@@ -1,0 +1,15 @@
+{
+  "name": "threadcrawler",
+  "version": "1.0.0",
+  "description": "Dive into comment threads. Each reply is a room. Go deep or die.",
+  "scripts": {
+    "dev": "devvit playtest",
+    "build": "devvit publish"
+  },
+  "devvit": {
+    "runtime": "webview"
+  },
+  "dependencies": {
+    "@devvit/public-api": "^0.10.0"
+  }
+}
