@@ -1,15 +1,18 @@
 {
-  "name": "threadcrawler",
-  "version": "1.0.0",
+  "name": "thready-crawly",
+  "version": "0.0.0",
   "description": "Thread Crawler - Reddit dungeon crawler",
   "scripts": {
     "dev": "devvit playtest",
     "build": "devvit upload"
   },
   "dependencies": {
-    "@devvit/public-api": "^0.13.0"
+    "@devvit/public-api": "0.13.6"
   },
   "devDependencies": {
     "typescript": "^5.0.0"
-  }
+  },
+  "type": "module",
+  "private": true,
+  "license": "BSD-3-Clause"
 }

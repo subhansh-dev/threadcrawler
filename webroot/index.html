@@ -6,30 +6,37 @@
   <title>Thread Crawler</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Quicksand:wght@400;500;600;700&family=Share+Tech+Mono&display=swap" rel="stylesheet">
   <style>
     *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
 
     :root {
-      --bg: #08080f;
-      --glass: rgba(15,12,28,0.5);
-      --glass-border: rgba(168,130,247,0.12);
-      --purple: #A882F7;
-      --emerald: #34D399;
-      --gold: #FBBF24;
-      --red: #F87171;
-      --cyan: #22D3EE;
-      --text: #E2E0F0;
-      --text-dim: #9590B0;
-      --text-muted: #5E587A;
+      --bg: #010103;
+      --bg-deep: #020204;
+      --sakura: #E8829B;
+      --sakura-dim: rgba(232,130,155,0.12);
+      --miku: #7EDDD6;
+      --miku-dim: rgba(126,221,214,0.1);
+      --lavender: #C4B5FD;
+      --peach: #FDBA74;
+      --sky: #93C5FD;
+      --mint: #86EFAC;
+      --red: #EF4444;
+      --text: #E8D5E0;
+      --text-dim: #9B889E;
+      --text-muted: #6B5070;
+      --border: rgba(232,130,155,0.08);
     }
 
+    html { scroll-behavior: smooth; }
+
     body {
-      font-family: 'Space Grotesk', -apple-system, sans-serif;
+      font-family: 'Quicksand', -apple-system, sans-serif;
       background: var(--bg);
       color: var(--text);
       min-height: 100vh;
-      overflow: hidden;
+      overflow-x: hidden;
+      -webkit-font-smoothing: antialiased;
     }
 
     /* ─── BACKGROUND ─── */
@@ -37,130 +44,70 @@
       position: fixed; inset: 0; z-index: 0;
       background-image: url('bg.jpg');
       background-size: cover;
-      filter: blur(40px) brightness(0.2) saturate(1.2);
-      transform: scale(1.15);
+      background-position: center;
+      filter: blur(30px) brightness(0.3) saturate(1.4);
+      transform: scale(1.1);
     }
 
     .bg-overlay {
       position: fixed; inset: 0; z-index: 1;
-      background: radial-gradient(ellipse at 30% 20%, rgba(168,130,247,0.08) 0%, transparent 50%),
-                  linear-gradient(180deg, rgba(8,8,15,0.8) 0%, rgba(8,8,15,0.95) 100%);
+      background: radial-gradient(ellipse at 50% 30%, rgba(232,130,155,0.05) 0%, transparent 60%),
+                  linear-gradient(180deg, rgba(1,1,3,0.7) 0%, rgba(1,1,3,0.85) 100%);
     }
 
-    /* ─── GLASS ─── */
+    .bg-noise {
+      position: fixed; inset: 0; z-index: 2;
+      opacity: 0.02;
+      background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.5'/%3E%3C/svg%3E");
+      pointer-events: none;
+    }
+
+    /* ─── GLASS (MewoOS exact) ─── */
     .glass {
-      background: var(--glass);
-      backdrop-filter: blur(24px) saturate(1.6);
-      -webkit-backdrop-filter: blur(24px) saturate(1.6);
-      border: 1px solid var(--glass-border);
-      border-radius: 12px;
-      box-shadow: 0 8px 32px rgba(0,0,0,0.4), inset 0 1px 0 rgba(255,255,255,0.04);
+      background: linear-gradient(135deg, rgba(16,18,30,0.65) 0%, rgba(10,12,22,0.72) 50%, rgba(18,20,35,0.65) 100%);
+      backdrop-filter: blur(80px) saturate(2.2) brightness(1.08);
+      -webkit-backdrop-filter: blur(80px) saturate(2.2) brightness(1.08);
+      border: 1px solid rgba(255,255,255,0.1);
+      border-top-color: rgba(255,255,255,0.12);
+      border-left-color: rgba(255,255,255,0.1);
+      border-radius: 20px;
+      box-shadow: 0 8px 40px rgba(0,0,0,0.5),
+                  0 2px 0 rgba(255,255,255,0.06) inset,
+                  inset 0 1px 0 rgba(255,255,255,0.1),
+                  inset 0 -1px 0 rgba(255,255,255,0.04),
+                  0 0 0 1px rgba(255,255,255,0.04);
+      position: relative;
+      overflow: hidden;
     }
 
-    /* ─── LAYOUT ─── */
+    .glass::before {
+      content: '';
+      position: absolute; inset: 0;
+      background: linear-gradient(135deg, rgba(255,255,255,0.03) 0%, transparent 50%);
+      pointer-events: none;
+      border-radius: inherit;
+    }
+
+    .glass-pill { border-radius: 100px; }
+
+    /* ─── APP LAYOUT ─── */
     .app {
       position: relative; z-index: 10;
-      display: flex;
-      height: 100vh;
-      gap: 8px;
-      padding: 8px;
-    }
-
-    .sidebar {
-      width: 240px;
+      max-width: 520px;
+      margin: 0 auto;
+      padding: 12px;
+      min-height: 100vh;
       display: flex;
       flex-direction: column;
-      gap: 8px;
-      flex-shrink: 0;
     }
 
-    .game-area {
-      flex: 1;
-      display: flex;
-      flex-direction: column;
-      position: relative;
-    }
-
-    /* ─── TITLE SCREEN ─── */
-    #title-screen {
-      position: absolute; inset: 0;
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      justify-content: center;
-      z-index: 20;
-    }
-
-    .title-icon {
-      width: 80px; height: 80px;
-      background: linear-gradient(135deg, var(--purple-dim), rgba(124,58,237,0.2));
-      border-radius: 20px;
-      display: flex; align-items: center; justify-content: center;
-      margin-bottom: 20px;
-      border: 1px solid rgba(168,130,247,0.2);
-      box-shadow: 0 8px 32px rgba(168,130,247,0.15);
-      animation: float 3s ease-in-out infinite;
-    }
-
-    @keyframes float {
-      0%, 100% { transform: translateY(0); }
-      50% { transform: translateY(-8px); }
-    }
-
-    .title-icon svg {
-      width: 40px; height: 40px;
-      stroke: var(--purple);
-      fill: none;
-      stroke-width: 2;
-    }
-
-    .title-text {
-      font-size: 28px;
-      font-weight: 700;
-      background: linear-gradient(135deg, var(--purple), var(--emerald));
-      -webkit-background-clip: text;
-      -webkit-text-fill-color: transparent;
-      margin-bottom: 8px;
-    }
-
-    .title-sub {
-      font-size: 12px;
-      color: var(--text-dim);
-      margin-bottom: 24px;
-    }
-
-    .start-btn {
-      padding: 12px 32px;
-      background: linear-gradient(135deg, var(--purple), #7C3AED);
-      border: none;
-      border-radius: 12px;
-      color: white;
-      font-family: 'Space Grotesk', sans-serif;
-      font-size: 14px;
-      font-weight: 600;
-      cursor: pointer;
-      box-shadow: 0 8px 32px rgba(168,130,247,0.3);
-      transition: all 0.2s;
-    }
-
-    .start-btn:hover {
-      transform: translateY(-2px);
-      box-shadow: 0 12px 40px rgba(168,130,247,0.4);
-    }
-
-    /* ─── GAME SCREEN ─── */
-    #game-screen {
-      display: none;
-      flex-direction: column;
-      gap: 8px;
-      height: 100%;
-    }
-
-    .header-bar {
-      padding: 8px 14px;
+    /* ─── HEADER ─── */
+    .header {
       display: flex;
       align-items: center;
       justify-content: space-between;
+      padding: 10px 16px;
+      margin-bottom: 10px;
     }
 
     .logo {
@@ -172,23 +119,19 @@
     }
 
     .logo-icon {
-      width: 28px; height: 28px;
-      background: linear-gradient(135deg, var(--purple), #7C3AED);
-      border-radius: 8px;
+      width: 30px; height: 30px;
+      background: linear-gradient(135deg, var(--sakura), #D4789C);
+      border-radius: 10px;
       display: flex; align-items: center; justify-content: center;
+      box-shadow: 0 0 20px rgba(232,130,155,0.3);
     }
 
-    .logo-icon svg {
-      width: 16px; height: 16px;
-      stroke: white;
-      fill: none;
-      stroke-width: 2;
-    }
+    .logo-icon svg { width: 16px; height: 16px; stroke: white; fill: none; stroke-width: 2; }
 
-    .stats {
+    .stats-bar {
       display: flex;
-      gap: 12px;
-      font-family: 'JetBrains Mono', monospace;
+      gap: 10px;
+      font-family: 'Share Tech Mono', monospace;
       font-size: 10px;
       color: var(--text-dim);
     }
@@ -200,13 +143,12 @@
       border-radius: 50%;
     }
 
-    .stat-hp .stat-dot { background: var(--red); box-shadow: 0 0 6px rgba(248,113,113,0.5); }
-    .stat-gold .stat-dot { background: var(--gold); box-shadow: 0 0 6px rgba(251,191,36,0.5); }
-    .stat-xp .stat-dot { background: var(--purple); box-shadow: 0 0 6px rgba(168,130,247,0.5); }
-    .stat-depth .stat-dot { background: var(--cyan); box-shadow: 0 0 6px rgba(34,211,238,0.5); }
+    .stat-hp .stat-dot { background: var(--red); box-shadow: 0 0 8px rgba(239,68,68,0.5); }
+    .stat-gold .stat-dot { background: var(--peach); box-shadow: 0 0 8px rgba(253,186,116,0.5); }
+    .stat-xp .stat-dot { background: var(--sakura); box-shadow: 0 0 8px rgba(232,130,155,0.5); }
 
     .hp-bar {
-      width: 80px; height: 6px;
+      width: 60px; height: 5px;
       background: rgba(255,255,255,0.06);
       border-radius: 3px;
       overflow: hidden;
@@ -214,59 +156,228 @@
 
     .hp-fill {
       height: 100%;
-      background: linear-gradient(90deg, var(--red), #FB7185);
+      background: linear-gradient(90deg, var(--red), #F87171);
       border-radius: 3px;
       transition: width 0.3s;
+      box-shadow: 0 0 8px rgba(239,68,68,0.4);
     }
 
-    /* ─── GAME CONTAINER ─── */
-    #game-container {
-      flex: 1;
+    /* ─── THREAD CARD ─── */
+    .thread-card { padding: 16px; margin-bottom: 10px; }
+
+    .thread-title {
+      font-size: 14px;
+      font-weight: 600;
+      margin-bottom: 8px;
+      line-height: 1.4;
+    }
+
+    .thread-meta {
+      font-family: 'Share Tech Mono', monospace;
+      font-size: 10px;
+      color: var(--text-muted);
+      display: flex;
+      gap: 10px;
+      margin-bottom: 10px;
+      align-items: center;
+    }
+
+    .thread-body {
+      font-size: 13px;
+      line-height: 1.6;
+      padding: 14px;
+      background: rgba(255,255,255,0.03);
       border-radius: 12px;
-      overflow: hidden;
-      background: var(--bg);
-      border: 1px solid var(--glass-border);
+      border: 1px solid rgba(255,255,255,0.05);
+      margin-bottom: 10px;
+      position: relative;
     }
 
-    #game-container canvas {
-      display: block;
-      width: 100% !important;
-      height: 100% !important;
+    .thread-body::before {
+      content: '';
+      position: absolute;
+      left: 0; top: 10px; bottom: 10px;
+      width: 2px;
+      background: linear-gradient(180deg, var(--sakura), var(--miku));
+      border-radius: 1px;
     }
 
-    /* ─── LOG ─── */
-    .log-panel {
-      padding: 8px 12px;
-      max-height: 100px;
-      overflow-y: auto;
+    /* ─── INDICATORS ─── */
+    .indicators { display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 10px; }
+
+    .indicator {
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+      padding: 4px 10px;
+      border-radius: 100px;
+      font-family: 'Share Tech Mono', monospace;
+      font-size: 10px;
+      font-weight: 500;
     }
 
-    .log-title {
-      font-family: 'JetBrains Mono', monospace;
-      font-size: 9px;
+    .ind-trap { background: rgba(239,68,68,0.12); color: var(--red); border: 1px solid rgba(239,68,68,0.2); }
+    .ind-heal { background: rgba(52,211,153,0.12); color: var(--mint); border: 1px solid rgba(52,211,153,0.2); }
+    .ind-power { background: rgba(253,186,116,0.12); color: var(--peach); border: 1px solid rgba(253,186,116,0.2); }
+    .ind-monster { background: rgba(196,181,253,0.12); color: var(--lavender); border: 1px solid rgba(196,181,253,0.2); }
+
+    /* ─── EXITS ─── */
+    .exits-label {
+      font-family: 'Share Tech Mono', monospace;
+      font-size: 10px;
       font-weight: 600;
       color: var(--text-muted);
       letter-spacing: 1px;
       text-transform: uppercase;
-      margin-bottom: 4px;
+      margin-bottom: 8px;
     }
 
-    .log-entry {
-      font-family: 'JetBrains Mono', monospace;
-      font-size: 9px;
-      color: var(--text-muted);
-      padding: 2px 0;
-      border-bottom: 1px solid rgba(255,255,255,0.02);
+    .exit-btn {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      width: 100%;
+      padding: 12px 14px;
+      background: rgba(255,255,255,0.03);
+      border: 1px solid rgba(255,255,255,0.06);
+      border-radius: 12px;
+      color: var(--text);
+      font-size: 12px;
+      cursor: pointer;
+      transition: all 0.2s ease;
+      margin-bottom: 6px;
+      text-align: left;
+      font-family: 'Quicksand', sans-serif;
     }
 
-    /* ─── CONTROLS ─── */
-    .controls-panel {
-      padding: 10px 12px;
+    .exit-btn:hover {
+      background: rgba(232,130,155,0.08);
+      border-color: rgba(232,130,155,0.25);
+      transform: translateX(4px);
+      box-shadow: 0 4px 20px rgba(232,130,155,0.1);
     }
 
-    .controls-title {
-      font-family: 'JetBrains Mono', monospace;
-      font-size: 9px;
+    .exit-arrow { color: var(--sakura); font-size: 14px; flex-shrink: 0; }
+    .exit-author { color: var(--sakura); font-weight: 600; font-size: 11px; }
+    .exit-preview { color: var(--text-muted); font-size: 10px; margin-top: 2px; line-height: 1.3; }
+    .exit-score { margin-left: auto; font-family: 'Share Tech Mono', monospace; font-size: 10px; color: var(--text-muted); flex-shrink: 0; }
+
+    /* ─── COMBAT ─── */
+    .combat-card {
+      background: rgba(239,68,68,0.05);
+      border: 1px solid rgba(239,68,68,0.15);
+      padding: 16px;
+      margin-bottom: 10px;
+    }
+
+    .combat-header { display: flex; align-items: center; gap: 10px; margin-bottom: 12px; }
+
+    .combat-icon {
+      width: 36px; height: 36px;
+      background: rgba(239,68,68,0.12);
+      border-radius: 10px;
+      display: flex; align-items: center; justify-content: center;
+      border: 1px solid rgba(239,68,68,0.15);
+    }
+
+    .combat-icon svg { width: 18px; height: 18px; stroke: var(--red); fill: none; stroke-width: 2; }
+
+    .combat-name { font-size: 14px; font-weight: 700; color: var(--red); }
+    .combat-sub { font-size: 10px; color: var(--text-muted); font-family: 'Share Tech Mono', monospace; }
+
+    .health-bar {
+      width: 100%; height: 6px;
+      background: rgba(255,255,255,0.06);
+      border-radius: 3px;
+      overflow: hidden;
+      margin-bottom: 8px;
+    }
+
+    .health-fill {
+      height: 100%;
+      background: linear-gradient(90deg, var(--red), #F87171);
+      border-radius: 3px;
+      transition: width 0.3s;
+      box-shadow: 0 0 10px rgba(239,68,68,0.4);
+    }
+
+    .health-text { font-family: 'Share Tech Mono', monospace; font-size: 10px; color: var(--text-muted); margin-bottom: 12px; }
+    .combat-actions { display: flex; gap: 8px; }
+
+    /* ─── BUTTONS ─── */
+    .btn {
+      padding: 10px 20px;
+      border: none;
+      border-radius: 12px;
+      font-family: 'Quicksand', sans-serif;
+      font-size: 12px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.2s ease;
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .btn::after {
+      content: '';
+      position: absolute; inset: 0;
+      background: linear-gradient(135deg, rgba(255,255,255,0.1) 0%, transparent 50%);
+      opacity: 0;
+      transition: opacity 0.2s;
+    }
+
+    .btn:hover::after { opacity: 1; }
+
+    .btn-primary {
+      background: linear-gradient(135deg, var(--sakura), #D4789C);
+      color: white;
+      box-shadow: 0 4px 20px rgba(232,130,155,0.3);
+    }
+
+    .btn-primary:hover {
+      transform: translateY(-1px);
+      box-shadow: 0 6px 28px rgba(232,130,155,0.4);
+    }
+
+    .btn-secondary {
+      background: rgba(255,255,255,0.06);
+      color: var(--text);
+      border: 1px solid rgba(255,255,255,0.08);
+    }
+
+    .btn-secondary:hover { background: rgba(255,255,255,0.1); }
+
+    .btn-start {
+      padding: 14px 36px;
+      font-size: 14px;
+      border-radius: 14px;
+      background: linear-gradient(135deg, var(--sakura), #D4789C);
+      color: white;
+      box-shadow: 0 8px 32px rgba(232,130,155,0.3),
+                  inset 0 1px 0 rgba(255,255,255,0.2);
+    }
+
+    .btn-start:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 12px 40px rgba(232,130,155,0.4);
+    }
+
+    /* ─── LOG ─── */
+    .log-card {
+      flex: 1;
+      overflow-y: auto;
+      padding: 12px 14px;
+      margin-top: 10px;
+      max-height: 140px;
+      min-height: 60px;
+    }
+
+    .log-title {
+      font-family: 'Share Tech Mono', monospace;
+      font-size: 10px;
       font-weight: 600;
       color: var(--text-muted);
       letter-spacing: 1px;
@@ -274,163 +385,188 @@
       margin-bottom: 6px;
     }
 
-    .control-row {
-      display: flex;
-      justify-content: space-between;
+    .log-entry {
+      font-family: 'Share Tech Mono', monospace;
       font-size: 10px;
-      color: var(--text-dim);
-      padding: 2px 0;
+      color: var(--text-muted);
+      padding: 3px 0;
+      border-bottom: 1px solid rgba(255,255,255,0.03);
+      line-height: 1.5;
     }
 
-    .control-key {
-      font-family: 'JetBrains Mono', monospace;
-      color: var(--purple);
-      font-weight: 500;
+    .log-trap { color: var(--red); }
+    .log-heal { color: var(--mint); }
+    .log-power { color: var(--peach); }
+    .log-combat { color: var(--lavender); }
+    .log-level { color: var(--sky); }
+
+    /* ─── DEPTH BAR ─── */
+    .depth-bar {
+      display: flex;
+      gap: 4px;
+      padding: 8px 12px;
+      background: rgba(255,255,255,0.02);
+      border-radius: 10px;
+      border: 1px solid rgba(255,255,255,0.04);
     }
 
-    /* ─── GAME OVER ─── */
-    #gameover-screen {
-      display: none;
-      position: absolute; inset: 0;
+    .depth-pip {
+      width: 10px; height: 10px;
+      border-radius: 50%;
+      background: rgba(255,255,255,0.05);
+      border: 1px solid rgba(255,255,255,0.06);
+      transition: all 0.3s ease;
+    }
+
+    .depth-pip.active {
+      background: var(--sakura);
+      border-color: var(--sakura);
+      box-shadow: 0 0 12px rgba(232,130,155,0.5);
+    }
+
+    .depth-pip.visited {
+      background: rgba(232,130,155,0.25);
+      border-color: rgba(232,130,155,0.3);
+    }
+
+    /* ─── VIBE BADGE ─── */
+    .vibe-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+      padding: 3px 10px;
+      border-radius: 100px;
+      font-family: 'Share Tech Mono', monospace;
+      font-size: 9px;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+
+    .vibe-horror { background: rgba(239,68,68,0.12); color: var(--red); border: 1px solid rgba(239,68,68,0.2); }
+    .vibe-strategy { background: rgba(147,197,253,0.12); color: var(--sky); border: 1px solid rgba(147,197,253,0.2); }
+    .vibe-zen { background: rgba(52,211,153,0.12); color: var(--mint); border: 1px solid rgba(52,211,153,0.2); }
+    .vibe-chaos { background: rgba(253,186,116,0.12); color: var(--peach); border: 1px solid rgba(253,186,116,0.2); }
+    .vibe-mystery { background: rgba(196,181,253,0.12); color: var(--lavender); border: 1px solid rgba(196,181,253,0.2); }
+
+    /* ─── START SCREEN ─── */
+    .start-screen {
+      flex: 1;
+      display: flex;
       flex-direction: column;
       align-items: center;
       justify-content: center;
-      z-index: 20;
-      background: rgba(8,8,15,0.9);
+      text-align: center;
+      padding: 40px 20px;
     }
+
+    .start-icon {
+      width: 80px; height: 80px;
+      background: linear-gradient(135deg, rgba(232,130,155,0.15), rgba(126,221,214,0.1));
+      border-radius: 22px;
+      display: flex; align-items: center; justify-content: center;
+      margin-bottom: 24px;
+      border: 1px solid rgba(232,130,155,0.15);
+      box-shadow: 0 8px 40px rgba(232,130,155,0.12);
+      animation: float 3s ease-in-out infinite;
+    }
+
+    .start-icon svg { width: 36px; height: 36px; stroke: var(--sakura); fill: none; stroke-width: 2; }
+
+    @keyframes float {
+      0%, 100% { transform: translateY(0); }
+      50% { transform: translateY(-8px); }
+    }
+
+    .start-title {
+      font-size: 26px;
+      font-weight: 700;
+      margin-bottom: 10px;
+      background: linear-gradient(135deg, var(--sakura), var(--miku));
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+    }
+
+    .start-desc {
+      font-size: 13px;
+      color: var(--text-dim);
+      max-width: 320px;
+      line-height: 1.7;
+      margin-bottom: 28px;
+    }
+
+    .start-hint {
+      font-family: 'Share Tech Mono', monospace;
+      font-size: 10px;
+      color: var(--text-muted);
+      margin-top: 16px;
+      opacity: 0.5;
+    }
+
+    /* ─── GAME OVER ─── */
+    .game-over { text-align: center; padding: 40px 20px; }
 
     .go-icon {
       width: 64px; height: 64px;
-      background: rgba(248,113,113,0.1);
+      margin: 0 auto 16px;
+      background: rgba(239,68,68,0.12);
       border-radius: 16px;
       display: flex; align-items: center; justify-content: center;
-      margin-bottom: 16px;
-      border: 1px solid rgba(248,113,113,0.15);
+      border: 1px solid rgba(239,68,68,0.15);
     }
 
-    .go-icon svg {
-      width: 32px; height: 32px;
-      stroke: var(--red);
-      fill: none;
-      stroke-width: 2;
-    }
+    .go-icon svg { width: 32px; height: 32px; stroke: var(--red); fill: none; stroke-width: 2; }
 
-    .go-title {
-      font-size: 22px;
-      font-weight: 700;
-      color: var(--red);
-      margin-bottom: 12px;
-    }
+    .game-over h2 { font-size: 22px; font-weight: 700; color: var(--red); margin-bottom: 12px; }
 
-    .go-stats {
-      font-family: 'JetBrains Mono', monospace;
+    .game-over-stats {
+      font-family: 'Share Tech Mono', monospace;
       font-size: 11px;
       color: var(--text-dim);
-      text-align: center;
+      margin-bottom: 24px;
       line-height: 2;
-      margin-bottom: 20px;
     }
+
+    /* ─── CONTROLS HINT ─── */
+    .controls-hint {
+      position: fixed;
+      bottom: 16px;
+      left: 50%;
+      transform: translateX(-50%);
+      z-index: 100;
+      padding: 8px 16px;
+      font-family: 'Share Tech Mono', monospace;
+      font-size: 10px;
+      color: var(--text-muted);
+      display: flex;
+      gap: 12px;
+    }
+
+    .controls-hint span { color: var(--sakura); font-weight: 500; }
 
     /* ─── SCROLLBAR ─── */
-    ::-webkit-scrollbar { width: 3px; }
+    ::-webkit-scrollbar { width: 4px; }
     ::-webkit-scrollbar-track { background: transparent; }
-    ::-webkit-scrollbar-thumb { background: rgba(168,130,247,0.15); border-radius: 2px; }
+    ::-webkit-scrollbar-thumb { background: rgba(232,130,155,0.15); border-radius: 2px; }
 
-    /* ─── RESPONSIVE ─── */
-    @media (max-width: 768px) {
-      .app { flex-direction: column; }
-      .sidebar { width: 100%; flex-direction: row; flex-wrap: wrap; }
-      .sidebar > div { flex: 1; min-width: 150px; }
+    /* ─── ANIMATIONS ─── */
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(8px); }
+      to { opacity: 1; transform: translateY(0); }
     }
+    .fade-in { animation: fadeIn 0.3s ease forwards; }
   </style>
 </head>
 <body>
   <div class="bg-layer"></div>
   <div class="bg-overlay"></div>
+  <div class="bg-noise"></div>
 
-  <div class="app">
-    <!-- Sidebar -->
-    <div class="sidebar">
-      <!-- Header -->
-      <div class="header-bar glass">
-        <div class="logo">
-          <div class="logo-icon">
-            <svg viewBox="0 0 24 24"><path d="M3 21V8l9-5 9 5v13M9 21V13h6v8M12 3v5"/></svg>
-          </div>
-          THREAD CRAWLER
-        </div>
-      </div>
+  <div class="app" id="app"></div>
 
-      <!-- Stats -->
-      <div class="glass" style="padding: 10px 12px;">
-        <div class="stats" style="flex-direction: column; gap: 6px;">
-          <div class="stat stat-hp">
-            <div class="stat-dot"></div>
-            <span>HP</span>
-            <div class="hp-bar"><div class="hp-fill" id="hp-fill" style="width:100%"></div></div>
-            <span id="hp-text">100/100</span>
-          </div>
-          <div class="stat stat-gold">
-            <div class="stat-dot"></div>
-            <span>Gold</span>
-            <span id="gold-text">0</span>
-          </div>
-          <div class="stat stat-xp">
-            <div class="stat-dot"></div>
-            <span>Level</span>
-            <span id="level-text">Lv.1</span>
-          </div>
-          <div class="stat stat-depth">
-            <div class="stat-dot"></div>
-            <span>Depth</span>
-            <span id="depth-text">Depth 0</span>
-          </div>
-        </div>
-      </div>
-
-      <!-- Controls -->
-      <div class="glass controls-panel">
-        <div class="controls-title">Controls</div>
-        <div class="control-row"><span>Move</span><span class="control-key">WASD / Arrows</span></div>
-        <div class="control-row"><span>Shoot</span><span class="control-key">SPACE</span></div>
-        <div class="control-row"><span>Interact</span><span class="control-key">E</span></div>
-      </div>
-
-      <!-- Log -->
-      <div class="glass log-panel" style="flex: 1;">
-        <div class="log-title">Activity Log</div>
-        <div id="game-log"></div>
-      </div>
-    </div>
-
-    <!-- Game Area -->
-    <div class="game-area">
-      <!-- Title Screen -->
-      <div id="title-screen" class="glass">
-        <div class="title-icon">
-          <svg viewBox="0 0 24 24"><path d="M3 21V8l9-5 9 5v13M9 21V13h6v8M12 3v5"/></svg>
-        </div>
-        <div class="title-text">Thread Crawler</div>
-        <div class="title-sub">Dive into comment threads. Each reply is a room.</div>
-        <button class="start-btn" onclick="startGame()">Enter the Dungeon</button>
-      </div>
-
-      <!-- Phaser Game Container -->
-      <div id="game-container"></div>
-
-      <!-- Game Screen UI -->
-      <div id="game-screen" class="glass"></div>
-
-      <!-- Game Over -->
-      <div id="gameover-screen" class="glass">
-        <div class="go-icon">
-          <svg viewBox="0 0 24 24"><circle cx="12" cy="10" r="8"/><circle cx="9" cy="9" r="1.5" fill="currentColor"/><circle cx="15" cy="9" r="1.5" fill="currentColor"/><path d="M9 17v3M12 17v3M15 17v3"/></svg>
-        </div>
-        <div class="go-title">YOU DIED</div>
-        <div class="go-stats" id="go-stats"></div>
-        <button class="start-btn" onclick="restartGame()">Try Again</button>
-      </div>
-    </div>
+  <div class="controls-hint glass glass-pill" id="controls-hint" style="display:none;">
+    <span>WASD</span> Move · <span>SPACE</span> Shoot · <span>E</span> Interact
   </div>
 
   <script src="https://cdn.jsdelivr.net/npm/phaser@3.60.0/dist/phaser.min.js"></script>
