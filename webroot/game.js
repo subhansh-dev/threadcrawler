@@ -299,7 +299,7 @@ class GameScene extends Phaser.Scene {
     this.bullets = this.physics.add.group();
 
     // ─── MONSTERS ───
-    for (let i = 0; i < 3 + depth; i++) this.spawnMonster();
+    for (let i = 0; i < 3 + state.depth; i++) this.spawnMonster();
 
     // ─── FOG OF WAR ───
     this.fogGraphics = this.add.graphics();
