@@ -622,7 +622,12 @@
     <span>WASD</span> Move · <span>SPACE</span> Shoot · <span>E</span> Interact
   </div>
 
-  <script src="https://cdn.jsdelivr.net/npm/phaser@3.60.0/dist/phaser.min.js"></script>
+  <script src="phaser.min.js"></script>
+  <script>
+    window.onerror = function(msg, url, line) {
+      document.getElementById('app').innerHTML = '<div style="padding:40px;text-align:center;color:#E8829B;font-family:monospace;"><h2>Error</h2><p>' + msg + '</p><p style="font-size:12px;color:#9B889E;">Line ' + line + '</p></div>';
+    };
+  </script>
   <script src="game.js"></script>
 </body>
 </html>
