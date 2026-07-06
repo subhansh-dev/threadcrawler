@@ -1,0 +1,21 @@
+{
+  "$schema": "https://developers.reddit.com/schema/config-file.v1.json",
+  "name": "threadcrawler",
+  "post": {
+    "dir": "webroot",
+    "entrypoints": {
+      "default": {
+        "entry": "index.html",
+        "height": "tall"
+      }
+    }
+  },
+  "permissions": {
+    "reddit": {
+      "enable": true
+    }
+  },
+  "dev": {
+    "subreddit": "test_devvit_demos"
+  }
+}
