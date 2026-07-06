@@ -5,127 +5,164 @@
 [![License](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
 [![Status](https://img.shields.io/badge/Status-Hackathon%20Ready-green)]()
 
-**A dungeon crawler where Reddit comment threads become the dungeon.**
-
-Every comment is a room. Every reply is a path deeper. Traps hide in downvoted comments. Heals hide in upvoted ones. Monsters guard the deepest threads.
+A dungeon crawler where Reddit comment threads become the dungeon. Every comment is a room. Every reply is a path deeper into the darkness.
 
 Built for the [Reddit Game Hackathon](https://www.reddit.com/r/GamesOnReddit/).
 
 ---
 
-## How It Works
+## The Core Idea
 
-Thread Crawler turns Reddit's comment structure into a playable dungeon. When you start a game, it pulls a real thread from the subreddit and converts the comment tree into a navigable map.
+Thread Crawler takes a real Reddit comment thread and turns it into a playable dungeon. The comment tree structure becomes the dungeon layout:
 
-| Reddit Concept | Game Equivalent |
+- **Root comments** are the starting rooms on the first floor
+- **Replies** branch off into deeper corridors
+- **Deep threads** (comments with many nested replies) become the deepest, most dangerous parts of the dungeon
+- **Short threads** are shallow rooms with quick exits
+
+The deeper you go into the reply tree, the harder the dungeon gets. A thread with 10 levels of nesting becomes a 10-floor dungeon crawl.
+
+## How Reddit Maps to Game Mechanics
+
+| Reddit Concept | Game Mechanic |
 |---|---|
-| Comment | Room |
-| Reply | Path deeper |
-| Upvote | Health pack |
-| Downvote | Trap |
-| Award | Power-up |
-| Thread depth | Dungeon depth |
-| Long thread | Deep dungeon |
+| Comment | Room you can stand in |
+| Reply | Path leading deeper |
+| Upvote (positive score) | Health pickup |
+| Downvote (negative score) | Damage trap |
+| Award/Gilding | Power-up item |
+| Thread depth | Dungeon floor number |
+| Comment count | Total rooms available |
+| Author name | Room label |
+| Score value | Trap/heal intensity |
 
 ## Gameplay
 
-**Controls:**
-- WASD or Arrow Keys to move
-- SPACE to shoot
-- E to interact with exits
+**Movement:** WASD or Arrow Keys to walk around the dungeon.
 
-**Objective:** Navigate through the comment tree, collect loot, fight monsters, and reach the deepest room possible before dying.
+**Combat:** SPACE to fire a projectile in the direction you're facing. Monsters patrol rooms and chase you when you get close.
 
-**Progression:**
-- Each floor generates a new dungeon from a seed
-- Deeper floors have more monsters, tighter corridors, and better loot
-- Killing monsters earns gold and XP
-- Leveling up increases HP, attack, and defense
-- Titles unlock at milestones: Newbie, Post Pilgrim, Comment Knight, Thread Surfer, Reply Warrior, Depth Diver, Thread Lord
+**Interaction:** Press E near the green exit to descend to the next floor.
 
-## Technical Details
+**Items:**
+- Red floor tiles = traps (deal damage on contact)
+- Green cross tiles = heals (restore HP on contact)
+- Gold star tiles = power-ups (random stat boost)
 
-### Dungeon Generation
+**Progression:** Clear 7 floors to escape the dungeon. Each floor generates a new layout from a mathematical seed. Deeper floors have more monsters, tighter corridors, and better loot.
 
-The map is generated using a combination of mathematical techniques:
+## Controls
 
-1. **Perlin Noise** -- Creates organic terrain variation. Different octaves layered via Fractal Brownian Motion produce natural-looking cave boundaries.
+| Key | Action |
+|---|---|
+| W/A/S/D or Arrows | Move |
+| SPACE | Shoot |
+| E | Interact with exit |
 
-2. **Cellular Automata** -- Iterative simulation where each cell's state depends on its neighbors. Runs 5 iterations to carve out cave-like open spaces from solid rock.
+## Dungeon Generation
 
-3. **Room Carving** -- Random rooms (4-10 tiles wide) are carved at random positions. This ensures there are always navigable spaces regardless of what the noise generates.
+Every dungeon is procedurally generated using three mathematical techniques layered together:
 
-4. **Corridor Connection** -- Rooms are connected with L-shaped corridors, guaranteeing all rooms are reachable.
+**Perlin Noise** creates the organic cave boundaries. By sampling noise at different frequencies and combining them (Fractal Brownian Motion), we get natural-looking terrain that isn't random — it has structure, like real cave systems.
 
-5. **Tile Placement** -- Traps, heals, power-ups, spawn point, and exit are placed based on room positions and random probability.
+**Cellular Automata** fills in the solid rock. Starting with random fill, we run 6 iterations where each cell's state depends on its neighbors. Cells with 5+ neighbors become open space. This creates connected cave rooms naturally.
 
-Each seed produces a deterministic dungeon, so the same seed always generates the same map.
+**Room Carving + Corridor Connection** ensures playability. Random rectangular rooms are carved out, then connected with L-shaped corridors. This guarantees all rooms are reachable no matter what the noise generates.
 
-### Rendering
+Each seed produces a deterministic dungeon — same seed always generates the same map.
 
-Phaser 3 handles all rendering at 60fps:
-- Tile-based map with per-tile color variation
-- Physics-based player movement with wall collision
-- Camera follows the player with smooth interpolation
+## Floor Themes
+
+The dungeon changes visual theme as you descend:
+
+| Floor | Theme | Colors |
+|---|---|---|
+| 1 | Thread Depths | Purple walls, dark floors |
+| 2 | Void Corridor | Deep purple, minimal light |
+| 3 | Emerald Cavern | Green-tinted caves |
+| 4 | Crimson Depths | Red atmosphere |
+| 5 | Golden Halls | Warm golden tones |
+| 6 | Frozen Abyss | Cyan ice caves |
+| 7 | Shadow Realm | Near-black, minimal visibility |
+
+## Monster Types
+
+Monsters scale with floor depth:
+
+| Monster | Base HP | Speed | Behavior |
+|---|---|---|---|
+| Shadow | 25 | Slow | Patrols, chases when close |
+| Wraith | 35 | Medium | Faster pursuit |
+| Stalker | 45 | Slow | High damage tank |
+| Void | 55 | Medium | Balanced threat |
+| Crawler | 65 | Slow | Floor 5+ elite |
+
+Each floor adds 3 + floor_number monsters. Monster stats scale with depth.
+
+## Features
+
+- Fog of war with explored tile memory
+- Real-time minimap showing player, monsters, and exit
+- Invincibility frames on damage (flashing effect)
+- Particle effects on hits, kills, and item pickups
 - Screen shake on damage
-- Hit particles on monster kills
-- Pulsing exit glow
-
-### Monster AI
-
-Monsters use distance-based chase logic:
-- Within 200px: move toward player at speed 60 + (depth * 10)
-- Within 28px: deal damage to player
-- Outside 200px: idle
-
-Monster count scales with depth (2 + depth monsters per floor).
+- 7 unique floor themes with distinct color palettes
+- Progressive difficulty scaling
+- Level-up system with stat increases and title progression
+- Gold economy for future features
+- Activity log tracking all events
 
 ## Project Structure
 
 ```
 threadcrawler/
-  devvit.json          # Devvit configuration
-  package.json         # Dependencies
+  devvit.json              # Reddit Devvit config
+  package.json             # Dependencies
   src/
-    main.tsx           # Devvit backend (thread analysis, sentiment)
-    server/
-      index.js         # Express server for webview
+    main.tsx               # Backend (Reddit API, thread analysis)
+    server/index.js        # Express server
   webroot/
-    index.html         # Game UI with glassmorphic design
-    game.js            # Phaser 3 game engine + math generation
-    bg.jpg             # Background image
+    index.html             # Game UI with glassmorphic design
+    game.js                # Phaser 3 engine + dungeon generation
+    phaser.min.js          # Phaser 3 library (local)
+    bg.jpg                 # Main background (MewoOS wallpaper)
+    start-bg.jpg           # Start screen background
 ```
 
-## Running Locally
+## Running
 
+**Standalone (no Reddit):**
 ```bash
-# Install dependencies
-npm install
-
-# Start dev server
-npm run dev
-
-# Open the playtest URL in your browser
+cd webroot
+python -m http.server 3000
+# Open http://localhost:3000
 ```
 
-The dev server creates a test subreddit and post automatically.
+**With Devvit:**
+```bash
+npm install
+npm install -g devvit
+devvit login
+devvit playtest r/your-subreddit
+```
+
+## Tech Stack
+
+- **Phaser 3** — Game engine, rendering, physics
+- **Devvit** — Reddit integration (optional)
+- **Perlin Noise** — Procedural terrain generation
+- **Cellular Automata** — Cave structure generation
+- **Space Grotesk + Share Tech Mono** — Typography
+- **Glassmorphic CSS** — UI panels with backdrop blur
 
 ## Design
 
-The UI uses a glassmorphic dark theme with:
-- Purple/emerald/gold color palette
-- Space Grotesk + JetBrains Mono typography
-- Backdrop blur glass panels
-- SVG icons (no emoji)
-- Animated depth indicators
-- Real-time activity log
-
-## Built With
-
-- [Phaser 3](https://phaser.io) -- Game engine
-- [Devvit](https://developers.reddit.com) -- Reddit developer platform
-- [Perlin Noise](https://en.wikipedia.org/wiki/Perlin_noise) -- Terrain generation
-- [Cellular Automata](https://en.wikipedia.org/wiki/Cellular_automaton) -- Cave generation
+Dark theme with MewoOS-inspired glassmorphism:
+- Pure black background with wallpaper blur
+- Translucent glass panels with backdrop-filter
+- Sakura pink and miku teal accent colors
+- SVG icons throughout
+- Noise texture overlay for depth
 
 ## License
 
