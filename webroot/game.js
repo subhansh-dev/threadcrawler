@@ -531,12 +531,10 @@ class GameScene extends Phaser.Scene {
     const px = this.player.x, py = this.player.y;
     const theme = THEMES[state.floorTheme % THEMES.length];
 
-    // Player ambient light
-    const glowR = TILE * 6 + Math.sin(time * 0.002) * TILE;
-    const glow = this.lightGraphics.createRadialGradient(px, py, 0, px, py, glowR);
-    // Can't use createRadialGradient on graphics, use circles instead
-    for (let r = glowR; r > 0; r -= TILE) {
-      const alpha = 0.02 * (1 - r / glowR);
+    // Player ambient light — concentric circles
+    const maxR = TILE * 5 + Math.sin(time * 0.002) * TILE;
+    for (let r = maxR; r > 0; r -= TILE * 0.8) {
+      const alpha = 0.015 * (1 - r / maxR);
       this.lightGraphics.fillStyle(theme.accent, alpha);
       this.lightGraphics.fillCircle(px, py, r);
     }
