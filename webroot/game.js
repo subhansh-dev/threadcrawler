@@ -3,6 +3,42 @@
    Math-driven procedural generation + polished 2D gameplay
    ═══════════════════════════════════════════════════════════ */
 
+// ─── SOUND ENGINE ────────────────────────────────────────────
+let audioCtx = null;
+function getAudioCtx() {
+  if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+  return audioCtx;
+}
+
+function playSound(freq, duration, type = 'square', volume = 0.08) {
+  try {
+    const ctx = getAudioCtx();
+    const osc = ctx.createOscillator();
+    const gain = ctx.createGain();
+    osc.type = type;
+    osc.frequency.setValueAtTime(freq, ctx.currentTime);
+    gain.gain.setValueAtTime(volume, ctx.currentTime);
+    gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + duration);
+    osc.connect(gain);
+    gain.connect(ctx.destination);
+    osc.start(ctx.currentTime);
+    osc.stop(ctx.currentTime + duration);
+  } catch(e) {}
+}
+
+const SFX = {
+  shoot: () => playSound(800, 0.08, 'square', 0.06),
+  hit: () => { playSound(200, 0.1, 'sawtooth', 0.07); playSound(150, 0.15, 'square', 0.05); },
+  kill: () => { playSound(600, 0.05, 'square', 0.06); playSound(800, 0.08, 'square', 0.05); playSound(1000, 0.1, 'sine', 0.04); },
+  hurt: () => { playSound(150, 0.2, 'sawtooth', 0.08); playSound(100, 0.3, 'square', 0.06); },
+  heal: () => { playSound(523, 0.1, 'sine', 0.06); playSound(659, 0.1, 'sine', 0.05); playSound(784, 0.15, 'sine', 0.04); },
+  power: () => { playSound(440, 0.08, 'sine', 0.06); playSound(660, 0.12, 'sine', 0.05); },
+  trap: () => { playSound(100, 0.15, 'sawtooth', 0.08); playSound(80, 0.2, 'square', 0.06); },
+  exit: () => { playSound(330, 0.15, 'sine', 0.05); playSound(440, 0.15, 'sine', 0.04); playSound(550, 0.2, 'sine', 0.03); },
+  levelup: () => { playSound(523, 0.1, 'sine', 0.06); playSound(659, 0.1, 'sine', 0.05); playSound(784, 0.1, 'sine', 0.05); playSound(1047, 0.2, 'sine', 0.04); },
+  death: () => { playSound(200, 0.3, 'sawtooth', 0.08); playSound(100, 0.5, 'square', 0.06); },
+};
+
 // ─── MATH UTILITIES ──────────────────────────────────────────
 class PerlinNoise {
   constructor(seed = 42) {
@@ -292,15 +328,34 @@ class GameScene extends Phaser.Scene {
       } else if (t === T.EXIT) {
         g.fillStyle(theme.floorColor, 1);
         g.fillRect(px, py, TILE, TILE);
-        // Glowing exit
-        const pulse = 0.15 + Math.sin(Date.now() * 0.004) * 0.1;
-        g.fillStyle(theme.accent, pulse);
-        g.fillRect(px + 2, py + 2, TILE - 4, TILE - 4);
-        g.lineStyle(2, theme.accent, 0.5);
-        g.strokeRect(px + 4, py + 4, TILE - 8, TILE - 8);
-        // Arrow indicator
-        g.fillStyle(theme.accent, 0.6);
-        g.fillTriangle(px + TILE/2, py + 6, px + TILE/2 - 6, py + 16, px + TILE/2 + 6, py + 16);
+        // Horror exit — ominous portal
+        const t2 = Date.now() * 0.001;
+        // Outer ring (pulsing)
+        const ringPulse = 0.15 + Math.sin(t2 * 2) * 0.1;
+        g.lineStyle(2, 0xEF4444, ringPulse);
+        g.strokeCircle(px + TILE/2, py + TILE/2, 14);
+        // Inner ring
+        g.lineStyle(1.5, theme.accent, 0.3 + Math.sin(t2 * 3) * 0.15);
+        g.strokeCircle(px + TILE/2, py + TILE/2, 10);
+        // Center void
+        g.fillStyle(0x000000, 0.6);
+        g.fillCircle(px + TILE/2, py + TILE/2, 6);
+        g.fillStyle(theme.accent, 0.4);
+        g.fillCircle(px + TILE/2, py + TILE/2, 4);
+        // Pulsing glow
+        const glowAlpha = 0.08 + Math.sin(t2 * 1.5) * 0.05;
+        g.fillStyle(0xEF4444, glowAlpha);
+        g.fillCircle(px + TILE/2, py + TILE/2, 20);
+        // Warning pixels around edge
+        g.fillStyle(0xEF4444, 0.15 + Math.sin(t2 * 4) * 0.1);
+        g.fillRect(px + 2, py + 2, 3, 3);
+        g.fillRect(px + TILE - 5, py + 2, 3, 3);
+        g.fillRect(px + 2, py + TILE - 5, 3, 3);
+        g.fillRect(px + TILE - 5, py + TILE - 5, 3, 3);
+        // Descending arrow
+        const arrowY = py + 8 + Math.sin(t2 * 3) * 3;
+        g.fillStyle(0xEF4444, 0.4);
+        g.fillTriangle(px + TILE/2, arrowY + 6, px + TILE/2 - 4, arrowY, px + TILE/2 + 4, arrowY);
       } else if (t === T.SPAWN) {
         g.fillStyle(theme.floorColor, 1);
         g.fillRect(px, py, TILE, TILE);
@@ -542,7 +597,7 @@ class GameScene extends Phaser.Scene {
     // ─── CAMERA ───
     this.cameras.main.setBounds(0, 0, MAP_W * TILE, MAP_H * TILE);
     this.cameras.main.startFollow(this.player, true, 0.1, 0.1);
-    this.cameras.main.setZoom(1.4);
+    this.cameras.main.setZoom(1.8);
 
     // ─── CONTROLS ───
     this.cursors = this.input.keyboard.createCursorKeys();
@@ -804,6 +859,7 @@ class GameScene extends Phaser.Scene {
     bullet.body.setAllowGravity(false);
     bullet.body.setVelocity(nx * BULLET_SPEED, ny * BULLET_SPEED);
     this.bullets.add(bullet);
+    SFX.shoot();
 
     // Muzzle flash particles
     for (let i = 0; i < 3; i++) {
@@ -849,6 +905,7 @@ class GameScene extends Phaser.Scene {
     }
 
     this.screenShake = 6;
+    SFX.hit();
 
     if (hp <= 0) {
       // Death explosion
@@ -861,6 +918,7 @@ class GameScene extends Phaser.Scene {
       state.player.gold += 8 + state.depth * 3;
       this.addLog(`Monster defeated! +${15 + state.depth * 5} XP`);
       this.screenShake = 10;
+      SFX.kill();
 
       // Level up
       if (state.player.xp >= state.player.xpNext) {
@@ -873,6 +931,7 @@ class GameScene extends Phaser.Scene {
         state.player.def += 1;
         state.player.title = this.getTitle(state.player.level);
         this.addLog(`LEVEL UP! Now ${state.player.title}`);
+        SFX.levelup();
       }
     }
   }
@@ -883,6 +942,7 @@ class GameScene extends Phaser.Scene {
     state.player.hp = Math.max(0, state.player.hp - dmg);
     state.player.invincible = 1.0;
     this.screenShake = 8;
+    SFX.hurt();
 
     this.cameras.main.flash(200, 239, 68, 68);
     this.addLog(`Took ${dmg} damage!`);
@@ -894,6 +954,7 @@ class GameScene extends Phaser.Scene {
 
     if (state.player.hp <= 0) {
       state.phase = 'gameover';
+      SFX.death();
       document.getElementById('gameover-screen').style.display = 'flex';
       document.getElementById('go-stats').innerHTML = `
         Depth: ${state.depth + 1}<br>
@@ -908,6 +969,7 @@ class GameScene extends Phaser.Scene {
     state.dungeon.map[y][x] = T.FLOOR;
     this.damagePlayer(18 + state.depth * 3);
     this.addLog('TRAP! Took damage!');
+    SFX.trap();
     // Red flash on tile
     const flash = this.add.rectangle(x * TILE + TILE/2, y * TILE + TILE/2, TILE, TILE, 0xEF4444, 0.4);
     this.tweens.add({ targets: flash, alpha: 0, duration: 400, onComplete: () => flash.destroy() });
@@ -919,6 +981,7 @@ class GameScene extends Phaser.Scene {
     const heal = 25 + Math.floor(Math.random() * 20);
     state.player.hp = Math.min(state.player.maxHp, state.player.hp + heal);
     this.addLog(`HEAL! Recovered ${heal} HP`);
+    SFX.heal();
     const flash = this.add.rectangle(x * TILE + TILE/2, y * TILE + TILE/2, TILE, TILE, 0x34D399, 0.4);
     this.tweens.add({ targets: flash, alpha: 0, duration: 400, onComplete: () => flash.destroy() });
     for (let i = 0; i < 5; i++) this.spawnParticle(x * TILE + TILE/2, y * TILE + TILE/2, (Math.random() - 0.5) * 40, -Math.random() * 50, 0x34D399, 0.7);
@@ -931,6 +994,7 @@ class GameScene extends Phaser.Scene {
     else if (roll < 0.65) { state.player.def += 2; this.addLog('Thick Skin! +2 DEF'); }
     else if (roll < 0.85) { state.player.gold += 25; this.addLog('Golden Reply! +25 Gold'); }
     else { state.player.maxHp += 15; state.player.hp = Math.min(state.player.hp + 15, state.player.maxHp); this.addLog('Vitality Boost! +15 Max HP'); }
+    SFX.power();
     const flash = this.add.rectangle(x * TILE + TILE/2, y * TILE + TILE/2, TILE, TILE, 0xFBBF24, 0.4);
     this.tweens.add({ targets: flash, alpha: 0, duration: 400, onComplete: () => flash.destroy() });
     for (let i = 0; i < 8; i++) this.spawnParticle(x * TILE + TILE/2, y * TILE + TILE/2, (Math.random() - 0.5) * 60, -Math.random() * 60, 0xFBBF24, 0.8);
@@ -1103,6 +1167,7 @@ class GameScene extends Phaser.Scene {
     this.transitioning = true;
     state.depth++;
     state.floorTheme = (state.floorTheme + 1) % THEMES.length;
+    SFX.exit();
 
     if (state.depth >= state.totalFloors) {
       state.phase = 'victory';
