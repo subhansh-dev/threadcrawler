@@ -1,6 +1,6 @@
 {
   "$schema": "https://developers.reddit.com/schema/config-file.v1.json",
-  "name": "thready-crawly",
+  "name": "nested-dungeons",
   "post": {
     "dir": "webroot",
     "entrypoints": {
@@ -16,6 +16,6 @@
     }
   },
   "dev": {
-    "subreddit": "test_devvit_demos"
+    "subreddit": "threadcrawler_test"
   }
 }
