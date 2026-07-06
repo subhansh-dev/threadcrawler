@@ -5,7 +5,30 @@
 
 const app = document.getElementById('app');
 
-// ─── GAME STATE ──────────────────────────────────────────────
+// ─── SVG ICONS ───────────────────────────────────────────────
+const ICONS = {
+  sword: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M14.5 17.5L3 6V3h3l11.5 11.5"/><path d="M13 19l6-6"/><path d="M16 16l4 4"/><path d="M19 21l2-2"/></svg>`,
+  heart: `<svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"/></svg>`,
+  coin: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="10"/><path d="M12 6v12M8 10h8M9 14h6"/></svg>`,
+  star: `<svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/></svg>`,
+  skull: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="10" r="8"/><circle cx="9" cy="9" r="1.5" fill="currentColor"/><circle cx="15" cy="9" r="1.5" fill="currentColor"/><path d="M9 17v3M12 17v3M15 17v3"/></svg>`,
+  shield: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>`,
+  chest: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M3 9h18v10a2 2 0 01-2 2H5a2 2 0 01-2-2V9z"/><path d="M3 9l3-5h12l3 5"/><circle cx="12" cy="14" r="2"/></svg>`,
+  arrow: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M5 12h14M12 5l7 7-7 7"/></svg>`,
+  back: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M19 12H5M12 19l-7-7 7-7"/></svg>`,
+  fight: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M14.5 17.5L3 6V3h3l11.5 11.5"/><path d="M13 19l6-6"/><path d="M16 16l4 4"/><path d="M19 21l2-2"/></svg>`,
+  run: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="17" cy="4" r="2"/><path d="M6 20l4-8 4 2 5-9"/></svg>`,
+  trophy: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M6 9H4.5a2.5 2.5 0 010-5H6"/><path d="M18 9h1.5a2.5 2.5 0 000-5H18"/><path d="M4 22h16"/><path d="M10 14.66V17c0 .55-.47.98-.97 1.21C7.85 18.75 7 20.24 7 22"/><path d="M14 14.66V17c0 .55.47.98.97 1.21C18.15 18.75 19 20.24 19 22"/><path d="M18 2H6v7a6 6 0 0012 0V2z"/></svg>`,
+  dungeon: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M3 21V8l9-5 9 5v13"/><path d="M9 21V13h6v8"/><path d="M12 3v5"/></svg>`,
+  comment: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z"/></svg>`,
+  upvote: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M12 19V5M5 12l7-7 7 7"/></svg>`,
+  warning: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>`,
+  plus: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>`,
+};
+
+function icon(name, size = 14) {
+  return `<span class="icon" style="width:${size}px;height:${size}px;">${ICONS[name] || ''}</span>`;
+}
 let state = {
   phase: 'start', // start, explore, combat, victory, dead
   player: {
@@ -154,24 +177,24 @@ function render() {
 
 function renderStart() {
   app.innerHTML = `
-    <div class="header glass glass-pill" style="margin-bottom:12px;">
+    <div class="header glass glass-pill" style="margin-bottom:10px;">
       <div class="logo">
-        <div class="logo-icon">🕳️</div>
+        <div class="logo-icon">${ICONS.dungeon}</div>
         THREAD CRAWLER
       </div>
       <div class="stats-bar">
-        <span style="opacity:0.4;font-size:10px;">v1.0</span>
+        <span style="opacity:0.4;font-size:9px;">v1.0</span>
       </div>
     </div>
     <div class="start-screen">
-      <div class="start-icon">🕳️</div>
+      <div class="start-icon">${ICONS.dungeon}</div>
       <h1 class="start-title">Dive Into Threads</h1>
       <p class="start-desc">
         Every comment is a room. Every reply is a path deeper.
         Traps lurk in downvoted comments. Heals hide in upvoted ones.
         Monsters guard the deepest threads.
       </p>
-      <button class="btn btn-start" onclick="startGame()">Crawl a Thread</button>
+      <button class="btn btn-start" onclick="startGame()">${ICONS.arrow} Crawl a Thread</button>
       <p class="start-hint">Based on real Reddit thread structure</p>
     </div>
   `;
@@ -191,41 +214,41 @@ function renderExplore() {
   }).join('');
 
   const indicators = [];
-  if (room.hasTrap) indicators.push('<span class="indicator ind-trap">⚠ TRAP</span>');
-  if (room.hasHeal) indicators.push('<span class="indicator ind-heal">♥ HEAL</span>');
-  if (room.hasPower) indicators.push('<span class="indicator ind-power">★ POWER</span>');
-  if (room.monster) indicators.push('<span class="indicator ind-monster">👾 MONSTER</span>');
+  if (room.hasTrap) indicators.push(`<span class="indicator ind-trap">${ICONS.warning} TRAP</span>`);
+  if (room.hasHeal) indicators.push(`<span class="indicator ind-heal">${ICONS.heart} HEAL</span>`);
+  if (room.hasPower) indicators.push(`<span class="indicator ind-power">${ICONS.star} POWER</span>`);
+  if (room.monster) indicators.push(`<span class="indicator ind-monster">${ICONS.skull} MONSTER</span>`);
 
   const exits = room.children.map(id => {
     const child = dungeon.rooms[id];
     if (!child) return '';
     return `
       <button class="exit-btn fade-in" onclick="moveTo('${id}')">
-        <span class="exit-arrow">→</span>
+        <span class="exit-arrow">${ICONS.arrow}</span>
         <div style="flex:1;min-width:0;">
           <span class="exit-author">u/${child.author}</span>
           <div class="exit-preview">${child.body.slice(0, 55)}...</div>
         </div>
-        <span class="exit-score">⬆ ${child.score}</span>
+        <span class="exit-score">${ICONS.upvote} ${child.score}</span>
       </button>
     `;
   }).join('');
 
   app.innerHTML = `
-    <div class="header glass glass-pill" style="margin-bottom:10px;">
+    <div class="header glass glass-pill" style="margin-bottom:8px;">
       <div class="logo">
-        <div class="logo-icon">🕳️</div>
+        <div class="logo-icon">${ICONS.dungeon}</div>
         THREAD CRAWLER
       </div>
       <div class="stats-bar">
-        <div class="stat stat-hp"><div class="stat-dot"></div>${p.hp}/${p.maxHp}</div>
-        <div class="stat stat-gold"><div class="stat-dot"></div>${p.gold}</div>
-        <div class="stat stat-xp"><div class="stat-dot"></div>Lv.${p.level}</div>
+        <div class="stat stat-hp"><div class="stat-dot"></div>${ICONS.heart} ${p.hp}/${p.maxHp}</div>
+        <div class="stat stat-gold"><div class="stat-dot"></div>${ICONS.coin} ${p.gold}</div>
+        <div class="stat stat-xp"><div class="stat-dot"></div>${ICONS.star} Lv.${p.level}</div>
       </div>
     </div>
 
     <div class="thread-card glass fade-in">
-      <div class="thread-title">"${dungeon.threadTitle.slice(0, 70)}${dungeon.threadTitle.length > 70 ? '...' : ''}"</div>
+      <div class="thread-title">${ICONS.comment} "${dungeon.threadTitle.slice(0, 65)}${dungeon.threadTitle.length > 65 ? '...' : ''}"</div>
       <div class="thread-meta">
         <span>by u/${dungeon.threadAuthor}</span>
         <span>${dungeon.totalRooms} rooms</span>
@@ -235,10 +258,10 @@ function renderExplore() {
     </div>
 
     <div class="thread-card glass fade-in">
-      <div style="display:flex;align-items:center;gap:8px;margin-bottom:8px;">
-        <span style="color:var(--accent);font-weight:600;font-size:12px;">u/${room.author}</span>
-        <span style="font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--text-muted);">Score: ${room.score}</span>
-        <span style="font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--text-muted);">Depth: ${room.depth}</span>
+      <div style="display:flex;align-items:center;gap:6px;margin-bottom:6px;">
+        <span style="color:var(--purple);font-weight:600;font-size:11px;">u/${room.author}</span>
+        <span style="font-family:'JetBrains Mono',monospace;font-size:9px;color:var(--text-muted);">Score: ${room.score}</span>
+        <span style="font-family:'JetBrains Mono',monospace;font-size:9px;color:var(--text-muted);">Depth: ${room.depth}</span>
       </div>
       <div class="thread-body">${room.body}</div>
       ${indicators.length > 0 ? `<div class="indicators">${indicators.join('')}</div>` : ''}
@@ -246,13 +269,13 @@ function renderExplore() {
 
     ${room.children.length > 0 ? `
       <div class="thread-card glass fade-in">
-        <div class="exits-label">REPLY PATHS (${room.children.length})</div>
+        <div class="exits-label">${ICONS.comment} REPLY PATHS (${room.children.length})</div>
         <div class="exits">${exits}</div>
       </div>
     ` : `
       <div class="thread-card glass fade-in" style="text-align:center;">
-        <div style="font-size:12px;color:var(--text-muted);margin-bottom:12px;">Dead end. No more replies.</div>
-        <button class="btn btn-secondary" onclick="goBack()">← Back up</button>
+        <div style="font-size:11px;color:var(--text-muted);margin-bottom:10px;">Dead end. No more replies.</div>
+        <button class="btn btn-secondary" onclick="goBack()">${ICONS.back} Back up</button>
       </div>
     `}
 
@@ -270,28 +293,31 @@ function renderCombat() {
   const hpPercent = (c.hp / c.maxHp) * 100;
 
   app.innerHTML = `
-    <div class="header glass glass-pill" style="margin-bottom:10px;">
+    <div class="header glass glass-pill" style="margin-bottom:8px;">
       <div class="logo">
-        <div class="logo-icon">🕳️</div>
+        <div class="logo-icon">${ICONS.dungeon}</div>
         THREAD CRAWLER
       </div>
       <div class="stats-bar">
-        <div class="stat stat-hp"><div class="stat-dot"></div>${p.hp}/${p.maxHp}</div>
-        <div class="stat stat-gold"><div class="stat-dot"></div>${p.gold}</div>
-        <div class="stat stat-xp"><div class="stat-dot"></div>Lv.${p.level}</div>
+        <div class="stat stat-hp"><div class="stat-dot"></div>${ICONS.heart} ${p.hp}/${p.maxHp}</div>
+        <div class="stat stat-gold"><div class="stat-dot"></div>${ICONS.coin} ${p.gold}</div>
+        <div class="stat stat-xp"><div class="stat-dot"></div>${ICONS.star} Lv.${p.level}</div>
       </div>
     </div>
 
     <div class="combat-card glass fade-in">
-      <div class="combat-title">
-        <div class="combat-monster-icon">👾</div>
-        ${c.name}
+      <div class="combat-header">
+        <div class="combat-icon">${ICONS.skull}</div>
+        <div>
+          <div class="combat-name">${c.name}</div>
+          <div class="combat-sub">Monster encountered</div>
+        </div>
       </div>
       <div class="health-bar"><div class="health-fill" style="width:${hpPercent}%"></div></div>
       <div class="health-text">${c.hp}/${c.maxHp} HP</div>
       <div class="combat-actions">
-        <button class="btn btn-primary" onclick="attack()">⚔ Attack (${p.atk} ATK)</button>
-        <button class="btn btn-secondary" onclick="flee()">🏃 Flee</button>
+        <button class="btn btn-primary" onclick="attack()">${ICONS.fight} Attack (${p.atk})</button>
+        <button class="btn btn-secondary" onclick="flee()">${ICONS.run} Flee</button>
       </div>
     </div>
 
@@ -304,14 +330,14 @@ function renderCombat() {
 function renderDead() {
   const p = state.player;
   app.innerHTML = `
-    <div class="header glass glass-pill" style="margin-bottom:10px;">
+    <div class="header glass glass-pill" style="margin-bottom:8px;">
       <div class="logo">
-        <div class="logo-icon">🕳️</div>
+        <div class="logo-icon">${ICONS.dungeon}</div>
         THREAD CRAWLER
       </div>
     </div>
     <div class="game-over glass fade-in">
-      <div class="game-over-icon">💀</div>
+      <div class="game-over-icon">${ICONS.skull}</div>
       <h2>YOU DIED</h2>
       <div class="game-over-stats">
         Depth reached: ${state.depth}<br>
@@ -320,7 +346,7 @@ function renderDead() {
         Gold collected: ${p.gold}<br>
         Level: ${p.level} (${p.title})
       </div>
-      <button class="btn btn-start" onclick="startGame()">Try Again</button>
+      <button class="btn btn-start" onclick="startGame()">${ICONS.arrow} Try Again</button>
     </div>
   `;
 }
@@ -328,15 +354,15 @@ function renderDead() {
 function renderVictory() {
   const p = state.player;
   app.innerHTML = `
-    <div class="header glass glass-pill" style="margin-bottom:10px;">
+    <div class="header glass glass-pill" style="margin-bottom:8px;">
       <div class="logo">
-        <div class="logo-icon">🕳️</div>
+        <div class="logo-icon">${ICONS.dungeon}</div>
         THREAD CRAWLER
       </div>
     </div>
     <div class="game-over glass fade-in">
-      <div class="game-over-icon">🏆</div>
-      <h2 style="color:var(--peach);">THREAD CLEARED</h2>
+      <div class="game-over-icon" style="background:var(--gold-dim);border-color:rgba(251,191,36,0.15);">${ICONS.trophy}</div>
+      <h2 style="color:var(--gold);">THREAD CLEARED</h2>
       <div class="game-over-stats">
         Max depth: ${state.depth}<br>
         Rooms cleared: ${state.roomsCleared}<br>
@@ -344,7 +370,7 @@ function renderVictory() {
         Gold collected: ${p.gold}<br>
         Level: ${p.level} (${p.title})
       </div>
-      <button class="btn btn-start" onclick="startGame()">Crawl Another</button>
+      <button class="btn btn-start" onclick="startGame()">${ICONS.arrow} Crawl Another</button>
     </div>
   `;
 }
