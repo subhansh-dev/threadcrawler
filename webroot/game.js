@@ -58,7 +58,12 @@ const PLAYER_SPEED = 160;
 const BULLET_SPEED = 280;
 const VIEW_RADIUS = 8;
 
-const T = { FLOOR: 0, WALL: 1, EXIT: 2, SPAWN: 3, TRAP: 4, HEAL: 5, POWER: 6, WATER: 7, DEEP: 8 };
+const T = {
+  FLOOR: 0, WALL: 1, EXIT: 2, SPAWN: 3, TRAP: 4, HEAL: 5, POWER: 6,
+  WATER: 7, DEEP: 8, CRACK: 9, MOSS: 10, RUBBLE: 11, BONES: 12,
+  TORCH: 13, CHEST: 14, SAVE: 15, DOOR_FRAME: 16, BLOOD: 17, WRITING: 18,
+  FLOOR_ALT: 19, CARPET: 20, RUG: 21,
+};
 
 // ─── GAME STATE ──────────────────────────────────────────────
 let state = {
@@ -96,23 +101,48 @@ function generateDungeon(seed, depth) {
     if (cave[y][x] === 0 && n > -0.15) map[y][x] = T.FLOOR;
   }
 
-  // Room carving
+  // Room carving with themed variants
   const rooms = [];
+  const roomTypes = ['empty', 'rubble', 'bones', 'torches', 'carpet', 'blood', 'writing'];
   for (let i = 0; i < 8 + depth * 2; i++) {
     const rw = 5 + Math.floor(Math.random() * 7);
     const rh = 5 + Math.floor(Math.random() * 6);
     const rx = 2 + Math.floor(Math.random() * (MAP_W - rw - 4));
     const ry = 2 + Math.floor(Math.random() * (MAP_H - rh - 4));
-    rooms.push({ x: rx, y: ry, w: rw, h: rh, cx: Math.floor(rx + rw / 2), cy: Math.floor(ry + rh / 2) });
+    const roomType = roomTypes[Math.floor(Math.random() * roomTypes.length)];
+    rooms.push({ x: rx, y: ry, w: rw, h: rh, cx: Math.floor(rx + rw / 2), cy: Math.floor(ry + rh / 2), type: roomType });
     for (let y = ry; y < ry + rh; y++) for (let x = rx; x < rx + rw; x++) map[y][x] = T.FLOOR;
   }
 
-  // Connect rooms
+  // Connect rooms with door frames at room entrances
   for (let i = 1; i < rooms.length; i++) {
     const a = rooms[i - 1], b = rooms[i];
     let x = a.cx, y = a.cy;
-    while (x !== b.cx) { if (x > 1 && x < MAP_W - 2 && y > 1 && y < MAP_H - 2) { map[y][x] = T.FLOOR; } x += x < b.cx ? 1 : -1; }
-    while (y !== b.cy) { if (x > 1 && x < MAP_W - 2 && y > 1 && y < MAP_H - 2) { map[y][x] = T.FLOOR; } y += y < b.cy ? 1 : -1; }
+    while (x !== b.cx) {
+      if (x > 1 && x < MAP_W - 2 && y > 1 && y < MAP_H - 2) {
+        map[y][x] = T.FLOOR;
+        // Door frame at room boundaries
+        if (x === rooms[i].x || x === rooms[i].x + rooms[i].w - 1) {
+          if (y > 0 && y < MAP_H - 1) {
+            map[y - 1][x] = T.DOOR_FRAME;
+            map[y + 1][x] = T.DOOR_FRAME;
+          }
+        }
+      }
+      x += x < b.cx ? 1 : -1;
+    }
+    while (y !== b.cy) {
+      if (x > 1 && x < MAP_W - 2 && y > 1 && y < MAP_H - 2) {
+        map[y][x] = T.FLOOR;
+        if (y === rooms[i].y || y === rooms[i].y + rooms[i].h - 1) {
+          if (x > 0 && x < MAP_W - 1) {
+            map[y][x - 1] = T.DOOR_FRAME;
+            map[y][x + 1] = T.DOOR_FRAME;
+          }
+        }
+      }
+      y += y < b.cy ? 1 : -1;
+    }
   }
 
   // Place features
@@ -127,23 +157,52 @@ function generateDungeon(seed, depth) {
     if (w > 0.3) map[y][x] = T.WATER;
   }
 
-  // Hazards & items
+  // Room decorations based on room type
   rooms.forEach((room, idx) => {
     if (idx === 0) return;
+
+    // Add room-specific decorations
     for (let y = room.y; y < room.y + room.h; y++) for (let x = room.x; x < room.x + room.w; x++) {
       if (map[y][x] !== T.FLOOR) continue;
       const r = Math.random();
-      if (r < 0.05) map[y][x] = T.TRAP;
-      else if (r < 0.10) map[y][x] = T.HEAL;
-      else if (r < 0.14) map[y][x] = T.POWER;
+
+      // Room type decorations
+      if (room.type === 'rubble' && r < 0.08) { map[y][x] = T.RUBBLE; continue; }
+      if (room.type === 'bones' && r < 0.06) { map[y][x] = T.BONES; continue; }
+      if (room.type === 'torches' && r < 0.04) { map[y][x] = T.TORCH; continue; }
+      if (room.type === 'blood' && r < 0.10) { map[y][x] = T.BLOOD; continue; }
+      if (room.type === 'writing' && r < 0.05) { map[y][x] = T.WRITING; continue; }
+      if (room.type === 'carpet' && r < 0.30) { map[y][x] = T.CARPET; continue; }
+
+      // General decorations
+      if (r < 0.04) { map[y][x] = T.TRAP; continue; }
+      if (r < 0.08) { map[y][x] = T.HEAL; continue; }
+      if (r < 0.11) { map[y][x] = T.POWER; continue; }
+      if (r < 0.13) { map[y][x] = T.CRACK; continue; }
+      if (r < 0.15) { map[y][x] = T.MOSS; continue; }
+
+      // Floor variation
+      if (Math.random() < 0.06) map[y][x] = T.FLOOR_ALT;
+    }
+
+    // Add save point in every 3rd room
+    if (idx % 3 === 0 && room.w >= 5 && room.h >= 5) {
+      map[room.cy][room.cx] = T.SAVE;
+    }
+
+    // Add treasure chest in some rooms
+    if (idx > 0 && Math.random() < 0.3) {
+      const cx = room.x + 1 + Math.floor(Math.random() * (room.w - 2));
+      const cy = room.y + 1 + Math.floor(Math.random() * (room.h - 2));
+      if (map[cy][cx] === T.FLOOR) map[cy][cx] = T.CHEST;
     }
   });
 
-  // Decorations (floor details)
+  // Decorations array for rendering
   const decorations = [];
   for (let y = 1; y < MAP_H - 1; y++) for (let x = 1; x < MAP_W - 1; x++) {
     if (map[y][x] === T.FLOOR && Math.random() < 0.03) {
-      decorations.push({ x, y, type: Math.floor(Math.random() * 4) });
+      decorations.push({ x, y, type: Math.floor(Math.random() * 6) });
     }
   }
 
@@ -184,83 +243,214 @@ class GameScene extends Phaser.Scene {
 
     this.physics.world.setBounds(0, 0, MAP_W * TILE, MAP_H * TILE);
 
-    // ─── TILEMAP RENDERING ───
+    // ─── TILEMAP RENDERING (Undertale-style detail) ───
     const g = this.add.graphics();
     for (let y = 0; y < MAP_H; y++) for (let x = 0; x < MAP_W; x++) {
       const t = dungeon.map[y][x];
       const px = x * TILE, py = y * TILE;
+      const shade = Phaser.Display.Color.ValueToColor(theme.wallColor);
+      const variation = Math.floor(Math.random() * 0x0a0a14);
 
       if (t === T.WALL) {
-        const shade = Phaser.Display.Color.ValueToColor(theme.wallColor);
-        const variation = Math.floor(Math.random() * 0x0a0a14);
+        // Wall with depth shading
         g.fillStyle(Phaser.Display.Color.GetColor(
           Math.min(255, shade.red + (variation & 0xff)),
           Math.min(255, shade.green + ((variation >> 8) & 0xff)),
           Math.min(255, shade.blue + ((variation >> 16) & 0xff))
         ), 1);
         g.fillRect(px, py, TILE, TILE);
-        // Wall top highlight
-        g.fillStyle(0xffffff, 0.03);
+        // Top highlight
+        g.fillStyle(0xffffff, 0.04);
         g.fillRect(px, py, TILE, 2);
-      } else if (t === T.FLOOR) {
-        g.fillStyle(theme.floorColor, 1);
+        // Bottom shadow
+        g.fillStyle(0x000000, 0.2);
+        g.fillRect(px, py + TILE - 2, TILE, 2);
+        // Brick pattern
+        if ((x + y) % 3 === 0) {
+          g.lineStyle(1, 0xffffff, 0.02);
+          g.lineBetween(px, py + TILE / 2, px + TILE, py + TILE / 2);
+        }
+      } else if (t === T.FLOOR || t === T.FLOOR_ALT) {
+        g.fillStyle(t === T.FLOOR_ALT ? 0x111122 : theme.floorColor, 1);
         g.fillRect(px, py, TILE, TILE);
-        // Floor detail
+        // Floor detail patterns
         if ((x + y) % 7 === 0) { g.fillStyle(0xffffff, 0.015); g.fillRect(px + 4, py + 4, TILE - 8, TILE - 8); }
         if ((x * 3 + y * 7) % 11 === 0) { g.fillStyle(theme.accent, 0.02); g.fillRect(px + 8, py + 8, 2, 2); }
+        if ((x * 5 + y * 3) % 13 === 0) { g.fillStyle(0xffffff, 0.01); g.fillRect(px + 12, py + 12, 1, 1); }
       } else if (t === T.WATER) {
-        g.fillStyle(0x1a3a5c, 0.6);
+        g.fillStyle(0x0a1a2e, 0.8);
         g.fillRect(px, py, TILE, TILE);
-        g.fillStyle(0x22D3EE, 0.08);
+        // Water ripples
+        const ripple = Math.sin(Date.now() * 0.003 + x + y) * 0.03;
+        g.fillStyle(0x22D3EE, 0.08 + ripple);
         g.fillRect(px + 2, py + 2, TILE - 4, TILE - 4);
+        // Water sparkles
+        if ((x + y) % 5 === 0) {
+          g.fillStyle(0x22D3EE, 0.15);
+          g.fillCircle(px + TILE/2 + Math.sin(Date.now() * 0.002) * 4, py + TILE/2, 1);
+        }
       } else if (t === T.EXIT) {
         g.fillStyle(theme.floorColor, 1);
         g.fillRect(px, py, TILE, TILE);
-        g.fillStyle(theme.accent, 0.2);
+        // Glowing exit
+        const pulse = 0.15 + Math.sin(Date.now() * 0.004) * 0.1;
+        g.fillStyle(theme.accent, pulse);
         g.fillRect(px + 2, py + 2, TILE - 4, TILE - 4);
-        g.lineStyle(2, theme.accent, 0.4);
+        g.lineStyle(2, theme.accent, 0.5);
         g.strokeRect(px + 4, py + 4, TILE - 8, TILE - 8);
+        // Arrow indicator
+        g.fillStyle(theme.accent, 0.6);
+        g.fillTriangle(px + TILE/2, py + 6, px + TILE/2 - 6, py + 16, px + TILE/2 + 6, py + 16);
       } else if (t === T.SPAWN) {
         g.fillStyle(theme.floorColor, 1);
         g.fillRect(px, py, TILE, TILE);
         g.fillStyle(0x3B82F6, 0.15);
         g.fillRect(px + 2, py + 2, TILE - 4, TILE - 4);
+        // Spawn marker
+        g.lineStyle(1, 0x3B82F6, 0.3);
+        g.strokeCircle(px + TILE/2, py + TILE/2, 8);
       } else if (t === T.TRAP) {
         g.fillStyle(theme.floorColor, 1);
         g.fillRect(px, py, TILE, TILE);
-        g.fillStyle(0xEF4444, 0.12);
-        g.fillRect(px + 6, py + 6, TILE - 12, TILE - 12);
-        // Trap warning marks
-        g.lineStyle(1, 0xEF4444, 0.2);
-        g.lineBetween(px + 8, py + 8, px + TILE - 8, py + TILE - 8);
-        g.lineBetween(px + TILE - 8, py + 8, px + 8, py + TILE - 8);
+        // Warning marks
+        g.lineStyle(1.5, 0xEF4444, 0.25);
+        g.lineBetween(px + 6, py + 6, px + TILE - 6, py + TILE - 6);
+        g.lineBetween(px + TILE - 6, py + 6, px + 6, py + TILE - 6);
+        // Center dot
+        g.fillStyle(0xEF4444, 0.2);
+        g.fillCircle(px + TILE/2, py + TILE/2, 3);
       } else if (t === T.HEAL) {
         g.fillStyle(theme.floorColor, 1);
         g.fillRect(px, py, TILE, TILE);
-        g.fillStyle(0x34D399, 0.12);
-        g.fillRect(px + 6, py + 6, TILE - 12, TILE - 12);
+        // Cross shape
         g.fillStyle(0x34D399, 0.25);
-        g.fillRect(px + TILE/2 - 1, py + 8, 2, TILE - 16);
-        g.fillRect(px + 8, py + TILE/2 - 1, TILE - 16, 2);
+        g.fillRect(px + TILE/2 - 1, py + 6, 2, TILE - 12);
+        g.fillRect(px + 6, py + TILE/2 - 1, TILE - 12, 2);
+        // Glow
+        g.fillStyle(0x34D399, 0.08);
+        g.fillCircle(px + TILE/2, py + TILE/2, 10);
       } else if (t === T.POWER) {
         g.fillStyle(theme.floorColor, 1);
         g.fillRect(px, py, TILE, TILE);
-        g.fillStyle(0xFBBF24, 0.12);
-        g.fillRect(px + 6, py + 6, TILE - 12, TILE - 12);
         // Star shape
         g.fillStyle(0xFBBF24, 0.3);
-        g.fillRect(px + TILE/2 - 1, py + 6, 2, TILE - 12);
-        g.fillRect(px + 6, py + TILE/2 - 1, TILE - 12, 2);
+        g.fillRect(px + TILE/2 - 1, py + 5, 2, TILE - 10);
+        g.fillRect(px + 5, py + TILE/2 - 1, TILE - 10, 2);
+        // Glow
+        g.fillStyle(0xFBBF24, 0.08);
+        g.fillCircle(px + TILE/2, py + TILE/2, 10);
+      } else if (t === T.CRACK) {
+        g.fillStyle(theme.floorColor, 1);
+        g.fillRect(px, py, TILE, TILE);
+        // Crack lines
+        g.lineStyle(1, 0x000000, 0.3);
+        g.lineBetween(px + 4, py + 4, px + 12, py + 16);
+        g.lineBetween(px + 12, py + 16, px + 8, py + TILE - 4);
+      } else if (t === T.MOSS) {
+        g.fillStyle(theme.floorColor, 1);
+        g.fillRect(px, py, TILE, TILE);
+        // Moss patches
+        g.fillStyle(0x2d5a27, 0.25);
+        g.fillCircle(px + 8, py + 8, 4);
+        g.fillCircle(px + TILE - 8, py + TILE - 8, 3);
+        g.fillStyle(0x3a7a33, 0.15);
+        g.fillCircle(px + TILE/2, py + TILE/2, 5);
+      } else if (t === T.RUBBLE) {
+        g.fillStyle(theme.floorColor, 1);
+        g.fillRect(px, py, TILE, TILE);
+        // Rubble stones
+        g.fillStyle(0x333344, 0.4);
+        g.fillCircle(px + 8, py + 10, 3);
+        g.fillCircle(px + 20, py + 8, 2);
+        g.fillCircle(px + 14, py + 20, 4);
+        g.fillCircle(px + 24, py + 18, 2);
+      } else if (t === T.BONES) {
+        g.fillStyle(theme.floorColor, 1);
+        g.fillRect(px, py, TILE, TILE);
+        // Bone shapes
+        g.fillStyle(0xd4c5b0, 0.3);
+        g.fillCircle(px + 8, py + 12, 2);
+        g.fillCircle(px + 24, py + 20, 2);
+        g.lineStyle(2, 0xd4c5b0, 0.2);
+        g.lineBetween(px + 8, py + 12, px + 24, py + 20);
+      } else if (t === T.TORCH) {
+        g.fillStyle(theme.floorColor, 1);
+        g.fillRect(px, py, TILE, TILE);
+        // Torch bracket
+        g.lineStyle(2, 0x666666, 0.4);
+        g.lineBetween(px + TILE/2, py + 4, px + TILE/2, py + 14);
+        // Flame
+        const flicker = Math.sin(Date.now() * 0.01 + x) * 0.1;
+        g.fillStyle(0xFF6B35, 0.5 + flicker);
+        g.fillCircle(px + TILE/2, py + 6, 4);
+        g.fillStyle(0xFBBF24, 0.3 + flicker);
+        g.fillCircle(px + TILE/2, py + 5, 3);
+        // Light glow
+        g.fillStyle(0xFF6B35, 0.04);
+        g.fillCircle(px + TILE/2, py + TILE/2, 20);
+      } else if (t === T.CHEST) {
+        g.fillStyle(theme.floorColor, 1);
+        g.fillRect(px, py, TILE, TILE);
+        // Chest body
+        g.fillStyle(0x8B6914, 0.6);
+        g.fillRect(px + 6, py + 10, TILE - 12, TILE - 14);
+        // Chest lid
+        g.fillStyle(0xA07818, 0.7);
+        g.fillRect(px + 6, py + 8, TILE - 12, 6);
+        // Lock
+        g.fillStyle(0xFBBF24, 0.5);
+        g.fillCircle(px + TILE/2, py + 14, 2);
+      } else if (t === T.SAVE) {
+        g.fillStyle(theme.floorColor, 1);
+        g.fillRect(px, py, TILE, TILE);
+        // Save point — glowing diamond
+        const savePulse = 0.3 + Math.sin(Date.now() * 0.003) * 0.15;
+        g.fillStyle(0x22D3EE, savePulse);
+        g.fillCircle(px + TILE/2, py + TILE/2, 8);
+        g.fillStyle(0x22D3EE, savePulse * 0.5);
+        g.fillCircle(px + TILE/2, py + TILE/2, 12);
+      } else if (t === T.DOOR_FRAME) {
+        g.fillStyle(theme.floorColor, 1);
+        g.fillRect(px, py, TILE, TILE);
+        // Door frame
+        g.fillStyle(0x444455, 0.3);
+        g.fillRect(px + 2, py + 2, TILE - 4, TILE - 4);
+        g.lineStyle(1, 0x555566, 0.2);
+        g.strokeRect(px + 2, py + 2, TILE - 4, TILE - 4);
+      } else if (t === T.BLOOD) {
+        g.fillStyle(theme.floorColor, 1);
+        g.fillRect(px, py, TILE, TILE);
+        // Blood stains
+        g.fillStyle(0x8B0000, 0.25);
+        g.fillCircle(px + 10, py + 12, 5);
+        g.fillCircle(px + 20, py + 18, 3);
+        g.fillCircle(px + 16, py + 8, 4);
+      } else if (t === T.WRITING) {
+        g.fillStyle(theme.floorColor, 1);
+        g.fillRect(px, py, TILE, TILE);
+        // Wall writing
+        g.lineStyle(1, 0xAA0000, 0.3);
+        g.lineBetween(px + 4, py + 8, px + 12, py + 8);
+        g.lineBetween(px + 6, py + 12, px + 18, py + 12);
+        g.lineBetween(px + 8, py + 16, px + 16, py + 16);
+      } else if (t === T.CARPET) {
+        g.fillStyle(0x2a1a1a, 0.8);
+        g.fillRect(px, py, TILE, TILE);
+        // Carpet pattern
+        g.lineStyle(1, 0x4a2a2a, 0.3);
+        g.strokeRect(px + 2, py + 2, TILE - 4, TILE - 4);
       }
     }
 
     // Decorations
     dungeon.decorations.forEach(d => {
       const px = d.x * TILE + TILE / 2, py = d.y * TILE + TILE / 2;
-      if (d.type === 0) { g.fillStyle(0xffffff, 0.04); g.fillCircle(px, py, 2); }
-      else if (d.type === 1) { g.lineStyle(1, 0xffffff, 0.03); g.lineBetween(px - 3, py, px + 3, py); }
-      else if (d.type === 2) { g.fillStyle(theme.accent, 0.04); g.fillCircle(px, py, 1.5); }
-      else { g.fillStyle(0xffffff, 0.02); g.fillRect(px - 2, py - 2, 4, 4); }
+      if (d.type === 0) { g.fillStyle(0xffffff, 0.03); g.fillCircle(px, py, 1.5); }
+      else if (d.type === 1) { g.lineStyle(1, 0xffffff, 0.025); g.lineBetween(px - 4, py, px + 4, py); }
+      else if (d.type === 2) { g.fillStyle(theme.accent, 0.03); g.fillCircle(px, py, 1); }
+      else if (d.type === 3) { g.fillStyle(0xffffff, 0.015); g.fillRect(px - 2, py - 2, 4, 4); }
+      else if (d.type === 4) { g.fillStyle(0x333344, 0.2); g.fillCircle(px, py, 2); }
+      else { g.lineStyle(1, 0xffffff, 0.015); g.lineBetween(px - 2, py - 2, px + 2, py + 2); }
     });
 
     // ─── WALLS ───
