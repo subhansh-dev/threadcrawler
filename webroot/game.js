@@ -470,36 +470,18 @@ class GameScene extends Phaser.Scene {
     this.exitZone.body.moves = false;
     this.exitGlow = this.add.circle(dungeon.exit.x * TILE + TILE/2, dungeon.exit.y * TILE + TILE/2, TILE, theme.accent, 0.1);
 
-    // ─── PLAYER ───
+    // ─── PIXEL PLAYER (Undertale-style character) ───
     this.player = this.add.container(dungeon.spawn.x * TILE + TILE/2, dungeon.spawn.y * TILE + TILE/2);
-    // Player body (Undertale-style heart)
     this.playerBody = this.add.graphics();
-    this.drawPlayerHeart(this.playerBody, 0xA882F7);
+    this.drawPixelPlayer(this.playerBody, 0xA882F7);
     this.player.add(this.playerBody);
-    // Player glow
-    this.playerGlow = this.add.circle(0, 0, TILE * 1.5, 0xA882F7, 0.08);
+    this.playerGlow = this.add.circle(0, 0, TILE * 1.2, 0xA882F7, 0.06);
     this.player.add(this.playerGlow);
-    this.player.setSize(18, 18);
+    this.player.setSize(16, 16);
     this.player.setDepth(10);
     this.physics.world.enable(this.player);
     this.player.body.setCollideWorldBounds(true);
     this.physics.add.collider(this.player, this.walls);
-
-    // ─── PIXEL CAT COMPANION (from MewoOS DesktopPet) ───
-    this.cat = this.add.container(this.player.x - 40, this.player.y);
-    this.cat.setDepth(9);
-    this.catTarget = { x: this.player.x - 40, y: this.player.y };
-    this.catFrame = 0;
-    this.catAnimTimer = 0;
-    this.catGfx = this.add.graphics();
-    this.cat.add(this.catGfx);
-    this.drawCat('idle1');
-    // Cat name tag
-    this.catName = this.add.text(0, -18, 'Mewo', {
-      fontSize: '8px', fontFamily: 'Share Tech Mono', color: '#E8829B',
-      align: 'center', stroke: '#000000', strokeThickness: 2
-    }).setOrigin(0.5);
-    this.cat.add(this.catName);
 
     // ─── BULLETS ───
     this.bullets = this.physics.add.group();
@@ -544,68 +526,36 @@ class GameScene extends Phaser.Scene {
     document.getElementById('controls-hint').style.display = 'flex';
   }
 
-  drawPlayerHeart(g, color) {
+  // Pixel art player character (Undertale-style)
+  drawPixelPlayer(g, color) {
     g.clear();
-    g.fillStyle(color, 0.9);
-    g.fillCircle(-4, -3, 5);
-    g.fillCircle(4, -3, 5);
-    g.fillCircle(0, 2, 6);
-    g.fillStyle(0xffffff, 0.3);
-    g.fillCircle(-3, -4, 2);
-  }
-
-  // Pixel cat from MewoOS DesktopPet
-  drawCat(frame) {
-    const g = this.catGfx;
-    g.clear();
-    const P = { 0: 'transparent', 1: '#1a1a24', 2: '#B8C4D0', 3: '#d0dae6', 4: '#1a1a24', 5: '#8899AA', 6: '#e8c8d4', 7: '#6B7B8D', 8: '#dde4ec', 9: '#4a5568' };
-    const frames = {
-      idle1: [
-        [0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],
-        [0,0,0,0,1,1,0,0,0,0,1,1,0,0,0,0],
-        [0,0,0,1,2,7,1,0,0,1,7,2,1,0,0,0],
-        [0,0,0,1,3,2,2,1,1,2,2,3,1,0,0,0],
-        [0,0,1,3,3,2,2,2,2,2,2,3,3,1,0,0],
-        [0,0,1,3,8,4,2,2,2,2,4,8,3,1,0,0],
-        [0,0,1,3,6,4,4,2,2,4,4,6,3,1,0,0],
-        [0,0,1,3,3,2,2,5,5,2,2,3,3,1,0,0],
-        [0,0,1,2,3,3,8,8,8,8,3,3,2,1,0,0],
-        [0,0,1,2,3,8,8,8,8,8,8,3,2,1,0,0],
-        [0,0,1,2,3,3,8,8,8,8,3,3,2,1,7,0],
-        [0,0,1,2,2,3,3,3,3,3,3,2,2,1,7,0],
-        [0,0,0,1,2,2,2,2,2,2,2,2,1,0,0,0],
-        [0,0,0,0,1,1,2,2,2,2,1,1,0,0,0,0],
-        [0,0,0,0,1,0,1,1,1,1,0,1,0,0,0,0],
-        [0,0,0,0,0,1,0,0,0,0,1,0,0,0,0,0],
-      ],
-      idle2: [
-        [0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],
-        [0,0,0,0,1,1,0,0,0,0,1,1,0,0,0,0],
-        [0,0,0,1,2,7,1,0,0,1,7,2,1,0,0,0],
-        [0,0,0,1,3,2,2,1,1,2,2,3,1,0,0,0],
-        [0,0,1,3,3,2,2,2,2,2,2,3,3,1,0,0],
-        [0,0,1,3,8,4,2,2,2,2,4,8,3,1,0,0],
-        [0,0,1,3,6,4,4,2,2,4,4,6,3,1,0,0],
-        [0,0,1,3,3,2,2,5,5,2,2,3,3,1,0,0],
-        [0,0,1,2,3,3,8,8,8,8,3,3,2,1,0,0],
-        [0,0,1,2,3,8,8,8,8,8,8,3,2,1,0,0],
-        [0,0,1,2,3,3,8,8,8,8,3,3,2,1,0,7],
-        [0,0,1,2,2,3,3,3,3,3,3,2,2,7,7,0],
-        [0,0,0,1,2,2,2,2,2,2,2,2,1,0,0,0],
-        [0,0,0,0,1,1,2,2,2,2,1,1,0,0,0,0],
-        [0,0,0,0,1,0,1,1,1,1,0,1,0,0,0,0],
-        [0,0,0,0,0,1,0,0,0,0,1,0,0,0,0,0],
-      ],
-    };
-    const data = frames[frame] || frames.idle1;
-    const ps = 1.5; // pixel size
-    for (let y = 0; y < data.length; y++) {
-      for (let x = 0; x < data[y].length; x++) {
-        if (data[y][x] === 0) continue;
-        const color = P[data[y][x]];
-        if (color === 'transparent') continue;
-        g.fillStyle(Phaser.Display.Color.HexStringToColor(color).color, 1);
-        g.fillRect(x * ps - 12, y * ps - 12, ps, ps);
+    const P = { 0: 'transparent', 1: '#1a1a24', 2: '#B8C4D0', 3: '#d0dae6', 4: '#1a1a24', 5: '#8899AA', 6: '#e8c8d4', 7: '#6B7B8D', 8: '#dde4ec' };
+    const sprite = [
+      [0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],
+      [0,0,0,0,0,1,1,0,0,0,0,1,1,0,0,0],
+      [0,0,0,0,1,2,7,1,0,0,1,7,2,1,0,0],
+      [0,0,0,0,1,3,2,2,1,1,2,2,3,1,0,0],
+      [0,0,0,1,3,3,2,2,2,2,2,2,3,3,1,0],
+      [0,0,0,1,3,8,4,2,2,2,2,4,8,3,1,0],
+      [0,0,0,1,3,6,4,4,2,2,4,4,6,3,1,0],
+      [0,0,0,1,3,3,2,2,5,5,2,2,3,3,1,0],
+      [0,0,0,1,2,3,8,8,8,8,3,3,2,1,0,0],
+      [0,0,0,1,2,3,8,8,8,8,8,3,2,1,0,0],
+      [0,0,0,1,2,3,3,8,8,8,3,3,2,1,0,0],
+      [0,0,0,1,2,2,3,3,3,3,3,2,2,1,0,0],
+      [0,0,0,0,1,2,2,2,2,2,2,2,1,0,0,0],
+      [0,0,0,0,0,1,1,2,2,1,1,0,0,0,0,0],
+      [0,0,0,0,0,1,0,1,1,0,1,0,0,0,0,0],
+      [0,0,0,0,0,0,1,0,0,1,0,0,0,0,0,0],
+    ];
+    const ps = 2;
+    for (let y = 0; y < sprite.length; y++) {
+      for (let x = 0; x < sprite[y].length; x++) {
+        if (sprite[y][x] === 0) continue;
+        const c = P[sprite[y][x]];
+        if (c === 'transparent') continue;
+        g.fillStyle(Phaser.Display.Color.HexStringToColor(c).color, 1);
+        g.fillRect(x * ps - 16, y * ps - 16, ps, ps);
       }
     }
   }
@@ -638,30 +588,6 @@ class GameScene extends Phaser.Scene {
     }
 
     this.player.body.setVelocity(vx * PLAYER_SPEED, vy * PLAYER_SPEED);
-
-    // ─── PIXEL CAT FOLLOW ───
-    if (this.cat) {
-      const catDist = Phaser.Math.Distance.Between(this.cat.x, this.cat.y, this.player.x, this.player.y);
-      if (catDist > TILE * 2) {
-        const catSpeed = 0.08;
-        this.cat.x += (this.player.x - TILE * 1.5 - this.cat.x) * catSpeed;
-        this.cat.y += (this.player.y + 4 - this.cat.y) * catSpeed;
-        this.catAnimTimer += dt * 6;
-        if (this.catAnimTimer > 0.5) {
-          this.catAnimTimer = 0;
-          this.catFrame = this.catFrame === 0 ? 1 : 0;
-          this.drawCat(this.catFrame === 0 ? 'idle1' : 'idle2');
-        }
-      } else {
-        this.cat.y = this.player.y + 4 + Math.sin(time * 0.003) * 2;
-        this.catAnimTimer += dt * 2;
-        if (this.catAnimTimer > 1) {
-          this.catAnimTimer = 0;
-          this.catFrame = this.catFrame === 0 ? 1 : 0;
-          this.drawCat(this.catFrame === 0 ? 'idle1' : 'idle2');
-        }
-      }
-    }
 
     // ─── SHOOTING ───
     if (Phaser.Input.Keyboard.JustDown(this.spaceKey)) this.shoot();
@@ -989,33 +915,79 @@ class GameScene extends Phaser.Scene {
 
     const monster = this.add.container(x * TILE + TILE/2, y * TILE + TILE/2);
 
-    // Monster body — Undertale-style pixel creature
+    // Monster body — pixel art sprite
     const body = this.add.graphics();
-    const s = type.size;
-    // Main body (rounded square)
-    body.fillStyle(type.color, 0.9);
-    body.fillRoundedRect(-s, -s, s * 2, s * 2, 4);
-    // Eyes
-    body.fillStyle(0xffffff, 0.9);
-    body.fillCircle(-s * 0.35, -s * 0.2, s * 0.3);
-    body.fillCircle(s * 0.35, -s * 0.2, s * 0.3);
-    // Pupils
-    body.fillStyle(0x000000, 0.8);
-    body.fillCircle(-s * 0.3, -s * 0.15, s * 0.15);
-    body.fillCircle(s * 0.4, -s * 0.15, s * 0.15);
-    // Mouth
-    body.lineStyle(1.5, 0x000000, 0.5);
-    body.lineBetween(-s * 0.3, s * 0.3, s * 0.3, s * 0.3);
+    const s = 1.2;
+    // Pixel monster sprite
+    const monsterSprites = [
+      // Shadow - simple ghost shape
+      [
+        [0,0,0,1,1,1,0,0],
+        [0,0,1,2,2,2,1,0],
+        [0,1,2,8,2,8,2,1],
+        [0,1,2,2,2,2,2,1],
+        [0,1,2,2,5,2,2,1],
+        [0,1,1,2,2,2,1,1],
+        [0,0,1,1,1,1,1,0],
+        [0,0,0,1,0,1,0,0],
+      ],
+      // Wraith - floating specter
+      [
+        [0,0,1,1,1,1,0,0],
+        [0,1,2,8,8,2,1,0],
+        [0,1,2,2,2,2,1,0],
+        [0,1,5,2,2,5,1,0],
+        [0,1,2,2,2,2,1,0],
+        [0,1,1,2,2,1,1,0],
+        [0,1,0,1,1,0,1,0],
+        [0,0,1,0,0,1,0,0],
+      ],
+      // Stalker - eye creature
+      [
+        [0,0,1,1,1,1,0,0],
+        [0,1,2,2,2,2,1,0],
+        [1,2,8,4,4,8,2,1],
+        [1,2,2,5,5,2,2,1],
+        [1,2,2,2,2,2,2,1],
+        [0,1,2,2,2,2,1,0],
+        [0,0,1,1,1,1,0,0],
+        [0,0,0,1,1,0,0,0],
+      ],
+      // Void - dark blob
+      [
+        [0,0,0,1,1,0,0,0],
+        [0,0,1,3,3,1,0,0],
+        [0,1,3,8,8,3,1,0],
+        [1,3,3,3,3,3,3,1],
+        [1,3,5,3,3,5,3,1],
+        [0,1,3,3,3,3,1,0],
+        [0,0,1,1,1,1,0,0],
+        [0,0,0,0,0,0,0,0],
+      ],
+    ];
+    const spriteIdx = Math.min(Math.floor(state.depth / 2), monsterSprites.length - 1);
+    const sprite = monsterSprites[spriteIdx];
+    const ps = 2;
+
+    for (let sy = 0; sy < sprite.length; sy++) {
+      for (let sx = 0; sx < sprite[sy].length; sx++) {
+        if (sprite[sy][sx] === 0) continue;
+        const colorMap = { 1: 0x1a1a24, 2: type.color, 3: 0x4C1D95, 4: 0x000000, 5: 0x000000, 8: 0xffffff };
+        const c = colorMap[sprite[sy][sx]] || type.color;
+        body.fillStyle(c, 0.9);
+        body.fillRect(sx * ps - 8, sy * ps - 8, ps, ps);
+      }
+    }
     monster.add(body);
 
     // Monster glow
-    const glow = this.add.circle(0, 0, s * 2, type.color, 0.08);
+    const glow = this.add.circle(0, 0, 14, type.color, 0.08);
     monster.add(glow);
 
     // Monster name tag
-    const nameTag = this.add.text(0, -s - 10, type.name, {
-      fontSize: '8px', fontFamily: 'Share Tech Mono', color: '#' + type.color.toString(16).padStart(6, '0'),
-      align: 'center'
+    const nameTag = this.add.text(0, -14, type.name, {
+      fontSize: '7px', fontFamily: 'Share Tech Mono', color: '#' + type.color.toString(16).padStart(6, '0'),
+      align: 'center', stroke: '#000000', strokeThickness: 1
     }).setOrigin(0.5);
     monster.add(nameTag);
 
