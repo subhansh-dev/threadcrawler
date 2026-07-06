@@ -312,133 +312,171 @@ class GameScene extends Phaser.Scene {
       } else if (t === T.TRAP) {
         g.fillStyle(theme.floorColor, 1);
         g.fillRect(px, py, TILE, TILE);
-        // Warning marks
-        g.lineStyle(1.5, 0xEF4444, 0.25);
-        g.lineBetween(px + 6, py + 6, px + TILE - 6, py + TILE - 6);
-        g.lineBetween(px + TILE - 6, py + 6, px + 6, py + TILE - 6);
-        // Center dot
-        g.fillStyle(0xEF4444, 0.2);
-        g.fillCircle(px + TILE/2, py + TILE/2, 3);
+        // Pixel art trap — spike pit
+        g.fillStyle(0x333344, 0.3);
+        g.fillRect(px + 4, py + 4, TILE - 8, TILE - 8);
+        // Spike pixels
+        g.fillStyle(0xEF4444, 0.35);
+        g.fillRect(px + 8, py + 6, 2, 6);
+        g.fillRect(px + 14, py + 8, 2, 6);
+        g.fillRect(px + 20, py + 6, 2, 6);
+        g.fillRect(px + 11, py + 10, 2, 5);
+        g.fillRect(px + 17, py + 10, 2, 5);
+        // Blood drops
+        g.fillStyle(0x8B0000, 0.25);
+        g.fillRect(px + 10, py + 14, 2, 2);
+        g.fillRect(px + 16, py + 16, 2, 2);
       } else if (t === T.HEAL) {
         g.fillStyle(theme.floorColor, 1);
         g.fillRect(px, py, TILE, TILE);
-        // Cross shape
-        g.fillStyle(0x34D399, 0.25);
-        g.fillRect(px + TILE/2 - 1, py + 6, 2, TILE - 12);
-        g.fillRect(px + 6, py + TILE/2 - 1, TILE - 12, 2);
-        // Glow
-        g.fillStyle(0x34D399, 0.08);
-        g.fillCircle(px + TILE/2, py + TILE/2, 10);
+        // Pixel art heal — heart
+        g.fillStyle(0x34D399, 0.4);
+        g.fillRect(px + 10, py + 8, 4, 3);
+        g.fillRect(px + 16, py + 8, 4, 3);
+        g.fillRect(px + 8, py + 10, 16, 4);
+        g.fillRect(px + 10, py + 14, 12, 3);
+        g.fillRect(px + 12, py + 17, 8, 3);
+        g.fillRect(px + 14, py + 20, 4, 2);
+        // Glow pixels
+        g.fillStyle(0x34D399, 0.15);
+        g.fillRect(px + 6, py + 6, 2, 2);
+        g.fillRect(px + 22, py + 6, 2, 2);
+        g.fillRect(px + 6, py + 22, 2, 2);
+        g.fillRect(px + 22, py + 22, 2, 2);
       } else if (t === T.POWER) {
         g.fillStyle(theme.floorColor, 1);
         g.fillRect(px, py, TILE, TILE);
-        // Star shape
-        g.fillStyle(0xFBBF24, 0.3);
-        g.fillRect(px + TILE/2 - 1, py + 5, 2, TILE - 10);
-        g.fillRect(px + 5, py + TILE/2 - 1, TILE - 10, 2);
-        // Glow
-        g.fillStyle(0xFBBF24, 0.08);
-        g.fillCircle(px + TILE/2, py + TILE/2, 10);
-      } else if (t === T.CRACK) {
-        g.fillStyle(theme.floorColor, 1);
-        g.fillRect(px, py, TILE, TILE);
-        // Crack lines
-        g.lineStyle(1, 0x000000, 0.3);
-        g.lineBetween(px + 4, py + 4, px + 12, py + 16);
-        g.lineBetween(px + 12, py + 16, px + 8, py + TILE - 4);
-      } else if (t === T.MOSS) {
-        g.fillStyle(theme.floorColor, 1);
-        g.fillRect(px, py, TILE, TILE);
-        // Moss patches
-        g.fillStyle(0x2d5a27, 0.25);
-        g.fillCircle(px + 8, py + 8, 4);
-        g.fillCircle(px + TILE - 8, py + TILE - 8, 3);
-        g.fillStyle(0x3a7a33, 0.15);
-        g.fillCircle(px + TILE/2, py + TILE/2, 5);
-      } else if (t === T.RUBBLE) {
-        g.fillStyle(theme.floorColor, 1);
-        g.fillRect(px, py, TILE, TILE);
-        // Rubble stones
-        g.fillStyle(0x333344, 0.4);
-        g.fillCircle(px + 8, py + 10, 3);
-        g.fillCircle(px + 20, py + 8, 2);
-        g.fillCircle(px + 14, py + 20, 4);
-        g.fillCircle(px + 24, py + 18, 2);
-      } else if (t === T.BONES) {
-        g.fillStyle(theme.floorColor, 1);
-        g.fillRect(px, py, TILE, TILE);
-        // Bone shapes
-        g.fillStyle(0xd4c5b0, 0.3);
-        g.fillCircle(px + 8, py + 12, 2);
-        g.fillCircle(px + 24, py + 20, 2);
-        g.lineStyle(2, 0xd4c5b0, 0.2);
-        g.lineBetween(px + 8, py + 12, px + 24, py + 20);
-      } else if (t === T.TORCH) {
-        g.fillStyle(theme.floorColor, 1);
-        g.fillRect(px, py, TILE, TILE);
-        // Torch bracket
-        g.lineStyle(2, 0x666666, 0.4);
-        g.lineBetween(px + TILE/2, py + 4, px + TILE/2, py + 14);
-        // Flame
-        const flicker = Math.sin(Date.now() * 0.01 + x) * 0.1;
-        g.fillStyle(0xFF6B35, 0.5 + flicker);
-        g.fillCircle(px + TILE/2, py + 6, 4);
-        g.fillStyle(0xFBBF24, 0.3 + flicker);
-        g.fillCircle(px + TILE/2, py + 5, 3);
-        // Light glow
-        g.fillStyle(0xFF6B35, 0.04);
-        g.fillCircle(px + TILE/2, py + TILE/2, 20);
-      } else if (t === T.CHEST) {
-        g.fillStyle(theme.floorColor, 1);
-        g.fillRect(px, py, TILE, TILE);
-        // Chest body
-        g.fillStyle(0x8B6914, 0.6);
-        g.fillRect(px + 6, py + 10, TILE - 12, TILE - 14);
-        // Chest lid
-        g.fillStyle(0xA07818, 0.7);
-        g.fillRect(px + 6, py + 8, TILE - 12, 6);
-        // Lock
-        g.fillStyle(0xFBBF24, 0.5);
-        g.fillCircle(px + TILE/2, py + 14, 2);
+        // Pixel art power — star
+        g.fillStyle(0xFBBF24, 0.45);
+        g.fillRect(px + 14, py + 6, 4, 4);
+        g.fillRect(px + 10, py + 10, 12, 4);
+        g.fillRect(px + 8, py + 14, 16, 4);
+        g.fillRect(px + 10, py + 18, 4, 3);
+        g.fillRect(px + 18, py + 18, 4, 3);
+        // Sparkle pixels
+        g.fillStyle(0xFBBF24, 0.2);
+        g.fillRect(px + 6, py + 8, 2, 2);
+        g.fillRect(px + 24, py + 8, 2, 2);
+        g.fillRect(px + 14, py + 4, 2, 2);
       } else if (t === T.SAVE) {
         g.fillStyle(theme.floorColor, 1);
         g.fillRect(px, py, TILE, TILE);
-        // Save point — glowing diamond
-        const savePulse = 0.3 + Math.sin(Date.now() * 0.003) * 0.15;
-        g.fillStyle(0x22D3EE, savePulse);
-        g.fillCircle(px + TILE/2, py + TILE/2, 8);
-        g.fillStyle(0x22D3EE, savePulse * 0.5);
-        g.fillCircle(px + TILE/2, py + TILE/2, 12);
-      } else if (t === T.DOOR_FRAME) {
+        // Pixel art save point — crystal
+        const sp = 0.25 + Math.sin(Date.now() * 0.004) * 0.15;
+        g.fillStyle(0x22D3EE, sp);
+        g.fillRect(px + 12, py + 6, 8, 4);
+        g.fillRect(px + 10, py + 10, 12, 6);
+        g.fillRect(px + 12, py + 16, 8, 4);
+        g.fillRect(px + 14, py + 20, 4, 3);
+        // Glow pixels
+        g.fillStyle(0x22D3EE, sp * 0.4);
+        g.fillRect(px + 8, py + 8, 2, 2);
+        g.fillRect(px + 22, py + 8, 2, 2);
+        g.fillRect(px + 14, py + 4, 2, 2);
+      } else if (t === T.CHEST) {
         g.fillStyle(theme.floorColor, 1);
         g.fillRect(px, py, TILE, TILE);
-        // Door frame
-        g.fillStyle(0x444455, 0.3);
-        g.fillRect(px + 2, py + 2, TILE - 4, TILE - 4);
-        g.lineStyle(1, 0x555566, 0.2);
-        g.strokeRect(px + 2, py + 2, TILE - 4, TILE - 4);
+        // Pixel art chest
+        g.fillStyle(0x8B6914, 0.7);
+        g.fillRect(px + 6, py + 12, 20, 14);
+        g.fillStyle(0xA07818, 0.8);
+        g.fillRect(px + 6, py + 8, 20, 6);
+        // Lock
+        g.fillStyle(0xFBBF24, 0.6);
+        g.fillRect(px + 14, py + 12, 4, 4);
+        g.fillRect(px + 15, py + 16, 2, 3);
+        // Metal bands
+        g.fillStyle(0x555555, 0.3);
+        g.fillRect(px + 6, py + 14, 20, 1);
+        g.fillRect(px + 6, py + 20, 20, 1);
       } else if (t === T.BLOOD) {
         g.fillStyle(theme.floorColor, 1);
         g.fillRect(px, py, TILE, TILE);
-        // Blood stains
-        g.fillStyle(0x8B0000, 0.25);
-        g.fillCircle(px + 10, py + 12, 5);
-        g.fillCircle(px + 20, py + 18, 3);
-        g.fillCircle(px + 16, py + 8, 4);
+        // Pixel blood splatter
+        g.fillStyle(0x8B0000, 0.3);
+        g.fillRect(px + 8, py + 10, 4, 3);
+        g.fillRect(px + 12, py + 12, 3, 2);
+        g.fillRect(px + 18, py + 8, 3, 4);
+        g.fillRect(px + 10, py + 16, 5, 3);
+        g.fillRect(px + 16, py + 18, 3, 2);
+        g.fillStyle(0x660000, 0.2);
+        g.fillRect(px + 14, py + 14, 2, 2);
+        g.fillRect(px + 20, py + 14, 2, 2);
       } else if (t === T.WRITING) {
         g.fillStyle(theme.floorColor, 1);
         g.fillRect(px, py, TILE, TILE);
-        // Wall writing
-        g.lineStyle(1, 0xAA0000, 0.3);
-        g.lineBetween(px + 4, py + 8, px + 12, py + 8);
-        g.lineBetween(px + 6, py + 12, px + 18, py + 12);
-        g.lineBetween(px + 8, py + 16, px + 16, py + 16);
-      } else if (t === T.CARPET) {
-        g.fillStyle(0x2a1a1a, 0.8);
+        // Pixel writing on wall
+        g.fillStyle(0xAA0000, 0.3);
+        g.fillRect(px + 6, py + 8, 8, 2);
+        g.fillRect(px + 8, py + 12, 12, 2);
+        g.fillRect(px + 6, py + 16, 10, 2);
+        g.fillRect(px + 10, py + 20, 6, 2);
+      } else if (t === T.BONES) {
+        g.fillStyle(theme.floorColor, 1);
         g.fillRect(px, py, TILE, TILE);
-        // Carpet pattern
-        g.lineStyle(1, 0x4a2a2a, 0.3);
-        g.strokeRect(px + 2, py + 2, TILE - 4, TILE - 4);
+        // Pixel bones
+        g.fillStyle(0xd4c5b0, 0.35);
+        g.fillRect(px + 8, py + 12, 16, 2);
+        g.fillRect(px + 6, py + 10, 2, 6);
+        g.fillRect(px + 22, py + 10, 2, 6);
+        g.fillRect(px + 18, py + 18, 12, 2);
+        g.fillRect(px + 16, py + 16, 2, 6);
+        g.fillRect(px + 28, py + 16, 2, 6);
+      } else if (t === T.TORCH) {
+        g.fillStyle(theme.floorColor, 1);
+        g.fillRect(px, py, TILE, TILE);
+        // Pixel torch bracket
+        g.fillStyle(0x666666, 0.5);
+        g.fillRect(px + 14, py + 14, 4, 12);
+        g.fillRect(px + 12, py + 24, 8, 2);
+        // Flame pixels
+        const flicker = Math.sin(Date.now() * 0.012 + x) * 0.12;
+        g.fillStyle(0xFF6B35, 0.55 + flicker);
+        g.fillRect(px + 13, py + 6, 6, 8);
+        g.fillRect(px + 11, py + 8, 2, 4);
+        g.fillRect(px + 19, py + 8, 2, 4);
+        g.fillStyle(0xFBBF24, 0.4 + flicker);
+        g.fillRect(px + 14, py + 4, 4, 4);
+        g.fillRect(px + 15, py + 2, 2, 4);
+        // Light glow
+        g.fillStyle(0xFF6B35, 0.03);
+        g.fillCircle(px + TILE/2, py + TILE/2, 24);
+      } else if (t === T.MOSS) {
+        g.fillStyle(theme.floorColor, 1);
+        g.fillRect(px, py, TILE, TILE);
+        // Pixel moss
+        g.fillStyle(0x2d5a27, 0.35);
+        g.fillRect(px + 6, py + 8, 4, 3);
+        g.fillRect(px + 10, py + 10, 3, 2);
+        g.fillRect(px + 20, py + 6, 4, 4);
+        g.fillStyle(0x3a7a33, 0.25);
+        g.fillRect(px + 14, py + 14, 5, 3);
+        g.fillRect(px + 8, py + 20, 3, 2);
+        g.fillRect(px + 22, py + 18, 4, 3);
+      } else if (t === T.CRACK) {
+        g.fillStyle(theme.floorColor, 1);
+        g.fillRect(px, py, TILE, TILE);
+        // Pixel crack
+        g.fillStyle(0x000000, 0.35);
+        g.fillRect(px + 6, py + 4, 2, 2);
+        g.fillRect(px + 8, py + 6, 2, 2);
+        g.fillRect(px + 10, py + 8, 2, 4);
+        g.fillRect(px + 12, py + 12, 2, 2);
+        g.fillRect(px + 10, py + 14, 2, 4);
+        g.fillRect(px + 8, py + 18, 2, 4);
+      } else if (t === T.RUBBLE) {
+        g.fillStyle(theme.floorColor, 1);
+        g.fillRect(px, py, TILE, TILE);
+        // Pixel rubble
+        g.fillStyle(0x333344, 0.45);
+        g.fillRect(px + 6, py + 10, 5, 4);
+        g.fillRect(px + 14, py + 8, 4, 3);
+        g.fillRect(px + 10, py + 18, 6, 5);
+        g.fillRect(px + 20, py + 16, 3, 3);
+        g.fillRect(px + 22, py + 20, 4, 3);
+        g.fillStyle(0x222233, 0.3);
+        g.fillRect(px + 8, py + 14, 3, 3);
+        g.fillRect(px + 18, py + 12, 2, 2);
       }
     }
 
@@ -915,79 +953,128 @@ class GameScene extends Phaser.Scene {
 
     const monster = this.add.container(x * TILE + TILE/2, y * TILE + TILE/2);
 
-    // Monster body — pixel art sprite
+    // Monster body — 16x16 pixel sprites like the player
     const body = this.add.graphics();
-    const s = 1.2;
-    // Pixel monster sprite
     const monsterSprites = [
-      // Shadow - simple ghost shape
+      // Shadow Ghost — floating specter with hollow eyes
       [
-        [0,0,0,1,1,1,0,0],
-        [0,0,1,2,2,2,1,0],
-        [0,1,2,8,2,8,2,1],
-        [0,1,2,2,2,2,2,1],
-        [0,1,2,2,5,2,2,1],
-        [0,1,1,2,2,2,1,1],
-        [0,0,1,1,1,1,1,0],
-        [0,0,0,1,0,1,0,0],
+        [0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],
+        [0,0,0,0,0,1,1,1,1,1,1,0,0,0,0,0],
+        [0,0,0,0,1,2,2,2,2,2,2,1,0,0,0,0],
+        [0,0,0,1,2,3,3,2,2,3,3,2,1,0,0,0],
+        [0,0,1,2,3,8,4,2,2,4,8,3,2,1,0,0],
+        [0,0,1,2,3,6,4,4,2,4,6,3,2,1,0,0],
+        [0,0,1,2,3,3,2,2,5,2,3,3,2,1,0,0],
+        [0,0,1,2,3,3,2,2,3,2,3,3,2,1,0,0],
+        [0,0,1,2,2,2,2,2,2,2,2,2,2,1,0,0],
+        [0,0,0,1,2,2,2,2,2,2,2,2,1,0,0,0],
+        [0,0,0,1,1,2,2,2,2,2,2,1,1,0,0,0],
+        [0,0,0,0,1,1,2,2,2,2,1,1,0,0,0,0],
+        [0,0,0,0,0,1,1,1,1,1,1,0,0,0,0,0],
+        [0,0,0,0,1,0,1,0,0,1,0,1,0,0,0,0],
+        [0,0,0,1,0,0,0,1,1,0,0,0,1,0,0,0],
+        [0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],
       ],
-      // Wraith - floating specter
+      // Wraith — armored specter with crown
       [
-        [0,0,1,1,1,1,0,0],
-        [0,1,2,8,8,2,1,0],
-        [0,1,2,2,2,2,1,0],
-        [0,1,5,2,2,5,1,0],
-        [0,1,2,2,2,2,1,0],
-        [0,1,1,2,2,1,1,0],
-        [0,1,0,1,1,0,1,0],
-        [0,0,1,0,0,1,0,0],
+        [0,0,0,0,1,0,0,1,1,0,0,1,0,0,0,0],
+        [0,0,0,1,2,1,0,1,1,0,1,2,1,0,0,0],
+        [0,0,0,1,2,2,1,1,1,1,2,2,1,0,0,0],
+        [0,0,1,2,3,3,2,2,2,2,3,3,2,1,0,0],
+        [0,0,1,2,8,4,2,2,2,2,4,8,2,1,0,0],
+        [0,0,1,2,6,4,4,2,2,4,4,6,2,1,0,0],
+        [0,0,1,2,3,3,2,5,5,2,3,3,2,1,0,0],
+        [0,0,1,2,3,3,2,3,3,2,3,3,2,1,0,0],
+        [0,0,1,2,2,3,3,3,3,3,3,2,2,1,0,0],
+        [0,0,1,2,2,3,3,3,3,3,3,2,2,1,0,0],
+        [0,0,0,1,2,2,3,3,3,3,2,2,1,0,0,0],
+        [0,0,0,1,2,2,2,2,2,2,2,2,1,0,0,0],
+        [0,0,0,0,1,1,2,2,2,2,1,1,0,0,0,0],
+        [0,0,0,0,1,0,1,1,1,1,0,1,0,0,0,0],
+        [0,0,0,0,0,1,0,0,0,0,1,0,0,0,0,0],
+        [0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],
       ],
-      // Stalker - eye creature
+      // Stalker — one-eyed creature with tentacles
       [
-        [0,0,1,1,1,1,0,0],
-        [0,1,2,2,2,2,1,0],
-        [1,2,8,4,4,8,2,1],
-        [1,2,2,5,5,2,2,1],
-        [1,2,2,2,2,2,2,1],
-        [0,1,2,2,2,2,1,0],
-        [0,0,1,1,1,1,0,0],
-        [0,0,0,1,1,0,0,0],
+        [0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],
+        [0,0,0,0,0,0,1,1,1,1,0,0,0,0,0,0],
+        [0,0,0,0,0,1,2,2,2,2,1,0,0,0,0,0],
+        [0,0,0,0,1,2,3,3,3,3,2,1,0,0,0,0],
+        [0,0,0,1,2,8,4,8,8,4,8,2,1,0,0,0],
+        [0,0,0,1,2,4,5,4,4,5,4,2,1,0,0,0],
+        [0,0,0,1,2,3,3,3,3,3,3,2,1,0,0,0],
+        [0,0,0,1,2,2,2,3,3,2,2,2,1,0,0,0],
+        [0,0,0,1,2,2,2,2,2,2,2,2,1,0,0,0],
+        [0,0,0,0,1,2,2,2,2,2,2,1,0,0,0,0],
+        [0,0,0,1,0,1,2,2,2,2,1,0,1,0,0,0],
+        [0,0,1,0,0,0,1,1,1,1,0,0,0,1,0,0],
+        [0,1,0,0,0,0,0,1,1,0,0,0,0,0,1,0],
+        [0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],
+        [0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],
+        [0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],
       ],
-      // Void - dark blob
+      // Void Blob — amorphous dark mass with glowing eyes
       [
-        [0,0,0,1,1,0,0,0],
-        [0,0,1,3,3,1,0,0],
-        [0,1,3,8,8,3,1,0],
-        [1,3,3,3,3,3,3,1],
-        [1,3,5,3,3,5,3,1],
-        [0,1,3,3,3,3,1,0],
-        [0,0,1,1,1,1,0,0],
-        [0,0,0,0,0,0,0,0],
+        [0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],
+        [0,0,0,0,0,1,1,1,1,1,1,0,0,0,0,0],
+        [0,0,0,0,1,3,3,3,3,3,3,1,0,0,0,0],
+        [0,0,0,1,3,3,8,8,8,8,3,3,1,0,0,0],
+        [0,0,1,3,3,8,4,3,3,4,8,3,3,1,0,0],
+        [0,0,1,3,3,3,3,5,5,3,3,3,3,1,0,0],
+        [0,0,1,3,3,3,3,3,3,3,3,3,3,1,0,0],
+        [0,0,1,3,3,3,3,3,3,3,3,3,3,1,0,0],
+        [0,0,0,1,3,3,3,3,3,3,3,3,1,0,0,0],
+        [0,0,0,1,3,3,3,3,3,3,3,3,1,0,0,0],
+        [0,0,0,0,1,3,3,3,3,3,3,1,0,0,0,0],
+        [0,0,0,0,1,1,3,3,3,3,1,1,0,0,0,0],
+        [0,0,0,0,0,1,1,1,1,1,1,0,0,0,0,0],
+        [0,0,0,0,1,0,1,0,0,1,0,1,0,0,0,0],
+        [0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],
+        [0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],
+      ],
+      // Crawler — multi-legged insect (floor 5+)
+      [
+        [0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],
+        [0,0,0,0,1,1,1,1,1,1,1,1,0,0,0,0],
+        [0,0,0,1,2,2,2,2,2,2,2,2,1,0,0,0],
+        [0,0,1,2,3,8,4,2,2,4,8,3,2,1,0,0],
+        [0,0,1,2,3,4,5,2,2,5,4,3,2,1,0,0],
+        [0,0,1,2,3,3,2,2,2,2,3,3,2,1,0,0],
+        [0,0,1,2,2,3,3,2,2,3,3,2,2,1,0,0],
+        [0,0,1,2,2,2,2,2,2,2,2,2,2,1,0,0],
+        [0,1,0,1,2,2,2,2,2,2,2,2,1,0,1,0],
+        [1,0,0,0,1,2,2,2,2,2,2,1,0,0,0,1],
+        [0,0,0,1,0,1,1,1,1,1,1,0,1,0,0,0],
+        [0,0,1,0,0,0,1,0,0,1,0,0,0,1,0,0],
+        [0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],
+        [0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],
+        [0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],
+        [0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],
       ],
     ];
     const spriteIdx = Math.min(Math.floor(state.depth / 2), monsterSprites.length - 1);
     const sprite = monsterSprites[spriteIdx];
+    const colorMap = { 1: 0x1a1a24, 2: type.color, 3: 0x4C1D95, 4: 0x000000, 5: 0x000000, 8: 0xffffff };
     const ps = 2;
 
     for (let sy = 0; sy < sprite.length; sy++) {
       for (let sx = 0; sx < sprite[sy].length; sx++) {
         if (sprite[sy][sx] === 0) continue;
-        const colorMap = { 1: 0x1a1a24, 2: type.color, 3: 0x4C1D95, 4: 0x000000, 5: 0x000000, 8: 0xffffff };
         const c = colorMap[sprite[sy][sx]] || type.color;
         body.fillStyle(c, 0.9);
-        body.fillRect(sx * ps - 8, sy * ps - 8, ps, ps);
+        body.fillRect(sx * ps - 16, sy * ps - 16, ps, ps);
       }
     }
     monster.add(body);
 
     // Monster glow
-    const glow = this.add.circle(0, 0, 14, type.color, 0.08);
+    const glow = this.add.circle(0, 0, 16, type.color, 0.06);
     monster.add(glow);
 
     // Monster name tag
-    const nameTag = this.add.text(0, -14, type.name, {
+    const nameTag = this.add.text(0, -18, type.name, {
       fontSize: '7px', fontFamily: 'Share Tech Mono', color: '#' + type.color.toString(16).padStart(6, '0'),
-      align: 'center', stroke: '#000000', strokeThickness: 1
+      align: 'center', stroke: '#000000', strokeThickness: 2
     }).setOrigin(0.5);
     monster.add(nameTag);
 
