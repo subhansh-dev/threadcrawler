@@ -584,9 +584,16 @@ class GameScene extends Phaser.Scene {
     const hp = monster.getData('hp') - state.player.atk;
     monster.setData('hp', hp);
 
-    // Hit flash
-    monster.setTint(0xffffff);
-    this.time.delayedCall(80, () => { if (monster.active) monster.clearTint(); });
+    // Hit flash — Container doesn't have setTint, tint the first child
+    const child = monster.getAt(0);
+    if (child && child.setTint) {
+      child.setTint(0xffffff);
+      this.time.delayedCall(80, () => { if (child.active) child.clearTint(); });
+    } else {
+      // Fallback: flash alpha
+      monster.setAlpha(0.3);
+      this.time.delayedCall(80, () => { if (monster.active) monster.setAlpha(0.8); });
+    }
 
     // Hit particles
     for (let i = 0; i < 8; i++) {
@@ -688,24 +695,45 @@ class GameScene extends Phaser.Scene {
 
     const theme = THEMES[state.floorTheme % THEMES.length];
     const monsterTypes = [
-      { name: 'Shadow', color: 0x6B21A8, hp: 25, speed: 45, damage: 8 },
-      { name: 'Wraith', color: 0x7C3AED, hp: 35, speed: 55, damage: 12 },
-      { name: 'Stalker', color: 0xA855F7, hp: 45, speed: 40, damage: 15 },
-      { name: 'Void', color: 0x4C1D95, hp: 55, speed: 50, damage: 18 },
+      { name: 'Shadow', color: 0x6B21A8, hp: 25, speed: 45, damage: 8, size: 10 },
+      { name: 'Wraith', color: 0x7C3AED, hp: 35, speed: 55, damage: 12, size: 11 },
+      { name: 'Stalker', color: 0xA855F7, hp: 45, speed: 40, damage: 15, size: 12 },
+      { name: 'Void', color: 0x4C1D95, hp: 55, speed: 50, damage: 18, size: 13 },
+      { name: 'Crawler', color: 0x581C87, hp: 65, speed: 35, damage: 20, size: 14 },
     ];
     const type = monsterTypes[Math.min(Math.floor(state.depth / 2), monsterTypes.length - 1)];
 
     const monster = this.add.container(x * TILE + TILE/2, y * TILE + TILE/2);
+
+    // Monster body — Undertale-style pixel creature
     const body = this.add.graphics();
-    body.fillStyle(type.color, 0.8);
-    body.fillCircle(0, 0, 10);
-    body.fillStyle(0xffffff, 0.3);
-    body.fillCircle(-2, -3, 3);
+    const s = type.size;
+    // Main body (rounded square)
+    body.fillStyle(type.color, 0.9);
+    body.fillRoundedRect(-s, -s, s * 2, s * 2, 4);
+    // Eyes
+    body.fillStyle(0xffffff, 0.9);
+    body.fillCircle(-s * 0.35, -s * 0.2, s * 0.3);
+    body.fillCircle(s * 0.35, -s * 0.2, s * 0.3);
+    // Pupils
+    body.fillStyle(0x000000, 0.8);
+    body.fillCircle(-s * 0.3, -s * 0.15, s * 0.15);
+    body.fillCircle(s * 0.4, -s * 0.15, s * 0.15);
+    // Mouth
+    body.lineStyle(1.5, 0x000000, 0.5);
+    body.lineBetween(-s * 0.3, s * 0.3, s * 0.3, s * 0.3);
     monster.add(body);
 
     // Monster glow
-    const glow = this.add.circle(0, 0, 18, type.color, 0.1);
+    const glow = this.add.circle(0, 0, s * 2, type.color, 0.08);
     monster.add(glow);
+
+    // Monster name tag
+    const nameTag = this.add.text(0, -s - 10, type.name, {
+      fontSize: '8px', fontFamily: 'Share Tech Mono', color: '#' + type.color.toString(16).padStart(6, '0'),
+      align: 'center'
+    }).setOrigin(0.5);
+    monster.add(nameTag);
 
     monster.setSize(16, 16);
     monster.setData('hp', type.hp + state.depth * 8);

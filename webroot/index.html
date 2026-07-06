@@ -580,17 +580,21 @@
     </div>
 
     <!-- Title Screen -->
-    <div class="glass thread-card" id="title-screen" style="flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;">
-      <div class="start-icon">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" width="36" height="36" style="stroke:var(--sakura)"><path d="M3 21V8l9-5 9 5v13"/><path d="M9 21V13h6v8"/><path d="M12 3v5"/></svg>
+    <div class="glass thread-card" id="title-screen" style="flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;position:relative;overflow:hidden;">
+      <div style="position:absolute;inset:0;background-image:url('start-bg.jpg');background-size:cover;background-position:center;filter:blur(20px) brightness(0.3) saturate(1.3);transform:scale(1.1);"></div>
+      <div style="position:absolute;inset:0;background:radial-gradient(ellipse at 50% 30%, rgba(232,130,155,0.08) 0%, transparent 60%), linear-gradient(180deg, rgba(1,1,3,0.5) 0%, rgba(1,1,3,0.7) 100%);"></div>
+      <div style="position:relative;z-index:2;display:flex;flex-direction:column;align-items:center;">
+        <div class="start-icon">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" width="36" height="36" style="stroke:var(--sakura)"><path d="M3 21V8l9-5 9 5v13"/><path d="M9 21V13h6v8"/><path d="M12 3v5"/></svg>
+        </div>
+        <h1 class="start-title">Dive Into Threads</h1>
+        <p class="start-desc">Every comment is a room. Every reply is a path deeper. Traps lurk in downvoted comments. Heals hide in upvoted ones. Monsters guard the deepest threads.</p>
+        <button class="btn btn-start" onclick="startGame()">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
+          Enter the Dungeon
+        </button>
+        <p class="start-hint">Based on real Reddit thread structure</p>
       </div>
-      <h1 class="start-title">Dive Into Threads</h1>
-      <p class="start-desc">Every comment is a room. Every reply is a path deeper. Traps lurk in downvoted comments. Heals hide in upvoted ones. Monsters guard the deepest threads.</p>
-      <button class="btn btn-start" onclick="startGame()">
-        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
-        Enter the Dungeon
-      </button>
-      <p class="start-hint">Based on real Reddit thread structure</p>
     </div>
 
     <!-- Game Screen -->
