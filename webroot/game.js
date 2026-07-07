@@ -88,11 +88,14 @@ function cellularAutomata(w, h, fill = 0.42, iters = 5) {
 
 // ─── CONSTANTS ───────────────────────────────────────────────
 const TILE = 32;
-const MAP_W = 50;
-const MAP_H = 40;
+const MAP_W = 60;
+const MAP_H = 45;
 const PLAYER_SPEED = 160;
 const BULLET_SPEED = 280;
 const VIEW_RADIUS = 8;
+const BLOCK_SIZE = 32;
+const METATILE_SIZE = 16;
+const SOURCE_TILE_SIZE = 8;
 
 const T = {
   FLOOR: 0, WALL: 1, EXIT: 2, SPAWN: 3, TRAP: 4, HEAL: 5, POWER: 6,
@@ -156,7 +159,488 @@ const THEMES = [
   { name: 'Shadow Realm', wallColor: 0x050508, floorColor: 0x030305, accent: 0xA882F7, ambient: 0.01 },
 ];
 
-// ─── DUNGEON GENERATOR ───────────────────────────────────────
+// ═══════════════════════════════════════════════════════════
+// METATILE SYSTEM — Pokémon-style tile hierarchy
+// ═══════════════════════════════════════════════════════════
+
+const METATILE_COLLISION = {
+  NONE: 'none', SOLID: 'solid', WATER: 'water', TRAP: 'trap',
+  HEAL: 'heal', POWER: 'power', EXIT: 'exit', WARP: 'warp',
+};
+
+function createDefaultTileset() {
+  const ts = { name: 'dungeon', metatiles: [], blocks: [], palettes: [] };
+
+  // ─── PALETTES (4-color groups) ───
+  ts.palettes = [
+    [[0,0,0,0],[0x1a,0x1a,0x2e,255],[0x0d,0x0d,0x1a,255],[0x33,0x33,0x55,255]], // wall
+    [[0,0,0,0],[0x0d,0x0d,0x1a,255],[0x11,0x11,0x22,255],[0x1a,0x1a,0x2e,255]], // floor
+    [[0,0,0,0],[0x0a,0x1a,0x2e,255],[0x22,0xd3,0xee,255],[0x11,0x2a,0x3e,255]], // water
+    [[0,0,0,0],[0x0d,0x0d,0x1a,255],[0xef,0x44,0x44,255],[0x8b,0x00,0x00,255]], // trap
+    [[0,0,0,0],[0x0d,0x0d,0x1a,255],[0x34,0xd3,0x99,255],[0x22,0xc5,0x5e,255]], // heal
+    [[0,0,0,0],[0x0d,0x0d,0x1a,255],[0xfb,0xbf,0x24,255],[0xf5,0x9e,0x0b,255]], // power
+  ];
+
+  // ─── METATILES (16×16, each = 4 source tile IDs in TL,TR,BL,BR order) ───
+  // Wall metatiles
+  ts.metatiles = [
+    { id: 0,  name: 'wall_solid',     tiles: [0,0,0,0], collision: METATILE_COLLISION.SOLID, palette: 0 },
+    { id: 1,  name: 'wall_top',       tiles: [1,1,0,0], collision: METATILE_COLLISION.SOLID, palette: 0 },
+    { id: 2,  name: 'wall_edge_left', tiles: [0,0,2,2], collision: METATILE_COLLISION.SOLID, palette: 0 },
+    { id: 3,  name: 'wall_edge_right',tiles: [0,0,3,3], collision: METATILE_COLLISION.SOLID, palette: 0 },
+    // Floor metatiles
+    { id: 10, name: 'floor_plain',    tiles: [10,10,10,10], collision: METATILE_COLLISION.NONE, palette: 1 },
+    { id: 11, name: 'floor_alt',      tiles: [11,11,11,11], collision: METATILE_COLLISION.NONE, palette: 1 },
+    { id: 12, name: 'floor_crack',    tiles: [10,10,12,12], collision: METATILE_COLLISION.NONE, palette: 1 },
+    { id: 13, name: 'floor_moss',     tiles: [10,13,13,10], collision: METATILE_COLLISION.NONE, palette: 1 },
+    // Water metatiles
+    { id: 20, name: 'water_calm',     tiles: [20,20,20,20], collision: METATILE_COLLISION.WATER, palette: 2 },
+    { id: 21, name: 'water_ripple',   tiles: [20,21,21,20], collision: METATILE_COLLISION.WATER, palette: 2 },
+    // Trap metatiles
+    { id: 30, name: 'trap_spikes',    tiles: [30,30,30,30], collision: METATILE_COLLISION.TRAP, palette: 3 },
+    { id: 31, name: 'trap_blood',     tiles: [30,31,31,30], collision: METATILE_COLLISION.TRAP, palette: 3 },
+    // Heal metatiles
+    { id: 40, name: 'heal_heart',     tiles: [40,40,40,40], collision: METATILE_COLLISION.HEAL, palette: 4 },
+    { id: 41, name: 'heal_glow',      tiles: [40,41,41,40], collision: METATILE_COLLISION.HEAL, palette: 4 },
+    // Power metatiles
+    { id: 50, name: 'power_star',     tiles: [50,50,50,50], collision: METATILE_COLLISION.POWER, palette: 5 },
+    { id: 51, name: 'power_sparkle',  tiles: [50,51,51,50], collision: METATILE_COLLISION.POWER, palette: 5 },
+    // Decorative
+    { id: 60, name: 'rubble',         tiles: [60,60,60,60], collision: METATILE_COLLISION.NONE, palette: 1 },
+    { id: 61, name: 'bones',          tiles: [61,61,61,61], collision: METATILE_COLLISION.NONE, palette: 1 },
+    { id: 62, name: 'torch',          tiles: [62,62,62,62], collision: METATILE_COLLISION.NONE, palette: 1 },
+    { id: 63, name: 'chest',          tiles: [63,63,63,63], collision: METATILE_COLLISION.NONE, palette: 1 },
+    { id: 64, name: 'save_crystal',   tiles: [64,64,64,64], collision: METATILE_COLLISION.NONE, palette: 2 },
+    { id: 65, name: 'carpet',         tiles: [65,65,65,65], collision: METATILE_COLLISION.NONE, palette: 1 },
+    { id: 66, name: 'writing',        tiles: [66,66,66,66], collision: METATILE_COLLISION.NONE, palette: 3 },
+    { id: 67, name: 'door_frame',     tiles: [67,67,67,67], collision: METATILE_COLLISION.SOLID, palette: 0 },
+  ];
+
+  // ─── BLOCKS (32×32, each = 4 metatile IDs TL,TR,BL,BR) ───
+  ts.blocks = [
+    { id: 0,  name: 'solid_wall',     metatiles: [0,0,0,0] },
+    { id: 1,  name: 'wall_room_top',  metatiles: [1,1,0,0] },
+    { id: 2,  name: 'open_floor',     metatiles: [10,10,10,10] },
+    { id: 3,  name: 'mixed_floor',    metatiles: [10,11,12,13] },
+    { id: 4,  name: 'water_pool',     metatiles: [20,20,20,21] },
+    { id: 5,  name: 'trap_room',      metatiles: [10,10,30,31] },
+    { id: 6,  name: 'heal_room',      metatiles: [10,10,40,41] },
+    { id: 7,  name: 'power_room',     metatiles: [10,10,50,51] },
+    { id: 8,  name: 'decor_rubble',   metatiles: [10,10,60,10] },
+    { id: 9,  name: 'decor_bones',    metatiles: [10,10,61,10] },
+    { id: 10, name: 'decor_torch',    metatiles: [62,10,10,62] },
+    { id: 11, name: 'save_block',     metatiles: [10,10,64,10] },
+    { id: 12, name: 'boss_entrance',  metatiles: [67,67,10,10] },
+    { id: 13, name: 'carpet_hall',    metatiles: [65,65,65,65] },
+    { id: 14, name: 'chest_block',    metatiles: [10,10,63,10] },
+  ];
+
+  return ts;
+}
+
+// ═══════════════════════════════════════════════════════════
+// ROOM GRAPH — Reddit thread → dungeon topology
+// ═══════════════════════════════════════════════════════════
+
+const ROOM_TYPE = {
+  ENTRANCE: 'entrance', CORRIDOR: 'corridor', CHAMBER: 'chamber',
+  TRAP: 'trap', HEAL: 'heal', POWER: 'power', BOSS: 'boss',
+  SECRET: 'secret', SHOP: 'shop', SAVE: 'save',
+};
+
+function classifyRoomType(comment) {
+  if (comment.depth === 0 && comment.isFirst) return ROOM_TYPE.ENTRANCE;
+  if (comment.isLast) return ROOM_TYPE.BOSS;
+  if (comment.score < -2) return ROOM_TYPE.TRAP;
+  if (comment.score > 50) return ROOM_TYPE.HEAL;
+  if (comment.awards && comment.awards > 0) return ROOM_TYPE.POWER;
+  if (comment.depth > 6) return ROOM_TYPE.SECRET;
+  if (comment.author === 'AutoModerator') return ROOM_TYPE.SHOP;
+  return ROOM_TYPE.CORRIDOR;
+}
+
+function generateRoomGraph(seed, depth) {
+  const rng = mulberry32(seed);
+  const roomCount = 8 + depth * 3 + Math.floor(rng() * 5);
+  const rooms = [];
+
+  for (let i = 0; i < roomCount; i++) {
+    rooms.push({
+      id: `r${depth}_${i}`,
+      author: `user_${Math.floor(rng() * 999)}`,
+      score: Math.floor(rng() * 80) - 10,
+      depth: Math.floor(i / 3),
+      children: [],
+      x: 0, y: 0,
+      width: 0, height: 0,
+      roomType: ROOM_TYPE.CORRIDOR,
+      connections: [],
+      decor: 'plain',
+      tileVariant: 'normal',
+    });
+  }
+
+  // Build tree: each room connects to the next on the critical path
+  for (let i = 0; i < roomCount - 1; i++) {
+    rooms[i].children.push(rooms[i + 1].id);
+    // Some rooms get side branches
+    if (rng() < 0.4 && i + 2 < roomCount) {
+      rooms[i].children.push(rooms[i + 2].id);
+    }
+  }
+
+  // Classify rooms
+  rooms[0].roomType = ROOM_TYPE.ENTRANCE;
+  rooms[roomCount - 1].roomType = ROOM_TYPE.BOSS;
+  for (let i = 2; i < roomCount; i += 3) rooms[i].roomType = ROOM_TYPE.SAVE;
+
+  // Random specials
+  for (let i = 1; i < roomCount - 1; i++) {
+    if (rooms[i].roomType !== ROOM_TYPE.CORRIDOR) continue;
+    const roll = rng();
+    if (roll < 0.08) rooms[i].roomType = ROOM_TYPE.TRAP;
+    else if (roll < 0.15) rooms[i].roomType = ROOM_TYPE.HEAL;
+    else if (roll < 0.20) rooms[i].roomType = ROOM_TYPE.POWER;
+    else if (roll < 0.24) rooms[i].roomType = ROOM_TYPE.SECRET;
+  }
+
+  return rooms;
+}
+
+function mulberry32(a) {
+  return function() {
+    a |= 0; a = a + 0x6D2B79F5 | 0;
+    let t = Math.imul(a ^ a >>> 15, 1 | a);
+    t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t;
+    return ((t ^ t >>> 14) >>> 0) / 4294967296;
+  };
+}
+
+// ═══════════════════════════════════════════════════════════
+// FLOOR LAYOUT — Undertale left→right→upward flow
+// ═══════════════════════════════════════════════════════════
+
+function getFlowDirection(floorNumber) {
+  if (floorNumber <= 2) return 'horizontal';
+  if (floorNumber <= 5) return 'mixed';
+  return 'vertical';
+}
+
+function buildCriticalPath(rooms) {
+  const path = [rooms[0]];
+  let current = rooms[0];
+  const visited = new Set([rooms[0].id]);
+
+  while (current.children.length > 0) {
+    const next = current.children
+      .map(id => rooms.find(r => r.id === id))
+      .filter(r => r && !visited.has(r.id))
+      .sort((a, b) => b.score - a.score)[0];
+    if (!next) break;
+    visited.add(next.id);
+    path.push(next);
+    current = next;
+  }
+  return path;
+}
+
+function layoutFloor(rooms, floorNumber, mapW, mapH) {
+  const flow = getFlowDirection(floorNumber);
+  const criticalPath = buildCriticalPath(rooms);
+  const rng = mulberry32(floorNumber * 7919 + 42);
+
+  const minRoomW = 4, maxRoomW = 8;
+  const minRoomH = 4, maxRoomH = 7;
+
+  // Place critical path rooms left→right (horizontal) or bottom→top (vertical)
+  let x = 3, y = Math.floor(mapH / 2);
+
+  for (let i = 0; i < criticalPath.length; i++) {
+    const room = criticalPath[i];
+    const rw = minRoomW + Math.floor(rng() * (maxRoomW - minRoomW));
+    const rh = minRoomH + Math.floor(rng() * (maxRoomH - minRoomH));
+
+    room.x = x;
+    room.y = y;
+    room.width = rw;
+    room.height = rh;
+
+    if (flow === 'horizontal' || (flow === 'mixed' && rng() < 0.6)) {
+      x += rw + 2 + Math.floor(rng() * 3);
+      y += Math.floor(rng() * 3) - 1;
+    } else {
+      y -= rh + 2 + Math.floor(rng() * 3);
+      x += Math.floor(rng() * 3) - 1;
+    }
+
+    x = Math.max(3, Math.min(mapW - maxRoomW - 3, x));
+    y = Math.max(3, Math.min(mapH - maxRoomH - 3, y));
+  }
+
+  // Attach side rooms to critical path rooms
+  for (const cRoom of criticalPath) {
+    const sideIds = cRoom.children.filter(id => !criticalPath.find(p => p.id === id));
+    for (let i = 0; i < sideIds.length; i++) {
+      const side = rooms.find(r => r.id === sideIds[i]);
+      if (!side) continue;
+      const sw = minRoomW + Math.floor(rng() * 3);
+      const sh = minRoomH + Math.floor(rng() * 3);
+      side.width = sw;
+      side.height = sh;
+
+      const attachNorth = i % 2 === 0;
+      if (attachNorth && cRoom.y > sh + 3) {
+        side.x = cRoom.x + Math.floor(rng() * Math.max(1, cRoom.width - sw));
+        side.y = cRoom.y - sh - 2;
+      } else if (cRoom.y + cRoom.height + sh + 3 < mapH) {
+        side.x = cRoom.x + Math.floor(rng() * Math.max(1, cRoom.width - sw));
+        side.y = cRoom.y + cRoom.height + 2;
+      } else {
+        side.x = cRoom.x + cRoom.width + 2;
+        side.y = cRoom.y + Math.floor(rng() * Math.max(1, cRoom.height - sh));
+      }
+
+      side.connections.push({ targetRoomId: cRoom.id, type: 'door', direction: 'south' });
+    }
+  }
+
+  // Ensure all rooms have positions
+  for (const room of rooms) {
+    if (room.width === 0) {
+      room.width = minRoomW + Math.floor(rng() * 3);
+      room.height = minRoomH + Math.floor(rng() * 3);
+      room.x = 3 + Math.floor(rng() * (mapW - room.width - 6));
+      room.y = 3 + Math.floor(rng() * (mapH - room.height - 6));
+    }
+  }
+
+  return criticalPath;
+}
+
+// ═══════════════════════════════════════════════════════════
+// FLOOR GENERATOR — combines room graph + layout + tilemap
+// ═══════════════════════════════════════════════════════════
+
+function generateFloor(seed, depth) {
+  const rng = mulberry32(seed);
+  const tileset = createDefaultTileset();
+  const rooms = generateRoomGraph(seed, depth);
+  const criticalPath = layoutFloor(rooms, depth, MAP_W, MAP_H);
+
+  // Build the 2D tile map
+  const map = Array.from({ length: MAP_H }, () => new Array(MAP_W).fill(0)); // 0 = wall by default
+
+  // Carve rooms into the map
+  for (const room of rooms) {
+    for (let ry = room.y; ry < room.y + room.height && ry < MAP_H; ry++) {
+      for (let rx = room.x; rx < room.x + room.width && rx < MAP_W; rx++) {
+        if (ry >= 0 && rx >= 0) map[ry][rx] = 10; // floor_plain metatile id
+      }
+    }
+  }
+
+  // Connect rooms with corridors (L-shaped paths)
+  for (let i = 0; i < criticalPath.length - 1; i++) {
+    const a = criticalPath[i];
+    const b = criticalPath[i + 1];
+    const ax = Math.floor(a.x + a.width / 2);
+    const ay = Math.floor(a.y + a.height / 2);
+    const bx = Math.floor(b.x + b.width / 2);
+    const by = Math.floor(b.y + b.height / 2);
+
+    // Horizontal then vertical
+    let cx = ax;
+    while (cx !== bx) {
+      if (cx >= 0 && cx < MAP_W && ay >= 0 && ay < MAP_H) map[ay][cx] = 10;
+      cx += cx < bx ? 1 : -1;
+    }
+    let cy = ay;
+    while (cy !== by) {
+      if (bx >= 0 && bx < MAP_W && cy >= 0 && cy < MAP_H) map[cy][bx] = 10;
+      cy += cy < by ? 1 : -1;
+    }
+  }
+
+  // Connect side rooms to their parents
+  for (const room of rooms) {
+    for (const conn of room.connections) {
+      const parent = rooms.find(r => r.id === conn.targetRoomId);
+      if (!parent) continue;
+      const px = Math.floor(parent.x + parent.width / 2);
+      const py = Math.floor(parent.y + parent.height / 2);
+      const rx = Math.floor(room.x + room.width / 2);
+      const ry = Math.floor(room.y + room.height / 2);
+
+      let cx = px;
+      while (cx !== rx) {
+        if (cx >= 0 && cx < MAP_W && py >= 0 && py < MAP_H) map[py][cx] = 10;
+        cx += cx < rx ? 1 : -1;
+      }
+      let cy = py;
+      while (cy !== ry) {
+        if (rx >= 0 && rx < MAP_W && cy >= 0 && cy < MAP_H) map[cy][rx] = 10;
+        cy += cy < ry ? 1 : -1;
+      }
+    }
+  }
+
+  // ─── ROOM DECORATION ───
+  const theme = THEMES[depth % THEMES.length];
+  for (const room of rooms) {
+    // Decorate based on room type
+    for (let ry = room.y; ry < room.y + room.height && ry < MAP_H; ry++) {
+      for (let rx = room.x; rx < room.x + room.width && rx < MAP_W; rx++) {
+        if (ry < 0 || rx < 0 || map[ry][rx] !== 10) continue;
+        const roll = rng();
+
+        switch (room.roomType) {
+          case ROOM_TYPE.TRAP:
+            if (roll < 0.12) map[ry][rx] = 30; // trap_spikes
+            else if (roll < 0.18) map[ry][rx] = 31; // trap_blood
+            break;
+          case ROOM_TYPE.HEAL:
+            if (roll < 0.08) map[ry][rx] = 40; // heal_heart
+            else if (roll < 0.12) map[ry][rx] = 41; // heal_glow
+            break;
+          case ROOM_TYPE.POWER:
+            if (roll < 0.08) map[ry][rx] = 50; // power_star
+            else if (roll < 0.12) map[ry][rx] = 51; // power_sparkle
+            break;
+          case ROOM_TYPE.SAVE:
+            if (rx === Math.floor(room.x + room.width / 2) && ry === Math.floor(room.y + room.height / 2)) {
+              map[ry][rx] = 64; // save_crystal
+            }
+            break;
+          case ROOM_TYPE.BOSS:
+            if (roll < 0.06) map[ry][rx] = 66; // writing
+            else if (roll < 0.10) map[ry][rx] = 31; // blood
+            break;
+          default: // CORRIDOR, CHAMBER, etc.
+            if (roll < 0.03) map[ry][rx] = 30; // trap
+            else if (roll < 0.05) map[ry][rx] = 40; // heal
+            else if (roll < 0.07) map[ry][rx] = 50; // power
+            else if (roll < 0.09) map[ry][rx] = 12; // floor_crack
+            else if (roll < 0.11) map[ry][rx] = 13; // floor_moss
+            else if (roll < 0.13) map[ry][rx] = 60; // rubble
+            else if (roll < 0.15) map[ry][rx] = 61; // bones
+            else if (roll < 0.16) map[ry][rx] = 11; // floor_alt
+            break;
+        }
+      }
+    }
+
+    // Carpet in corridors on critical path
+    if (criticalPath.includes(room) && room.roomType === ROOM_TYPE.CORRIDOR) {
+      const cx = Math.floor(room.x + room.width / 2);
+      for (let ry = room.y + 1; ry < room.y + room.height - 1 && ry < MAP_H; ry++) {
+        if (cx >= 0 && cx < MAP_W && map[ry][cx] === 10) map[ry][cx] = 65;
+      }
+    }
+
+    // Torches on walls of important rooms
+    if (room.roomType === ROOM_TYPE.BOSS || room.roomType === ROOM_TYPE.SAVE || room.roomType === ROOM_TYPE.HEAL) {
+      const edgeTiles = [];
+      for (let rx = room.x; rx < room.x + room.width && rx < MAP_W; rx++) {
+        if (room.y >= 0 && room.y < MAP_H && map[room.y][rx] === 10) edgeTiles.push([rx, room.y]);
+        if (room.y + room.height - 1 >= 0 && room.y + room.height - 1 < MAP_H && map[room.y + room.height - 1][rx] === 10) edgeTiles.push([rx, room.y + room.height - 1]);
+      }
+      // Place torches at corners
+      if (edgeTiles.length > 0) {
+        const corners = [edgeTiles[0], edgeTiles[edgeTiles.length - 1]];
+        for (const [tx, ty] of corners) {
+          if (tx >= 0 && tx < MAP_W && ty >= 0 && ty < MAP_H && map[ty][tx] === 10) {
+            map[ty][tx] = 62;
+          }
+        }
+      }
+    }
+
+    // Chests in some rooms
+    if (room.roomType === ROOM_TYPE.CORRIDOR && rng() < 0.35) {
+      const cx = room.x + 1 + Math.floor(rng() * Math.max(1, room.width - 2));
+      const cy = room.y + 1 + Math.floor(rng() * Math.max(1, room.height - 2));
+      if (cx >= 0 && cx < MAP_W && cy >= 0 && cy < MAP_H && map[cy][cx] === 10) {
+        map[cy][cx] = 63;
+      }
+    }
+  }
+
+  // ─── WATER POOLS (Perlin-based) ───
+  const perlin = new PerlinNoise(seed);
+  for (let y = 2; y < MAP_H - 2; y++) {
+    for (let x = 2; x < MAP_W - 2; x++) {
+      if (map[y][x] !== 10) continue;
+      const w = fbm(perlin, x * 0.12, y * 0.12, 2);
+      if (w > 0.35) map[y][x] = rng() < 0.5 ? 20 : 21;
+    }
+  }
+
+  // ─── SPAWN & EXIT ───
+  const entrance = criticalPath[0];
+  const exit = criticalPath[criticalPath.length - 1];
+  const spawnX = Math.floor(entrance.x + entrance.width / 2);
+  const spawnY = Math.floor(entrance.y + entrance.height / 2);
+  const exitX = Math.floor(exit.x + exit.width / 2);
+  const exitY = Math.floor(exit.y + exit.height / 2);
+
+  // Ensure spawn/exit are on walkable tiles
+  if (spawnY >= 0 && spawnY < MAP_H && spawnX >= 0 && spawnX < MAP_W) map[spawnY][spawnX] = 10;
+  if (exitY >= 0 && exitY < MAP_H && exitX >= 0 && exitX < MAP_W) map[exitY][exitX] = 10;
+
+  // Build room lookup for decorations
+  const roomLookup = {};
+  for (const room of rooms) roomLookup[room.id] = room;
+
+  return {
+    map, rooms, criticalPath, roomLookup, tileset,
+    spawn: { x: spawnX, y: spawnY },
+    exit: { x: exitX, y: exitY },
+    seed, depth,
+    decorations: [], // will be populated during render
+  };
+}
+
+// ═══════════════════════════════════════════════════════════
+// CONNECTION MANAGER — Warp events between floors
+// ═══════════════════════════════════════════════════════════
+
+function createConnectionManager() {
+  const warps = [];
+
+  function registerFloorExit(floor, exitX, exitY, targetFloor) {
+    warps.push({
+      id: `exit_${floor}_${targetFloor}`,
+      x: exitX, y: exitY,
+      type: 'stair_down',
+      targetFloor,
+      targetRoom: 'entrance',
+      targetX: 0, targetY: 0, // set when target floor generates
+    });
+  }
+
+  function registerFloorEntrance(floor, entranceX, entranceY) {
+    warps.push({
+      id: `entrance_${floor}`,
+      x: entranceX, y: entranceY,
+      type: 'stair_up',
+      targetFloor: floor - 1,
+      targetRoom: 'exit',
+      targetX: 0, targetY: 0,
+    });
+  }
+
+  function findWarpAt(x, y) {
+    return warps.find(w => w.x === x && w.y === y);
+  }
+
+  function getWarpTarget(warp) {
+    return { floor: warp.targetFloor, x: warp.targetX, y: warp.targetY };
+  }
+
+  return { warps, registerFloorExit, registerFloorEntrance, findWarpAt, getWarpTarget };
+}
+
+// ─── DUNGEON GENERATOR (legacy wrapper) ─────────────────────
 function generateDungeon(seed, depth) {
   const perlin = new PerlinNoise(seed);
   const map = Array.from({ length: MAP_H }, () => new Array(MAP_W).fill(T.WALL));
@@ -1498,8 +1982,6 @@ function updateStatusUI() {
     </span>`;
   }).join('');
 }
-
-let game = null;
 
 function startGame() {
   state = {
