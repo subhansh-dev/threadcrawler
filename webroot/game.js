@@ -1086,156 +1086,157 @@ class GameScene extends Phaser.Scene {
     document.getElementById('controls-hint').classList.add('show');
   }
 
-  // ─── CAT CHARACTER SPRITE ───
+  // ─── CC (CODE GEASS) CHARACTER SPRITE ───
   drawCatPlayer(g, frame, facing) {
     g.clear();
     const ps = 1;
 
-    // Cat colors
-    const fur = 0xF8A848;       // orange tabby
-    const furDark = 0xD08030;   // darker orange
-    const furLight = 0xFCc878;  // light orange
-    const belly = 0xFCE8D0;     // cream belly
-    const nose = 0xE86078;      // pink nose
-    const eyes = 0x38C838;      // green eyes
-    const outline = 0x281808;   // dark brown outline
-    const whisker = 0xFCF0D8;   // whisker color
+    // CC colors (Code Geass)
+    const hair = 0x7CFC00;        // lime green hair
+    const hairDark = 0x4CAF00;    // darker green
+    const hairLight = 0x98FB98;   // light green highlights
+    const skin = 0xFDE8D0;        // fair skin
+    const skinShadow = 0xE8C8A8;  // skin shadow
+    const eyes = 0xDAA520;        // golden eyes
+    const eyeWhite = 0xFFFFFF;
+    const outfit = 0xF0F0F0;      // white outfit
+    const outfitShadow = 0xC8C8C8;
+    const outfitDark = 0xA0A0A0;
+    const outline = 0x282020;     // dark outline
+    const lips = 0xE88088;        // soft pink lips
 
-    // Frame offsets for walk animation (shift legs)
+    // Frame offsets for walk animation
     const walkCycle = frame % 4;
     const legOffset = walkCycle < 2 ? 0 : 1;
     const bobY = walkCycle === 1 || walkCycle === 3 ? -1 : 0;
 
-    // ─── TAIL ───
-    g.fillStyle(furDark, 1);
-    if (facing.x < 0) {
-      // Tail goes right when facing left
-      g.fillRect(12 * ps, (7 + bobY) * ps, 3 * ps, 2 * ps);
-      g.fillRect(14 * ps, (5 + bobY) * ps, 2 * ps, 3 * ps);
-    } else {
-      // Tail goes left when facing right
-      g.fillRect(1 * ps, (7 + bobY) * ps, 3 * ps, 2 * ps);
-      g.fillRect(0 * ps, (5 + bobY) * ps, 2 * ps, 3 * ps);
-    }
-
-    // ─── EARS ───
-    g.fillStyle(fur, 1);
-    // Left ear
-    g.fillRect(4 * ps, 0 * ps, 2 * ps, 3 * ps);
-    g.fillRect(3 * ps, 1 * ps, 1 * ps, 2 * ps);
-    // Right ear
-    g.fillRect(10 * ps, 0 * ps, 2 * ps, 3 * ps);
-    g.fillRect(13 * ps, 1 * ps, 1 * ps, 2 * ps);
-    // Inner ear
-    g.fillStyle(furLight, 1);
-    g.fillRect(5 * ps, 1 * ps, 1 * ps, 2 * ps);
-    g.fillRect(11 * ps, 1 * ps, 1 * ps, 2 * ps);
-
-    // ─── HEAD ───
-    g.fillStyle(fur, 1);
-    g.fillRect(4 * ps, 2 * ps, 8 * ps, 5 * ps);
-    g.fillRect(3 * ps, 3 * ps, 10 * ps, 3 * ps);
-    // Head highlight
-    g.fillStyle(furLight, 0.5);
-    g.fillRect(5 * ps, 2 * ps, 4 * ps, 2 * ps);
+    // ─── HAIR (long, flowing green) ───
+    g.fillStyle(hair, 1);
+    // Hair back (long, flows down)
+    g.fillRect(3 * ps, (0 + bobY) * ps, 10 * ps, 3 * ps); // top
+    g.fillRect(2 * ps, (3 + bobY) * ps, 12 * ps, 4 * ps); // upper
+    g.fillRect(2 * ps, (7 + bobY) * ps, 3 * ps, 6 * ps); // left tail
+    g.fillRect(11 * ps, (7 + bobY) * ps, 3 * ps, 6 * ps); // right tail
+    g.fillRect(1 * ps, (10 + bobY) * ps, 2 * ps, 5 * ps); // far left
+    g.fillRect(13 * ps, (10 + bobY) * ps, 2 * ps, 5 * ps); // far right
+    // Hair highlights
+    g.fillStyle(hairLight, 0.6);
+    g.fillRect(5 * ps, (1 + bobY) * ps, 3 * ps, 2 * ps);
+    g.fillRect(4 * ps, (5 + bobY) * ps, 2 * ps, 3 * ps);
+    // Hair dark strands
+    g.fillStyle(hairDark, 0.7);
+    g.fillRect(2 * ps, (8 + bobY) * ps, 1 * ps, 5 * ps);
+    g.fillRect(13 * ps, (8 + bobY) * ps, 1 * ps, 5 * ps);
+    // Bangs (framing face)
+    g.fillStyle(hair, 1);
+    g.fillRect(4 * ps, (2 + bobY) * ps, 8 * ps, 2 * ps);
+    g.fillRect(3 * ps, (3 + bobY) * ps, 2 * ps, 3 * ps); // left bang
+    g.fillRect(11 * ps, (3 + bobY) * ps, 2 * ps, 3 * ps); // right bang
+    g.fillRect(5 * ps, (4 + bobY) * ps, 1 * ps, 2 * ps); // center strand
 
     // ─── FACE ───
-    // Eyes
-    g.fillStyle(0xFFFFFF, 1);
-    g.fillRect(5 * ps, 4 * ps, 3 * ps, 2 * ps);
-    g.fillRect(9 * ps, 4 * ps, 3 * ps, 2 * ps);
+    g.fillStyle(skin, 1);
+    g.fillRect(5 * ps, (4 + bobY) * ps, 6 * ps, 4 * ps);
+    g.fillRect(4 * ps, (5 + bobY) * ps, 8 * ps, 2 * ps);
+    // Face shadow
+    g.fillStyle(skinShadow, 0.3);
+    g.fillRect(4 * ps, (7 + bobY) * ps, 8 * ps, 1 * ps);
+
+    // Eyes (golden, large anime style)
+    g.fillStyle(eyeWhite, 1);
+    g.fillRect(5 * ps, (5 + bobY) * ps, 3 * ps, 2 * ps);
+    g.fillRect(9 * ps, (5 + bobY) * ps, 3 * ps, 2 * ps);
     g.fillStyle(eyes, 1);
-    g.fillRect(6 * ps, 4 * ps, 2 * ps, 2 * ps);
-    g.fillRect(10 * ps, 4 * ps, 2 * ps, 2 * ps);
+    g.fillRect(6 * ps, (5 + bobY) * ps, 2 * ps, 2 * ps);
+    g.fillRect(10 * ps, (5 + bobY) * ps, 2 * ps, 2 * ps);
     // Pupils
     g.fillStyle(outline, 1);
-    g.fillRect(7 * ps, 4 * ps, 1 * ps, 2 * ps);
-    g.fillRect(11 * ps, 4 * ps, 1 * ps, 2 * ps);
-    // Nose
-    g.fillStyle(nose, 1);
-    g.fillRect(7 * ps, 6 * ps, 2 * ps, 1 * ps);
-    // Mouth
+    g.fillRect(7 * ps, (5 + bobY) * ps, 1 * ps, 2 * ps);
+    g.fillRect(11 * ps, (5 + bobY) * ps, 1 * ps, 2 * ps);
+    // Eye highlights (anime sparkle)
+    g.fillStyle(0xFFFFFF, 0.9);
+    g.fillRect(6 * ps, (5 + bobY) * ps, 1 * ps, 1 * ps);
+    g.fillRect(10 * ps, (5 + bobY) * ps, 1 * ps, 1 * ps);
+    // Eyebrows
     g.fillStyle(outline, 0.6);
-    g.fillRect(6 * ps, 7 * ps, 1 * ps, 1 * ps);
-    g.fillRect(9 * ps, 7 * ps, 1 * ps, 1 * ps);
-    g.fillRect(7 * ps, 7 * ps, 2 * ps, 1 * ps);
-    // Whiskers
-    g.fillStyle(whisker, 0.7);
-    g.fillRect(1 * ps, 5 * ps, 3 * ps, 1 * ps);
-    g.fillRect(1 * ps, 6 * ps, 2 * ps, 1 * ps);
-    g.fillRect(12 * ps, 5 * ps, 3 * ps, 1 * ps);
-    g.fillRect(13 * ps, 6 * ps, 2 * ps, 1 * ps);
-    // Outline
-    g.fillStyle(outline, 1);
-    g.fillRect(3 * ps, 2 * ps, 1 * ps, 5 * ps);
-    g.fillRect(12 * ps, 2 * ps, 1 * ps, 5 * ps);
-    g.fillRect(4 * ps, 1 * ps, 2 * ps, 1 * ps);
-    g.fillRect(10 * ps, 1 * ps, 2 * ps, 1 * ps);
+    g.fillRect(5 * ps, (4 + bobY) * ps, 3 * ps, 1 * ps);
+    g.fillRect(9 * ps, (4 + bobY) * ps, 3 * ps, 1 * ps);
+    // Nose (subtle)
+    g.fillStyle(skinShadow, 0.4);
+    g.fillRect(7 * ps, (6 + bobY) * ps, 2 * ps, 1 * ps);
+    // Lips
+    g.fillStyle(lips, 0.7);
+    g.fillRect(7 * ps, (7 + bobY) * ps, 2 * ps, 1 * ps);
 
-    // ─── BODY ───
-    g.fillStyle(fur, 1);
-    g.fillRect(4 * ps, 8 * ps, 8 * ps, 4 * ps);
-    g.fillRect(3 * ps, 9 * ps, 10 * ps, 2 * ps);
-    // Belly
-    g.fillStyle(belly, 1);
-    g.fillRect(6 * ps, 8 * ps, 4 * ps, 4 * ps);
-    // Collar / bandana
-    g.fillStyle(0xE83838, 1);
-    g.fillRect(5 * ps, 8 * ps, 6 * ps, 1 * ps);
-    g.fillStyle(0xF8D838, 1);
-    g.fillRect(7 * ps, 8 * ps, 2 * ps, 1 * ps); // bell
+    // ─── OUTFIT (white bodysuit, CC style) ───
+    g.fillStyle(outfit, 1);
+    g.fillRect(4 * ps, (8 + bobY) * ps, 8 * ps, 5 * ps);
+    g.fillRect(3 * ps, (9 + bobY) * ps, 10 * ps, 3 * ps);
+    // Outfit details — collar and zipper
+    g.fillStyle(outfitShadow, 0.6);
+    g.fillRect(7 * ps, (8 + bobY) * ps, 2 * ps, 5 * ps); // zipper line
+    g.fillRect(5 * ps, (8 + bobY) * ps, 6 * ps, 1 * ps); // collar
+    // Outfit shading
+    g.fillStyle(outfitDark, 0.3);
+    g.fillRect(3 * ps, (11 + bobY) * ps, 2 * ps, 2 * ps);
+    g.fillRect(11 * ps, (11 + bobY) * ps, 2 * ps, 2 * ps);
+    // Black accents (belt area)
+    g.fillStyle(outline, 0.5);
+    g.fillRect(4 * ps, (12 + bobY) * ps, 8 * ps, 1 * ps);
 
-    // ─── ARMS (animate with walk) ───
-    g.fillStyle(furDark, 1);
+    // ─── ARMS ───
+    g.fillStyle(outfit, 1);
     if (legOffset === 0) {
-      g.fillRect(2 * ps, 9 * ps, 2 * ps, 3 * ps);
-      g.fillRect(12 * ps, 10 * ps, 2 * ps, 2 * ps);
+      g.fillRect(2 * ps, (9 + bobY) * ps, 2 * ps, 3 * ps);
+      g.fillRect(12 * ps, (10 + bobY) * ps, 2 * ps, 2 * ps);
     } else {
-      g.fillRect(2 * ps, 10 * ps, 2 * ps, 2 * ps);
-      g.fillRect(12 * ps, 9 * ps, 2 * ps, 3 * ps);
+      g.fillRect(2 * ps, (10 + bobY) * ps, 2 * ps, 2 * ps);
+      g.fillRect(12 * ps, (9 + bobY) * ps, 2 * ps, 3 * ps);
     }
-    // Paws
-    g.fillStyle(furLight, 1);
-    g.fillRect(2 * ps, 12 * ps, 2 * ps, 1 * ps);
-    g.fillRect(12 * ps, 12 * ps, 2 * ps, 1 * ps);
+    // Hands
+    g.fillStyle(skin, 1);
+    g.fillRect(2 * ps, (12 + bobY) * ps, 2 * ps, 1 * ps);
+    g.fillRect(12 * ps, (12 + bobY) * ps, 2 * ps, 1 * ps);
 
-    // ─── LEGS (animate with walk) ───
-    g.fillStyle(furDark, 1);
+    // ─── LEGS ───
+    g.fillStyle(outfitShadow, 1);
     if (legOffset === 0) {
-      g.fillRect(5 * ps, 12 * ps, 2 * ps, 3 * ps);
-      g.fillRect(9 * ps, 12 * ps, 2 * ps, 2 * ps);
+      g.fillRect(5 * ps, (13 + bobY) * ps, 2 * ps, 2 * ps);
+      g.fillRect(9 * ps, (13 + bobY) * ps, 2 * ps, 1 * ps);
     } else {
-      g.fillRect(5 * ps, 12 * ps, 2 * ps, 2 * ps);
-      g.fillRect(9 * ps, 12 * ps, 2 * ps, 3 * ps);
+      g.fillRect(5 * ps, (13 + bobY) * ps, 2 * ps, 1 * ps);
+      g.fillRect(9 * ps, (13 + bobY) * ps, 2 * ps, 2 * ps);
     }
-    // Feet
+    // Boots (dark)
     g.fillStyle(outline, 0.8);
-    g.fillRect(4 * ps, 15 * ps, 3 * ps, 1 * ps);
-    g.fillRect(9 * ps, 15 * ps, 3 * ps, 1 * ps);
+    g.fillRect(5 * ps, (15 + bobY) * ps, 2 * ps, 1 * ps);
+    g.fillRect(9 * ps, (15 + bobY) * ps, 2 * ps, 1 * ps);
 
-    // ─── ATTACK FRAME (sword slash) ───
+    // ─── ATTACK FRAME (geass symbol / energy blast) ───
     if (frame >= 10) {
-      g.fillStyle(0xBBBBBB, 1);
+      // Geass energy (red glow)
+      g.fillStyle(0xFF0000, 0.8);
       if (facing.x > 0) {
-        g.fillRect(14 * ps, 6 * ps, 2 * ps, 6 * ps);
-        g.fillStyle(0xDDDDDD, 1);
-        g.fillRect(14 * ps, 4 * ps, 2 * ps, 3 * ps);
+        g.fillRect(14 * ps, (5 + bobY) * ps, 3 * ps, 3 * ps);
+        g.fillStyle(0xFF4444, 0.5);
+        g.fillRect(15 * ps, (4 + bobY) * ps, 2 * ps, 5 * ps);
+        g.fillRect(17 * ps, (6 + bobY) * ps, 2 * ps, 2 * ps);
       } else if (facing.x < 0) {
-        g.fillRect(0 * ps, 6 * ps, 2 * ps, 6 * ps);
-        g.fillStyle(0xDDDDDD, 1);
-        g.fillRect(0 * ps, 4 * ps, 2 * ps, 3 * ps);
+        g.fillRect(0 * ps, (5 + bobY) * ps, 3 * ps, 3 * ps);
+        g.fillStyle(0xFF4444, 0.5);
+        g.fillRect(0 * ps, (4 + bobY) * ps, 2 * ps, 5 * ps);
+        g.fillRect(-1 * ps, (6 + bobY) * ps, 2 * ps, 2 * ps);
       } else if (facing.y < 0) {
-        g.fillRect(7 * ps, 0 * ps, 2 * ps, 6 * ps);
-        g.fillStyle(0xDDDDDD, 1);
-        g.fillRect(7 * ps, 0 * ps, 2 * ps, 3 * ps);
+        g.fillRect(6 * ps, (0 + bobY) * ps, 4 * ps, 3 * ps);
+        g.fillStyle(0xFF4444, 0.5);
+        g.fillRect(5 * ps, (-1 + bobY) * ps, 6 * ps, 2 * ps);
       } else {
-        g.fillRect(7 * ps, 14 * ps, 2 * ps, 6 * ps);
-        g.fillStyle(0xDDDDDD, 1);
-        g.fillRect(7 * ps, 18 * ps, 2 * ps, 3 * ps);
+        g.fillRect(6 * ps, (14 + bobY) * ps, 4 * ps, 3 * ps);
+        g.fillStyle(0xFF4444, 0.5);
+        g.fillRect(5 * ps, (16 + bobY) * ps, 6 * ps, 2 * ps);
       }
     }
 
-    // Center the sprite
     g.setPosition(-8, -8);
   }
 
