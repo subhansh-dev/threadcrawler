@@ -107,8 +107,8 @@ function cellularAutomata(w, h, fill = 0.42, iters = 5) {
 
 // ─── CONSTANTS ───────────────────────────────────────────────
 const TILE = 16;
-const MAP_W = 80;
-const MAP_H = 60;
+const MAP_W = 100;
+const MAP_H = 80;
 const PLAYER_SPEED = 100;
 const BULLET_SPEED = 200;
 const VIEW_RADIUS = 12;
@@ -511,11 +511,11 @@ function generateDungeon(seed, depth) {
       if (room.type === 'water_feature' && r < 0.15) { map[y][x] = T.WATER; continue; }
 
       // General decoration
-      if (r < 0.025) { map[y][x] = T.TRAP; continue; }
-      if (r < 0.045) { map[y][x] = T.HEAL; continue; }
-      if (r < 0.060) { map[y][x] = T.POWER; continue; }
-      if (r < 0.075) { map[y][x] = T.GRASS_TALL; continue; }
-      if (r < 0.085) { map[y][x] = T.FLOWER; continue; }
+      if (r < 0.035) { map[y][x] = T.TRAP; continue; }
+      if (r < 0.065) { map[y][x] = T.HEAL; continue; }
+      if (r < 0.085) { map[y][x] = T.POWER; continue; }
+      if (r < 0.10) { map[y][x] = T.GRASS_TALL; continue; }
+      if (r < 0.11) { map[y][x] = T.FLOWER; continue; }
 
       // Floor variation
       if (rng() < 0.08) map[y][x] = T.FLOOR_ALT;
@@ -527,7 +527,7 @@ function generateDungeon(seed, depth) {
     }
 
     // Treasure chests
-    if (idx > 0 && rng() < 0.3) {
+    if (idx > 0 && rng() < 0.5) {
       const cx = room.x + 1 + Math.floor(rng() * Math.max(1, room.w - 2));
       const cy = room.y + 1 + Math.floor(rng() * Math.max(1, room.h - 2));
       if (cx >= 0 && cx < MAP_W && cy >= 0 && cy < MAP_H && map[cy][cx] === T.FLOOR) {
@@ -784,10 +784,12 @@ function drawTile(g, tileType, px, py, theme, x, y, time) {
       // Highlight on top step
       g.fillStyle(0x555555, 0.6);
       g.fillRect(px + 3, py + 3, 10, 1);
-      // Pulsing glow
-      const glow = 0.15 + Math.sin(time * 0.003) * 0.1;
-      g.fillStyle(theme.accent, glow);
-      g.fillRect(px + 1, py + 1, 14, 14);
+      // Pulsing glow - big and visible
+      const glow = 0.3 + Math.sin(time * 0.003) * 0.2;
+      g.fillStyle(theme.accent || 0x34D399, glow);
+      g.fillRect(px - 4, py - 4, 24, 24);
+      g.fillStyle(0x34D399, glow * 0.5);
+      g.fillRect(px - 8, py - 8, 32, 32);
       break;
     }
     case T.TRAP: {
@@ -970,6 +972,7 @@ class GameScene extends Phaser.Scene {
     this.particles = [];
     this.fogGraphics = null;
     this.minimapGraphics = null;
+    this.compassGraphics = null;
     this.playerFacing = { x: 0, y: 1 };
     this.animTimer = 0;
     this.playerFrame = 0;
@@ -1020,10 +1023,6 @@ class GameScene extends Phaser.Scene {
     this.player.body.setOffset(-6, -6);
     this.physics.add.collider(this.player, this.walls);
 
-    // Camera tracking object (invisible, follows player)
-    this.cameraTarget = this.add.zone(dungeon.spawn.x * TILE + TILE/2, dungeon.spawn.y * TILE + TILE/2, 1, 1);
-    this.cameraTarget.setDepth(0);
-
     // ─── BULLETS ───
     this.bullets = this.physics.add.group();
 
@@ -1045,10 +1044,25 @@ class GameScene extends Phaser.Scene {
 
     // ─── CAMERA ───
     this.cameras.main.setBounds(0, 0, MAP_W * TILE, MAP_H * TILE);
-    this.cameras.main.startFollow(this.cameraTarget, true, 0.1, 0.1);
-    this.cameras.main.setZoom(2);
+    this.cameras.main.startFollow(this.player, true, 0.1, 0.1);
+    this.cameras.main.setZoom(1);
     const fogColor = theme.fogColor || 0x000000;
     this.cameras.main.setBackgroundColor(fogColor);
+
+    // Force canvas to fill container
+    this.scale.on('resize', (gameSize) => {
+      const canvas = this.game.canvas;
+      if (canvas) {
+        canvas.style.width = '100%';
+        canvas.style.height = '100%';
+      }
+    });
+    const canvas = this.game.canvas;
+    if (canvas) {
+      canvas.style.width = '100%';
+      canvas.style.height = '100%';
+      canvas.style.display = 'block';
+    }
 
     // ─── CONTROLS ───
     this.cursors = this.input.keyboard.createCursorKeys();
@@ -1505,7 +1519,6 @@ class GameScene extends Phaser.Scene {
     });
 
     // ─── CAMERA TRACKING ───
-    this.cameraTarget.setPosition(this.player.x, this.player.y);
 
     // ─── FOG OF WAR ───
     this.drawFog(dungeon, tx, ty);
@@ -1534,6 +1547,39 @@ class GameScene extends Phaser.Scene {
     // Only re-render every few frames for performance
     if (Math.floor(time / 200) !== Math.floor((time - delta) / 200)) {
       this.renderMap(dungeon, theme, time);
+    }
+
+    // ─── EXIT COMPASS ARROW ───
+    if (dungeon.exit && !this.compassGraphics) {
+      this.compassGraphics = this.add.graphics().setDepth(30);
+    }
+    if (this.compassGraphics && dungeon.exit) {
+      const cg = this.compassGraphics;
+      cg.clear();
+      const cam = this.cameras.main;
+      const screenCx = cam.width / 2;
+      const screenCy = cam.height / 2;
+      const exitWorldX = dungeon.exit.x * TILE + TILE / 2;
+      const exitWorldY = dungeon.exit.y * TILE + TILE / 2;
+      const dx = exitWorldX - this.player.x;
+      const dy = exitWorldY - this.player.y;
+      const dist = Math.sqrt(dx * dx + dy * dy);
+      if (dist > 100) {
+        const angle = Math.atan2(dy, dx);
+        const arrowDist = Math.min(80, dist / 4);
+        const ax = screenCx + Math.cos(angle) * arrowDist;
+        const ay = screenCy + Math.sin(angle) * arrowDist;
+        const pulse = 0.4 + Math.sin(time * 0.004) * 0.3;
+        cg.fillStyle(0x34D399, pulse);
+        const s = 5;
+        const tipX = ax + Math.cos(angle) * (s + 3);
+        const tipY = ay + Math.sin(angle) * (s + 3);
+        const leftX = ax + Math.cos(angle + 2.4) * s;
+        const leftY = ay + Math.sin(angle + 2.4) * s;
+        const rightX = ax + Math.cos(angle - 2.4) * s;
+        const rightY = ay + Math.sin(angle - 2.4) * s;
+        cg.fillTriangle(tipX, tipY, leftX, leftY, rightX, rightY);
+      }
     }
 
     this.updateUI();
@@ -1602,6 +1648,15 @@ class GameScene extends Phaser.Scene {
         g.fillStyle(0x889966, 0.3);
       }
       g.fillRect(mmX + x * mmScale, mmY + y * mmScale, mmScale, mmScale);
+    }
+
+    // Always show exit location on minimap with pulsing dot
+    if (dungeon.exit) {
+      const exitPx = mmX + dungeon.exit.x * mmScale;
+      const exitPy = mmY + dungeon.exit.y * mmScale;
+      const pulse = 0.5 + Math.sin(Date.now() * 0.005) * 0.5;
+      g.fillStyle(0x34D399, pulse);
+      g.fillRect(exitPx - 1, exitPy - 1, mmScale + 2, mmScale + 2);
     }
 
     // Player dot
@@ -2508,15 +2563,15 @@ const config = {
   type: Phaser.AUTO,
   parent: 'game-container',
   width: 480,
-  height: 320,
+  height: 340,
   backgroundColor: '#000000',
   physics: { default: 'arcade', arcade: { gravity: { y: 0 }, debug: false } },
   scene: [BootScene, GameScene],
   scale: {
-    mode: Phaser.Scale.ENVELOP,
-    autoCenter: Phaser.Scale.CENTER_BOTH,
+    mode: Phaser.Scale.NONE,
+    autoCenter: Phaser.Scale.NO_CENTER,
     width: 480,
-    height: 320,
+    height: 340,
   },
   pixelArt: true,
   antialias: false,
@@ -2698,6 +2753,20 @@ function startGame() {
   document.getElementById('controls-hint').classList.add('show');
   if (game) game.destroy(true);
   game = new Phaser.Game(config);
+
+  // Force canvas to fill container after Phaser creates it
+  game.events.once('ready', () => {
+    const container = document.getElementById('game-container');
+    const canvas = game.canvas;
+    if (container && canvas) {
+      canvas.style.width = '100%';
+      canvas.style.height = '100%';
+      canvas.style.display = 'block';
+      canvas.style.position = 'absolute';
+      canvas.style.top = '0';
+      canvas.style.left = '0';
+    }
+  });
 }
 
 function restartGame() {
