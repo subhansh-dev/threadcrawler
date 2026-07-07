@@ -39,6 +39,14 @@ const SFX = {
   death: () => { playSound(200, 0.3, 'sawtooth', 0.08); playSound(100, 0.5, 'square', 0.06); },
   step: () => playSound(120, 0.03, 'square', 0.02),
   chest: () => { playSound(523, 0.08, 'sine', 0.05); playSound(659, 0.08, 'sine', 0.04); playSound(784, 0.12, 'sine', 0.04); },
+  // Horror ambient sounds
+  drip: () => { playSound(800 + Math.random() * 400, 0.15, 'sine', 0.03); },
+  wind: () => { playSound(80 + Math.random() * 40, 0.8, 'sawtooth', 0.015); },
+  creak: () => { playSound(120 + Math.random() * 60, 0.3, 'sawtooth', 0.02); },
+  whisper: () => { playSound(200 + Math.random() * 100, 0.5, 'sine', 0.01); playSound(300 + Math.random() * 100, 0.4, 'sine', 0.008); },
+  heartbeat: () => { playSound(60, 0.15, 'sine', 0.04); setTimeout(() => playSound(50, 0.12, 'sine', 0.03), 200); },
+  monsterGrowl: () => { playSound(80, 0.4, 'sawtooth', 0.04); playSound(60, 0.5, 'square', 0.02); },
+  jumpscare: () => { playSound(1200, 0.05, 'square', 0.12); playSound(800, 0.1, 'sawtooth', 0.08); playSound(400, 0.2, 'sawtooth', 0.06); },
 };
 
 // ─── MATH UTILITIES ──────────────────────────────────────────
@@ -190,9 +198,9 @@ function getRandomWeapon(depth) {
 
 // ─── BOSS SYSTEM ──────────────────────────────────────────────
 const BOSSES = [
-  { name: 'Thread Guardian', color: 0xEF4444, hp: 150, speed: 30, damage: 20, size: 20, floor: 3 },
-  { name: 'Reply Hydra', color: 0xA855F7, hp: 250, speed: 35, damage: 25, size: 24, floor: 5 },
-  { name: 'OP Overlord', color: 0xFBBF24, hp: 400, speed: 40, damage: 35, size: 28, floor: 7 },
+  { name: 'The Thread Wraith', color: 0xEF4444, hp: 150, speed: 30, damage: 20, size: 20, floor: 3 },
+  { name: 'Hydra of Forgotten Replies', color: 0xA855F7, hp: 250, speed: 35, damage: 25, size: 24, floor: 5 },
+  { name: 'The Original Poster', color: 0xFBBF24, hp: 400, speed: 40, damage: 35, size: 28, floor: 7 },
 ];
 
 // ─── RANDOM EVENTS ────────────────────────────────────────────
@@ -207,6 +215,17 @@ const RANDOM_EVENTS = [
     apply: (p) => { p.maxHp += 20; p.hp += 20; state.log.push('Shrine: +20 Max HP!'); SFX.power(); } },
   { id: 'trap_room', name: 'Trapped Chest', chance: 0.07,
     apply: (p) => { if (Math.random() < 0.6) { p.gold += 50; state.log.push('Chest: +50 Gold!'); } else { p.hp = Math.max(1, p.hp - 20); state.log.push('Trapped! -20 HP'); SFX.trap(); } } },
+  // Horror events
+  { id: 'whispers', name: 'Whispers in the Dark', chance: 0.06,
+    apply: (p) => { SFX.whisper(); state.log.push('You hear whispers... nothing happens. Or does it?'); } },
+  { id: 'blood_pool', name: 'Blood Pool', chance: 0.04,
+    apply: (p) => { if (Math.random() < 0.7) { p.atk += 5; state.log.push('Blood ritual: +5 ATK!'); } else { p.hp = Math.max(1, p.hp - 15); state.log.push('Blood curse: -15 HP!'); SFX.hurt(); } } },
+  { id: 'shadow_figure', name: 'Shadow Figure', chance: 0.03,
+    apply: (p) => { SFX.monsterGrowl(); state.log.push('A shadow watches you...'); p.def += 2; state.log.push('Fear boosts defense: +2 DEF'); } },
+  { id: 'creaking_door', name: 'Creaking Door', chance: 0.05,
+    apply: (p) => { SFX.creak(); const gold = 15 + state.depth * 5; p.gold += gold; state.log.push(`Found gold behind the door: +${gold}G`); } },
+  { id: 'ghostly_touch', name: 'Ghostly Touch', chance: 0.03,
+    apply: (p) => { SFX.jumpscare(); if (Math.random() < 0.5) { const heal = 30; p.hp = Math.min(p.maxHp, p.hp + heal); state.log.push(`Ghost heals you: +${heal} HP`); } else { p.hp = Math.max(1, p.hp - 25); state.log.push(`Ghost attacks: -25 HP!`); } } },
 ];
 
 // ─── ACHIEVEMENTS ─────────────────────────────────────────────
@@ -328,66 +347,73 @@ let state = {
 const THEMES = [
   {
     name: 'Viridian Dungeon',
-    wallColor: 0x2D5A27, wallTop: 0x3A7A33, wallHighlight: 0x4A8A43,
-    floorColor: 0xC8D898, floorAlt: 0xB8C888, floorAccent: 0xA8B878,
-    waterColor: 0x3890F8, waterLight: 0x58A8FF, waterDeep: 0x2878D8,
-    accent: 0x34D399, ambient: 0.06,
-    pathColor: 0xD8C8A0, pathAlt: 0xC8B890,
-    grassColor: 0x48A838, grassLight: 0x58C848,
+    wallColor: 0x1A3A1A, wallTop: 0x2A4A2A, wallHighlight: 0x3A5A3A,
+    floorColor: 0x8A9870, floorAlt: 0x7A8860, floorAccent: 0x6A7850,
+    waterColor: 0x2A5838, waterLight: 0x3A6848, waterDeep: 0x1A4828,
+    accent: 0x34D399, ambient: 0.03,
+    pathColor: 0x9A8870, pathAlt: 0x8A7860,
+    grassColor: 0x2A5828, grassLight: 0x3A6838,
+    fogColor: 0x0A1A0A, ambientSound: 'drip',
   },
   {
-    name: 'Cerulean Cave',
-    wallColor: 0x3B4A6B, wallTop: 0x4B5A7B, wallHighlight: 0x5B6A8B,
-    floorColor: 0xC0C8D8, floorAlt: 0xB0B8C8, floorAccent: 0xA0A8B8,
-    waterColor: 0x4898E8, waterLight: 0x68B0FF, waterDeep: 0x3880D0,
-    accent: 0x60A0F0, ambient: 0.05,
-    pathColor: 0xD0D0D8, pathAlt: 0xC0C0C8,
-    grassColor: 0x389838, grassLight: 0x48B048,
+    name: 'Cerulean Catacombs',
+    wallColor: 0x1A2A3B, wallTop: 0x2A3A4B, wallHighlight: 0x3A4A5B,
+    floorColor: 0x708090, floorAlt: 0x607080, floorAccent: 0x506070,
+    waterColor: 0x2A3A5A, waterLight: 0x3A4A6A, waterDeep: 0x1A2A4A,
+    accent: 0x60A0F0, ambient: 0.02,
+    pathColor: 0x808898, pathAlt: 0x707888,
+    grassColor: 0x2A3838, grassLight: 0x3A4848,
+    fogColor: 0x0A0A1A, ambientSound: 'wind',
   },
   {
-    name: 'Goldenrod Tower',
-    wallColor: 0x6B5A2D, wallTop: 0x7B6A3D, wallHighlight: 0x8B7A4D,
-    floorColor: 0xE8D8A8, floorAlt: 0xD8C898, floorAccent: 0xC8B888,
-    waterColor: 0x3888E0, waterLight: 0x58A0F8, waterDeep: 0x2870C8,
-    accent: 0xFBBF24, ambient: 0.07,
-    pathColor: 0xE8D8B0, pathAlt: 0xD8C8A0,
-    grassColor: 0x58A838, grassLight: 0x68C048,
+    name: 'Goldenrod Crypt',
+    wallColor: 0x3B2A1D, wallTop: 0x4B3A2D, wallHighlight: 0x5B4A3D,
+    floorColor: 0xA89878, floorAlt: 0x988868, floorAccent: 0x887858,
+    waterColor: 0x3A2A1A, waterLight: 0x4A3A2A, waterDeep: 0x2A1A0A,
+    accent: 0xFBBF24, ambient: 0.025,
+    pathColor: 0xA89870, pathAlt: 0x988860,
+    grassColor: 0x3A4828, grassLight: 0x4A5838,
+    fogColor: 0x0A0A05, ambientSound: 'creak',
   },
   {
-    name: 'Cinnabar Lab',
-    wallColor: 0x6B2D2D, wallTop: 0x7B3D3D, wallHighlight: 0x8B4D4D,
-    floorColor: 0xD8C0C0, floorAlt: 0xC8B0B0, floorAccent: 0xB8A0A0,
-    waterColor: 0xE05858, waterLight: 0xF07070, waterDeep: 0xC84040,
-    accent: 0xEF4444, ambient: 0.05,
-    pathColor: 0xD8C8B8, pathAlt: 0xC8B8A8,
-    grassColor: 0x48A838, grassLight: 0x58C848,
+    name: 'Cinnabar Depths',
+    wallColor: 0x3B1A1A, wallTop: 0x4B2A2A, wallHighlight: 0x5B3A3A,
+    floorColor: 0x987070, floorAlt: 0x886060, floorAccent: 0x785050,
+    waterColor: 0x5A2020, waterLight: 0x6A3030, waterDeep: 0x4A1010,
+    accent: 0xEF4444, ambient: 0.02,
+    pathColor: 0x988078, pathAlt: 0x887068,
+    grassColor: 0x3A2828, grassLight: 0x4A3838,
+    fogColor: 0x0A0505, ambientSound: 'heartbeat',
   },
   {
-    name: 'Lavender Tower',
-    wallColor: 0x4A2D6B, wallTop: 0x5A3D7B, wallHighlight: 0x6A4D8B,
-    floorColor: 0xD0C0E0, floorAlt: 0xC0B0D0, floorAccent: 0xB0A0C0,
-    waterColor: 0x7858E0, waterLight: 0x9070F8, waterDeep: 0x6040C8,
-    accent: 0xA882F7, ambient: 0.04,
-    pathColor: 0xD0C8D8, pathAlt: 0xC0B8C8,
-    grassColor: 0x38A038, grassLight: 0x48B848,
+    name: 'Lavender Mausoleum',
+    wallColor: 0x2A1A3B, wallTop: 0x3A2A4B, wallHighlight: 0x4A3A5B,
+    floorColor: 0x807098, floorAlt: 0x706088, floorAccent: 0x605078,
+    waterColor: 0x3A2A5A, waterLight: 0x4A3A6A, waterDeep: 0x2A1A4A,
+    accent: 0xA882F7, ambient: 0.015,
+    pathColor: 0x888098, pathAlt: 0x787088,
+    grassColor: 0x2A2838, grassLight: 0x3A3848,
+    fogColor: 0x05050A, ambientSound: 'whisper',
   },
   {
-    name: 'Seafoam Cave',
-    wallColor: 0x2D5A6B, wallTop: 0x3D6A7B, wallHighlight: 0x4D7A8B,
-    floorColor: 0xC0D8E0, floorAlt: 0xB0C8D0, floorAccent: 0xA0B8C0,
-    waterColor: 0x38C8E0, waterLight: 0x58E0F8, waterDeep: 0x28B0C8,
-    accent: 0x22D3EE, ambient: 0.06,
-    pathColor: 0xC8D8E0, pathAlt: 0xB8C8D0,
-    grassColor: 0x38A848, grassLight: 0x48C058,
+    name: 'Seafoam Abyss',
+    wallColor: 0x1A2A2B, wallTop: 0x2A3A3B, wallHighlight: 0x3A4A4B,
+    floorColor: 0x708888, floorAlt: 0x607878, floorAccent: 0x506868,
+    waterColor: 0x2A4A5A, waterLight: 0x3A5A6A, waterDeep: 0x1A3A4A,
+    accent: 0x22D3EE, ambient: 0.02,
+    pathColor: 0x809098, pathAlt: 0x708088,
+    grassColor: 0x2A3A38, grassLight: 0x3A4A48,
+    fogColor: 0x050A0A, ambientSound: 'drip',
   },
   {
-    name: 'Victory Road',
-    wallColor: 0x3A3A2D, wallTop: 0x4A4A3D, wallHighlight: 0x5A5A4D,
-    floorColor: 0xD8D0B8, floorAlt: 0xC8C0A8, floorAccent: 0xB8B098,
-    waterColor: 0x3880D8, waterLight: 0x5898F0, waterDeep: 0x2868C0,
-    accent: 0xFBBF24, ambient: 0.05,
-    pathColor: 0xD8D0C0, pathAlt: 0xC8C0B0,
-    grassColor: 0x48A038, grassLight: 0x58B848,
+    name: 'Victory Graveyard',
+    wallColor: 0x1A1A15, wallTop: 0x2A2A25, wallHighlight: 0x3A3A35,
+    floorColor: 0x888870, floorAlt: 0x787860, floorAccent: 0x686850,
+    waterColor: 0x2A2A1A, waterLight: 0x3A3A2A, waterDeep: 0x1A1A0A,
+    accent: 0xFBBF24, ambient: 0.01,
+    pathColor: 0x888870, pathAlt: 0x787860,
+    grassColor: 0x2A2A18, grassLight: 0x3A3A28,
+    fogColor: 0x050505, ambientSound: 'heartbeat',
   },
 ];
 
@@ -575,7 +601,7 @@ function drawTile(g, tileType, px, py, theme, x, y, time) {
       const base = tileType === T.FLOOR_ALT ? theme.floorAlt : theme.floorColor;
       g.fillStyle(base, 1);
       g.fillRect(px, py, T16, T16);
-      // Checkerboard pattern (Pokemon floor style)
+      // Checkerboard pattern
       if ((x + y) % 2 === 0) {
         g.fillStyle(theme.floorAccent, 0.3);
         g.fillRect(px, py, T16, T16);
@@ -584,6 +610,31 @@ function drawTile(g, tileType, px, py, theme, x, y, time) {
       g.fillStyle(0x000000, 0.04);
       g.fillRect(px + T16 - 1, py, 1, T16);
       g.fillRect(px, py + T16 - 1, T16, 1);
+      // Horror: blood stains (hash-based, deterministic)
+      const hash = (x * 7 + y * 13 + x * y * 3) % 100;
+      if (hash < 3) {
+        g.fillStyle(0x8B0000, 0.2 + (hash * 0.01));
+        g.fillRect(px + 3, py + 4, 5, 4);
+        g.fillRect(px + 6, py + 7, 3, 3);
+        g.fillRect(px + 8, py + 5, 2, 2);
+      }
+      // Horror: cracks
+      if (hash > 85 && hash < 92) {
+        g.fillStyle(0x000000, 0.2);
+        g.fillRect(px + 4, py + 2, 1, 6);
+        g.fillRect(px + 5, py + 7, 3, 1);
+        g.fillRect(px + 8, py + 4, 1, 4);
+      }
+      // Horror: cobwebs in corners
+      if (hash > 92 && hash < 96) {
+        g.fillStyle(0xCCCCCC, 0.08);
+        g.fillRect(px, py, 6, 1);
+        g.fillRect(px, py, 1, 6);
+        g.fillRect(px + 1, py + 1, 4, 1);
+        g.fillRect(px + 1, py + 1, 1, 4);
+        g.fillRect(px + 2, py + 2, 2, 1);
+        g.fillRect(px + 2, py + 2, 1, 2);
+      }
       break;
     }
     case T.PATH: {
@@ -992,7 +1043,9 @@ class GameScene extends Phaser.Scene {
     this.cameras.main.setBounds(0, 0, MAP_W * TILE, MAP_H * TILE);
     this.cameras.main.startFollow(this.player, true, 0.1, 0.1);
     this.cameras.main.setZoom(2);
-    this.cameras.main.setBackgroundColor(0x000000);
+    // Use theme fog color for background
+    const fogColor = theme.fogColor || 0x000000;
+    this.cameras.main.setBackgroundColor(fogColor);
 
     // ─── CONTROLS ───
     this.cursors = this.input.keyboard.createCursorKeys();
@@ -1366,6 +1419,57 @@ class GameScene extends Phaser.Scene {
       this.addLog(`✨ ${event.name}!`);
       event.apply(state.player);
       SFX.power();
+    }
+
+    // ─── HORROR ATMOSPHERE ───
+    // Ambient sounds
+    if (Math.random() < 0.002 * dt) {
+      const theme = THEMES[state.floorTheme % THEMES.length];
+      const sound = theme.ambientSound;
+      if (sound && SFX[sound]) SFX[sound]();
+    }
+
+    // Floating dust/mist particles
+    if (Math.random() < 0.01 * dt) {
+      const px = this.player.x + (Math.random() - 0.5) * 200;
+      const py = this.player.y + (Math.random() - 0.5) * 200;
+      const dust = this.add.circle(px, py, 1 + Math.random() * 2, 0xFFFFFF, 0.03 + Math.random() * 0.04);
+      dust.setDepth(12);
+      this.particles.push({ gfx: dust, vx: (Math.random() - 0.5) * 8, vy: -5 - Math.random() * 10, life: 2 + Math.random() * 2, maxLife: 4 });
+    }
+
+    // Flickering torch light (subtle)
+    if (Math.random() < 0.005 * dt) {
+      const flicker = this.add.circle(
+        this.player.x + (Math.random() - 0.5) * 100,
+        this.player.y + (Math.random() - 0.5) * 100,
+        30 + Math.random() * 20, 0xFF6B35, 0.02 + Math.random() * 0.02
+      );
+      flicker.setDepth(4);
+      this.tweens.add({ targets: flicker, alpha: 0, duration: 500 + Math.random() * 500, onComplete: () => flicker.destroy() });
+    }
+
+    // Horror shadow in periphery (rare, creepy)
+    if (Math.random() < 0.0005 * dt && state.depth >= 2) {
+      const angle = Math.random() * Math.PI * 2;
+      const dist = 120 + Math.random() * 60;
+      const sx = this.player.x + Math.cos(angle) * dist;
+      const sy = this.player.y + Math.sin(angle) * dist;
+      const shadow = this.add.container(sx, sy);
+      const shadowGfx = this.add.graphics();
+      shadowGfx.fillStyle(0x000000, 0.6);
+      shadowGfx.fillRect(-6, -8, 12, 16);
+      shadowGfx.fillStyle(0xFF0000, 0.4);
+      shadowGfx.fillRect(-4, -5, 2, 2);
+      shadowGfx.fillRect(2, -5, 2, 2);
+      shadow.add(shadowGfx);
+      shadow.setDepth(6);
+      this.tweens.add({
+        targets: shadow, alpha: 0, x: sx + (Math.random() - 0.5) * 40, y: sy + (Math.random() - 0.5) * 40,
+        duration: 1500 + Math.random() * 1000,
+        onComplete: () => shadow.destroy()
+      });
+      if (Math.random() < 0.3) SFX.whisper();
     }
 
     // ─── SHIELD VISUAL ───
@@ -1818,11 +1922,11 @@ class GameScene extends Phaser.Scene {
 
     const theme = THEMES[state.floorTheme % THEMES.length];
     const monsterTypes = [
-      { name: 'Zubat', color: 0x7C3AED, hp: 25, speed: 40, damage: 8 },
-      { name: 'Gastly', color: 0x6B21A8, hp: 30, speed: 45, damage: 10 },
-      { name: 'Haunter', color: 0xA855F7, hp: 40, speed: 35, damage: 14 },
-      { name: 'Gengar', color: 0x4C1D95, hp: 50, speed: 50, damage: 18 },
-      { name: 'Mewtwo', color: 0x581C87, hp: 65, speed: 45, damage: 22 },
+      { name: 'Shadow Crawler', color: 0x4A2A4A, hp: 25, speed: 40, damage: 8 },
+      { name: 'Lost Soul', color: 0x3A3A5A, hp: 30, speed: 45, damage: 10 },
+      { name: 'Flesh Golem', color: 0x5A2A2A, hp: 40, speed: 35, damage: 14 },
+      { name: 'Void Stalker', color: 0x2A1A3A, hp: 50, speed: 50, damage: 18 },
+      { name: 'Bone Horror', color: 0x6A5A3A, hp: 65, speed: 45, damage: 22 },
     ];
     const typeIdx = Math.min(Math.floor(state.depth / 2), monsterTypes.length - 1);
     const type = monsterTypes[typeIdx];
@@ -1890,11 +1994,11 @@ class GameScene extends Phaser.Scene {
     // Spawn monster at specific tile (for grass encounters)
     const theme = THEMES[state.floorTheme % THEMES.length];
     const monsterTypes = [
-      { name: 'Zubat', color: 0x7C3AED, hp: 25, speed: 40, damage: 8 },
-      { name: 'Gastly', color: 0x6B21A8, hp: 30, speed: 45, damage: 10 },
-      { name: 'Haunter', color: 0xA855F7, hp: 40, speed: 35, damage: 14 },
-      { name: 'Gengar', color: 0x4C1D95, hp: 50, speed: 50, damage: 18 },
-      { name: 'Mewtwo', color: 0x581C87, hp: 65, speed: 45, damage: 22 },
+      { name: 'Shadow Crawler', color: 0x4A2A4A, hp: 25, speed: 40, damage: 8 },
+      { name: 'Lost Soul', color: 0x3A3A5A, hp: 30, speed: 45, damage: 10 },
+      { name: 'Flesh Golem', color: 0x5A2A2A, hp: 40, speed: 35, damage: 14 },
+      { name: 'Void Stalker', color: 0x2A1A3A, hp: 50, speed: 50, damage: 18 },
+      { name: 'Bone Horror', color: 0x6A5A3A, hp: 65, speed: 45, damage: 22 },
     ];
     const typeIdx = Math.min(Math.floor(state.depth / 2), monsterTypes.length - 1);
     const type = monsterTypes[typeIdx];
