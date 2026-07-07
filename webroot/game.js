@@ -1045,9 +1045,12 @@ class GameScene extends Phaser.Scene {
     const fogColor = theme.fogColor || 0x000000;
     this.cameras.main.setBackgroundColor(fogColor);
 
-    // Manual camera follow (more reliable than startFollow)
-    this.cameras.main.scrollX = this.player.x - this.cameras.main.width / (2 * this.cameras.main.zoom);
-    this.cameras.main.scrollY = this.player.y - this.cameras.main.height / (2 * this.cameras.main.zoom);
+    // Center camera on player after everything is set up
+    this.time.delayedCall(50, () => {
+      if (this.player && this.cameras && this.cameras.main) {
+        this.cameras.main.centerOn(this.player.x, this.player.y);
+      }
+    });
 
     // ─── CONTROLS ───
     this.cursors = this.input.keyboard.createCursorKeys();
@@ -1507,11 +1510,30 @@ class GameScene extends Phaser.Scene {
     const cam = this.cameras.main;
     const targetX = this.player.x - cam.width / (2 * cam.zoom);
     const targetY = this.player.y - cam.height / (2 * cam.zoom);
-    cam.scrollX += (targetX - cam.scrollX) * 0.1;
-    cam.scrollY += (targetY - cam.scrollY) * 0.1;
-    // Clamp to bounds
-    cam.scrollX = Math.max(0, Math.min(cam.scrollX, MAP_W * TILE - cam.width / cam.zoom));
-    cam.scrollY = Math.max(0, Math.min(cam.scrollY, MAP_H * TILE - cam.height / cam.zoom));
+
+    // Snap immediately on first frame, lerp after
+    if (!this._cameraSnapped) {
+      this._cameraSnapped = true;
+      cam.scrollX = targetX;
+      cam.scrollY = targetY;
+    } else {
+      cam.scrollX += (targetX - cam.scrollX) * 0.15;
+      cam.scrollY += (targetY - cam.scrollY) * 0.15;
+    }
+
+    const maxScrollX = Math.max(0, MAP_W * TILE - cam.width / cam.zoom);
+    const maxScrollY = Math.max(0, MAP_H * TILE - cam.height / cam.zoom);
+    cam.scrollX = Math.max(0, Math.min(cam.scrollX, maxScrollX));
+    cam.scrollY = Math.max(0, Math.min(cam.scrollY, maxScrollY));
+
+    // Debug once
+    if (!this._cameraDebugged) {
+      this._cameraDebugged = true;
+      console.log('Cam:', JSON.stringify({ sx: cam.scrollX, sy: cam.scrollY, w: cam.width, h: cam.height, z: cam.zoom }));
+      console.log('Player:', JSON.stringify({ x: this.player.x, y: this.player.y }));
+      console.log('Canvas:', JSON.stringify({ w: this.game.canvas.width, h: this.game.canvas.height }));
+      console.log('Container:', JSON.stringify({ w: document.getElementById('game-container')?.offsetWidth, h: document.getElementById('game-container')?.offsetHeight }));
+    }
 
     // ─── FOG OF WAR ───
     this.drawFog(dungeon, tx, ty);
