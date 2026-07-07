@@ -139,6 +139,168 @@ const STATUS = {
   REGEN: { name: 'Regen', color: 0x34D399, duration: 8, healPerTick: 2 },
 };
 
+// ─── COMBO SYSTEM ────────────────────────────────────────────
+let combo = { count: 0, timer: 0, multiplier: 1, maxCombo: 0 };
+const COMBO_TIMEOUT = 2.0; // seconds to maintain combo
+const COMBO_THRESHOLDS = [3, 5, 8, 12, 20]; // combo milestones
+
+function getComboMultiplier() {
+  if (combo.count < 3) return 1;
+  if (combo.count < 5) return 1.5;
+  if (combo.count < 8) return 2;
+  if (combo.count < 12) return 3;
+  if (combo.count < 20) return 4;
+  return 5;
+}
+
+function addCombo() {
+  combo.count++;
+  combo.timer = COMBO_TIMEOUT;
+  combo.multiplier = getComboMultiplier();
+  combo.maxCombo = Math.max(combo.maxCombo, combo.count);
+  // Milestone effects
+  if (COMBO_THRESHOLDS.includes(combo.count)) {
+    SFX.levelup();
+    state.log.push(`⚡ ${combo.count}x COMBO!`);
+  }
+}
+
+function resetCombo() {
+  combo.count = 0;
+  combo.multiplier = 1;
+}
+
+// ─── WEAPON SYSTEM ────────────────────────────────────────────
+const WEAPONS = {
+  rusty_sword: { name: 'Rusty Sword', atk: 3, icon: '🗡', color: 0x888888, desc: 'ATK +3' },
+  iron_blade: { name: 'Iron Blade', atk: 6, icon: '⚔', color: 0xBBBBBB, desc: 'ATK +6' },
+  fire_staff: { name: 'Fire Staff', atk: 8, icon: '🔥', color: 0xEF4444, desc: 'ATK +8, burn chance' },
+  ice_bow: { name: 'Ice Bow', atk: 5, icon: '❄', color: 0x22D3EE, desc: 'ATK +5, slow chance' },
+  shadow_dagger: { name: 'Shadow Dagger', atk: 10, icon: '🌑', color: 0x6B21A8, desc: 'ATK +10, crit chance' },
+  holy_lance: { name: 'Holy Lance', atk: 12, icon: '✦', color: 0xFBBF24, desc: 'ATK +12, heal on kill' },
+};
+
+function getRandomWeapon(depth) {
+  const pool = Object.keys(WEAPONS);
+  const maxIdx = Math.min(pool.length - 1, Math.floor(depth / 2) + 2);
+  const idx = Math.floor(Math.random() * (maxIdx + 1));
+  const id = pool[idx];
+  return { id, ...WEAPONS[id] };
+}
+
+// ─── BOSS SYSTEM ──────────────────────────────────────────────
+const BOSSES = [
+  { name: 'Thread Guardian', color: 0xEF4444, hp: 150, speed: 30, damage: 20, size: 20, floor: 3 },
+  { name: 'Reply Hydra', color: 0xA855F7, hp: 250, speed: 35, damage: 25, size: 24, floor: 5 },
+  { name: 'OP Overlord', color: 0xFBBF24, hp: 400, speed: 40, damage: 35, size: 28, floor: 7 },
+];
+
+// ─── RANDOM EVENTS ────────────────────────────────────────────
+const RANDOM_EVENTS = [
+  { id: 'merchant', name: 'Mysterious Merchant', chance: 0.08,
+    apply: (p) => { const cost = 20 + state.depth * 10; if (p.gold >= cost) { p.gold -= cost; p.atk += 3; state.log.push(`Merchant: +3 ATK for ${cost}G`); } else { state.log.push('Merchant: Not enough gold!'); } } },
+  { id: 'fountain', name: 'Healing Fountain', chance: 0.06,
+    apply: (p) => { const heal = Math.floor(p.maxHp * 0.5); p.hp = Math.min(p.maxHp, p.hp + heal); state.log.push(`Fountain: +${heal} HP!`); SFX.heal(); } },
+  { id: 'altar', name: 'Cursed Altar', chance: 0.05,
+    apply: (p) => { if (Math.random() < 0.5) { p.atk += 8; state.log.push('Altar: +8 ATK!'); } else { p.hp = Math.max(1, p.hp - 30); state.log.push('Altar: -30 HP!'); SFX.hurt(); } } },
+  { id: 'shrine', name: 'Ancient Shrine', chance: 0.04,
+    apply: (p) => { p.maxHp += 20; p.hp += 20; state.log.push('Shrine: +20 Max HP!'); SFX.power(); } },
+  { id: 'trap_room', name: 'Trapped Chest', chance: 0.07,
+    apply: (p) => { if (Math.random() < 0.6) { p.gold += 50; state.log.push('Chest: +50 Gold!'); } else { p.hp = Math.max(1, p.hp - 20); state.log.push('Trapped! -20 HP'); SFX.trap(); } } },
+];
+
+// ─── ACHIEVEMENTS ─────────────────────────────────────────────
+const ACHIEVEMENTS = [
+  { id: 'first_blood', name: 'First Blood', desc: 'Kill your first monster', check: () => state.kills >= 1 },
+  { id: 'combo_5', name: 'Combo King', desc: 'Reach 5x combo', check: () => combo.maxCombo >= 5 },
+  { id: 'floor_3', name: 'Deep Diver', desc: 'Reach floor 3', check: () => state.depth >= 3 },
+  { id: 'floor_7', name: 'Thread Master', desc: 'Clear all 7 floors', check: () => state.depth >= 7 },
+  { id: 'kills_50', name: 'Monster Slayer', desc: 'Kill 50 monsters total', check: () => state.kills >= 50 },
+  { id: 'gold_500', name: 'Gold Hoarder', desc: 'Collect 500 gold', check: () => state.player.gold >= 500 },
+  { id: 'level_10', name: 'Veteran', desc: 'Reach level 10', check: () => state.player.level >= 10 },
+  { id: 'no_damage_floor', name: 'Untouchable', desc: 'Clear a floor without taking damage', check: () => false }, // checked manually
+];
+
+let unlockedAchievements = new Set();
+let floorDamageTaken = 0;
+
+function checkAchievements() {
+  ACHIEVEMENTS.forEach(a => {
+    if (!unlockedAchievements.has(a.id) && a.check()) {
+      unlockedAchievements.add(a.id);
+      state.log.push(`🏆 Achievement: ${a.name}!`);
+      SFX.levelup();
+    }
+  });
+}
+
+// ─── PERSISTENT UPGRADES (localStorage) ───────────────────────
+const UPGRADES = {
+  max_hp: { name: 'Max HP', desc: '+10 HP per level', baseCost: 30, costMult: 1.5, apply: (p) => { p.maxHp += 10; p.hp += 10; } },
+  attack: { name: 'Attack', desc: '+2 ATK per level', baseCost: 40, costMult: 1.5, apply: (p) => { p.atk += 2; } },
+  defense: { name: 'Defense', desc: '+1 DEF per level', baseCost: 35, costMult: 1.5, apply: (p) => { p.def += 1; } },
+  speed: { name: 'Speed', desc: '+10% speed', baseCost: 50, costMult: 1.8, apply: (p) => { p.speedMult += 0.1; } },
+  inv_size: { name: 'Bag Size', desc: '+2 inventory slots', baseCost: 25, costMult: 1.3, apply: (p) => { p.maxInventory += 2; } },
+};
+
+let persistentGold = 0;
+let upgradeLevels = {};
+
+function loadPersistentData() {
+  try {
+    const d = JSON.parse(localStorage.getItem('threadcrawler_save') || '{}');
+    persistentGold = d.gold || 0;
+    upgradeLevels = d.upgrades || {};
+    unlockedAchievements = new Set(d.achievements || []);
+  } catch(e) {}
+}
+
+function savePersistentData() {
+  try {
+    localStorage.setItem('threadcrawler_save', JSON.stringify({
+      gold: persistentGold,
+      upgrades: upgradeLevels,
+      achievements: [...unlockedAchievements],
+    }));
+  } catch(e) {}
+}
+
+function buyUpgrade(id) {
+  const upg = UPGRADES[id];
+  if (!upg) return;
+  const level = upgradeLevels[id] || 0;
+  const cost = Math.floor(upg.baseCost * Math.pow(upg.costMult, level));
+  if (persistentGold < cost) { state.log.push('Not enough gold!'); return; }
+  persistentGold -= cost;
+  upgradeLevels[id] = level + 1;
+  upg.apply(state.player);
+  state.log.push(`Upgraded ${upg.name} to Lv.${level + 1}!`);
+  SFX.power();
+  savePersistentData();
+}
+
+function applyPersistentUpgrades() {
+  Object.entries(upgradeLevels).forEach(([id, level]) => {
+    const upg = UPGRADES[id];
+    if (!upg) return;
+    for (let i = 0; i < level; i++) upg.apply(state.player);
+  });
+}
+
+// ─── DEVVIT CONNECTION ────────────────────────────────────────
+let devvitDungeon = null;
+window.addEventListener('message', (e) => {
+  if (e.data && e.data.type === 'devvit_dungeon') {
+    devvitDungeon = e.data.dungeon;
+    state.log.push('Reddit thread loaded!');
+  }
+});
+
+// Send ready signal to parent (Devvit)
+if (window.parent !== window) {
+  window.parent.postMessage({ type: 'game_ready' }, '*');
+}
+
 // ─── GAME STATE ──────────────────────────────────────────────
 let state = {
   phase: 'title',
@@ -814,6 +976,10 @@ class GameScene extends Phaser.Scene {
     const monsterCount = Math.min(3 + state.depth, 8);
     for (let i = 0; i < monsterCount; i++) this.spawnMonster();
 
+    // Spawn boss on specific floors
+    const bossData = BOSSES.find(b => b.floor === state.depth);
+    if (bossData) this.spawnBoss(bossData);
+
     // ─── FOG OF WAR ───
     this.fogGraphics = this.add.graphics();
     this.fogGraphics.setDepth(20);
@@ -1084,6 +1250,24 @@ class GameScene extends Phaser.Scene {
     processStatusEffects(dt);
     updateStatusUI();
 
+    // ─── COMBO TIMER ───
+    if (combo.timer > 0) {
+      combo.timer -= dt;
+      if (combo.timer <= 0) {
+        resetCombo();
+      }
+    }
+
+    // ─── RANDOM EVENTS (small chance per second) ───
+    if (Math.random() < 0.001 * dt) {
+      const event = RANDOM_EVENTS[Math.floor(Math.random() * RANDOM_EVENTS.length)];
+      if (Math.random() < event.chance) {
+        this.addLog(`✨ ${event.name}!`);
+        event.apply(state.player);
+        SFX.power();
+      }
+    }
+
     // ─── SHIELD VISUAL ───
     if (state.player.shield > 0) {
       if (!this.shieldGfx) {
@@ -1290,7 +1474,18 @@ class GameScene extends Phaser.Scene {
 
   hitMonster(monster) {
     const theme = THEMES[state.floorTheme % THEMES.length];
-    const hp = monster.getData('hp') - state.player.atk;
+    let damage = state.player.atk;
+
+    // Weapon bonus
+    if (state.player.weapon) {
+      damage += state.player.weapon.atk || 0;
+    }
+
+    // Combo multiplier
+    addCombo();
+    damage = Math.floor(damage * combo.multiplier);
+
+    const hp = monster.getData('hp') - damage;
     const maxHp = monster.getData('maxHp');
     monster.setData('hp', hp);
 
@@ -1299,7 +1494,6 @@ class GameScene extends Phaser.Scene {
     if (hpFill && hpFill.active) {
       const ratio = Math.max(0, hp / maxHp);
       hpFill.setScale(ratio, 1);
-      // Color: green > yellow > red
       if (ratio > 0.5) hpFill.setFillStyle(0x48C848, 0.8);
       else if (ratio > 0.25) hpFill.setFillStyle(0xF8D838, 0.8);
       else hpFill.setFillStyle(0xEF4444, 0.8);
@@ -1316,7 +1510,22 @@ class GameScene extends Phaser.Scene {
 
     this.screenShake = 4;
     SFX.hit();
-    this.spawnDamageNumber(monster.x, monster.y, `-${state.player.atk}`, 0xFFFFFF);
+
+    // Show combo + damage number
+    const comboText = combo.count > 1 ? ` (${combo.count}x)` : '';
+    this.spawnDamageNumber(monster.x, monster.y, `-${damage}${comboText}`, combo.count >= 5 ? 0xFBBF24 : 0xFFFFFF);
+
+    // Weapon special effects
+    if (state.player.weapon) {
+      if (state.player.weapon.id === 'fire_staff' && Math.random() < 0.3) {
+        addStatusEffect('BURN');
+        state.log.push('Weapon: Burn applied!');
+      }
+      if (state.player.weapon.id === 'ice_bow' && Math.random() < 0.3) {
+        addStatusEffect('FREEZE');
+        state.log.push('Weapon: Freeze applied!');
+      }
+    }
 
     if (hp <= 0) {
       // Death explosion
@@ -1325,11 +1534,43 @@ class GameScene extends Phaser.Scene {
       }
       monster.destroy();
       state.kills++;
-      state.player.xp += 15 + state.depth * 5;
+
+      // Combo bonus XP
+      const comboXpBonus = Math.floor((15 + state.depth * 5) * (combo.multiplier - 1));
+      const baseXp = 15 + state.depth * 5;
+      state.player.xp += baseXp + comboXpBonus;
       state.player.gold += 8 + state.depth * 3;
-      this.addLog(`Monster defeated! +${15 + state.depth * 5} XP`);
+
+      // Holy lance heal on kill
+      if (state.player.weapon && state.player.weapon.id === 'holy_lance') {
+        const heal = 5;
+        state.player.hp = Math.min(state.player.maxHp, state.player.hp + heal);
+        this.spawnDamageNumber(this.player.x, this.player.y, `+${heal}`, 0x34D399);
+      }
+
+      this.addLog(`Monster defeated! +${baseXp + comboXpBonus} XP${comboXpBonus > 0 ? ` (${combo.multiplier}x combo!)` : ''}`);
       this.screenShake = 6;
       SFX.kill();
+
+      // Boss drops weapon
+      if (monster.getData('isBoss')) {
+        const weapon = getRandomWeapon(state.depth);
+        state.player.weapon = weapon;
+        this.addLog(`🗡 Boss dropped: ${weapon.name}! (${weapon.desc})`);
+        SFX.chest();
+      }
+
+      // Random weapon drop from normal monsters (5% chance)
+      if (!monster.getData('isBoss') && Math.random() < 0.05) {
+        const weapon = getRandomWeapon(state.depth);
+        if (!state.player.weapon || WEAPONS[weapon.id].atk > WEAPONS[state.player.weapon.id].atk) {
+          state.player.weapon = weapon;
+          this.addLog(`Found: ${weapon.name}! (${weapon.desc})`);
+          SFX.power();
+        }
+      }
+
+      checkAchievements();
 
       // Level up
       if (state.player.xp >= state.player.xpNext) {
@@ -1349,6 +1590,10 @@ class GameScene extends Phaser.Scene {
 
   damagePlayer(amount) {
     if (state.player.invincible > 0) return;
+
+    // Reset combo on taking damage
+    resetCombo();
+    floorDamageTaken++;
 
     // Shield check
     if (state.player.shield > 0) {
@@ -1594,6 +1839,75 @@ class GameScene extends Phaser.Scene {
     this.monsters.push(monster);
   }
 
+  spawnBoss(bossData) {
+    const dungeon = state.dungeon;
+    let bestRoom = null;
+    let bestArea = 0;
+    dungeon.rooms.forEach(room => {
+      const area = room.w * room.h;
+      if (area > bestArea) { bestArea = area; bestRoom = room; }
+    });
+    if (!bestRoom) return;
+
+    const bx = (bestRoom.x + Math.floor(bestRoom.w / 2)) * TILE + TILE / 2;
+    const by = (bestRoom.y + Math.floor(bestRoom.h / 2)) * TILE + TILE / 2;
+
+    const monster = this.add.container(bx, by);
+    const body = this.add.graphics();
+    const mc = bossData.color;
+    const rv = (mc >> 16) & 0xff, gv = (mc >> 8) & 0xff, bv = mc & 0xff;
+    const dark = Phaser.Display.Color.GetColor(Math.max(0, rv - 40), Math.max(0, gv - 40), Math.max(0, bv - 40));
+    const light = Phaser.Display.Color.GetColor(Math.min(255, rv + 50), Math.min(255, gv + 50), Math.min(255, bv + 50));
+
+    const s = bossData.size || 20;
+    body.fillStyle(mc, 0.9);
+    body.fillRect(-s/2, -s/2, s, s);
+    body.fillRect(-s/2 - 3, -s/2 + 4, s + 6, s - 8);
+    body.fillStyle(light, 0.5);
+    body.fillRect(-s/2 + 2, -s/2 + 2, s/2, s/3);
+    body.fillStyle(dark, 0.4);
+    body.fillRect(-s/2, s/2 - 4, s, 4);
+    body.fillStyle(0xFF0000, 0.9);
+    body.fillRect(-s/4, -s/4, 4, 4);
+    body.fillRect(s/4 - 4, -s/4, 4, 4);
+    body.fillStyle(0xFBBF24, 0.8);
+    body.fillRect(-s/2 + 2, -s/2 - 4, 4, 4);
+    body.fillRect(s/2 - 6, -s/2 - 4, 4, 4);
+    body.fillRect(0, -s/2 - 6, 4, 6);
+    monster.add(body);
+
+    const hpBg = this.add.rectangle(0, -s/2 - 10, s + 10, 3, 0x000000, 0.5);
+    const hpFill = this.add.rectangle(0, -s/2 - 10, s + 10, 3, 0xEF4444, 0.8);
+    hpFill.setOrigin(0.5);
+    monster.add(hpBg);
+    monster.add(hpFill);
+    monster.setData('hpFill', hpFill);
+
+    const nameTag = this.add.text(0, -s/2 - 16, bossData.name, {
+      fontFamily: 'Press Start 2P', fontSize: '6px', color: '#E83838',
+      stroke: '#000', strokeThickness: 2,
+    }).setOrigin(0.5);
+    monster.add(nameTag);
+
+    monster.setSize(s, s);
+    monster.setData('hp', bossData.hp);
+    monster.setData('maxHp', bossData.hp);
+    monster.setData('speed', bossData.speed);
+    monster.setData('damage', bossData.damage);
+    monster.setData('offset', Math.random() * Math.PI * 2);
+    monster.setData('name', bossData.name);
+    monster.setData('isBoss', true);
+    monster.setDepth(8);
+
+    this.physics.world.enable(monster);
+    monster.body.setCollideWorldBounds(true);
+    monster.body.setOffset(-s/2, -s/2);
+    this.physics.add.collider(monster, this.walls);
+    this.monsters.push(monster);
+
+    this.addLog(`⚠ BOSS: ${bossData.name} appeared!`);
+  }
+
   spawnParticle(x, y, vx, vy, color, alpha) {
     const p = this.add.circle(x, y, 1 + Math.random() * 1.5, color, alpha);
     p.setDepth(15);
@@ -1614,12 +1928,34 @@ class GameScene extends Phaser.Scene {
   nextFloor() {
     if (this.transitioning) return;
     this.transitioning = true;
+
+    // Untouchable achievement check
+    if (floorDamageTaken === 0 && state.depth > 0) {
+      if (!unlockedAchievements.has('no_damage_floor')) {
+        unlockedAchievements.add('no_damage_floor');
+        this.addLog('🏆 Achievement: Untouchable!');
+        SFX.levelup();
+      }
+    }
+
+    // Save gold to persistent storage
+    persistentGold += state.player.gold;
+    savePersistentData();
+
     state.depth++;
     state.floorTheme = (state.floorTheme + 1) % THEMES.length;
+    floorDamageTaken = 0;
+    resetCombo();
     SFX.exit();
+
+    // Floor clear celebration
+    this.addLog(`✨ Floor ${state.depth} cleared!`);
 
     if (state.depth >= state.totalFloors) {
       state.phase = 'victory';
+      persistentGold += 100; // bonus for clearing
+      savePersistentData();
+      checkAchievements();
       document.getElementById('gameover-screen').classList.add('show');
       document.getElementById('go-title').textContent = 'VICTORY!';
       document.getElementById('go-title').style.color = '#F8D838';
@@ -1628,7 +1964,8 @@ class GameScene extends Phaser.Scene {
         Kills: ${state.kills}<br>
         Gold: ${state.player.gold}<br>
         Level: ${state.player.level} (${state.player.title})<br>
-        Items: ${state.player.inventory.length}
+        Max Combo: ${combo.maxCombo}x<br>
+        Achievements: ${unlockedAchievements.size}/${ACHIEVEMENTS.length}
       `;
       return;
     }
@@ -1682,6 +2019,29 @@ class GameScene extends Phaser.Scene {
     if (logEl) {
       logEl.innerHTML = state.log.slice(-4).map(l => `<div class="log-entry">${l}</div>`).join('');
       logEl.scrollTop = logEl.scrollHeight;
+    }
+
+    // Combo display
+    const comboEl = document.getElementById('combo-display');
+    if (comboEl) {
+      if (combo.count >= 3) {
+        comboEl.textContent = `${combo.count}x COMBO`;
+        comboEl.style.display = 'block';
+        comboEl.style.color = combo.count >= 12 ? '#F8D838' : combo.count >= 5 ? '#E87898' : '#A882F7';
+      } else {
+        comboEl.style.display = 'none';
+      }
+    }
+
+    // Weapon display
+    const weaponEl = document.getElementById('weapon-display');
+    if (weaponEl) {
+      if (state.player.weapon) {
+        weaponEl.textContent = `${state.player.weapon.icon} ${state.player.weapon.name}`;
+        weaponEl.style.display = 'block';
+      } else {
+        weaponEl.style.display = 'none';
+      }
     }
 
     // Sync sidebar
@@ -1851,6 +2211,8 @@ function updateStatusUI() {
 
 // ─── GAME LIFECYCLE ──────────────────────────────────────────
 function startGame() {
+  loadPersistentData();
+
   state = {
     phase: 'explore',
     player: {
@@ -1858,11 +2220,20 @@ function startGame() {
       gold: 0, title: 'Youngster', invincible: 0,
       inventory: [], maxInventory: 12, equipped: null,
       speedMult: 1, shield: 0, statusEffects: [],
+      weapon: null,
     },
     dungeon: null, depth: 0, totalFloors: 7, kills: 0, log: [],
     visited: new Set(), keys: 0, floorTheme: 0,
     transitionAlpha: 0, isTransitioning: false,
   };
+
+  // Apply persistent upgrades
+  applyPersistentUpgrades();
+
+  // Reset combo
+  combo = { count: 0, timer: 0, multiplier: 1, maxCombo: 0 };
+  floorDamageTaken = 0;
+
   document.getElementById('title-screen').classList.remove('show');
   document.getElementById('gameover-screen').classList.remove('show');
   document.getElementById('power-led').classList.add('on');

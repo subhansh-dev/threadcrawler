@@ -767,6 +767,8 @@
                 <div class="gb-hud-stat">XP <div class="gb-hp-bar" style="width:30px;"><div class="gb-hp-fill" id="xp-fill" style="width:0%;background:var(--blue);"></div></div></div>
                 <span class="gb-hud-stat" id="hud-gold">G:0</span>
                 <span class="gb-hud-stat" id="hud-level">Lv1</span>
+                <span class="gb-hud-stat" id="weapon-display" style="display:none;color:#F8D838;font-size:6px;"></span>
+                <span class="gb-hud-stat" id="combo-display" style="display:none;font-size:7px;font-weight:bold;"></span>
               </div>
             </div>
 
@@ -813,6 +815,20 @@
                 <div class="inv-title">BAG <span id="inv-count">0</span>/12</div>
                 <div class="inv-grid" id="inventory-items"></div>
                 <button onclick="toggleInventory()" style="font-family:'Press Start 2P';font-size:8px;padding:8px 16px;background:var(--bg-card2);color:var(--text);border:2px solid var(--border);border-radius:6px;cursor:pointer;margin-top:12px;">CLOSE</button>
+              </div>
+
+              <!-- Shop overlay -->
+              <div class="inv-overlay" id="shop-panel">
+                <div class="inv-title">UPGRADE SHOP <span style="font-size:8px;color:#888868;">(Gold: <span id="shop-gold">0</span>G)</span></div>
+                <div id="shop-items" style="width:80%;max-width:400px;display:flex;flex-direction:column;gap:4px;"></div>
+                <button onclick="toggleShop()" style="font-family:'Press Start 2P';font-size:8px;padding:8px 16px;background:var(--bg-card2);color:var(--text);border:2px solid var(--border);border-radius:6px;cursor:pointer;margin-top:12px;">CLOSE</button>
+              </div>
+
+              <!-- Achievements overlay -->
+              <div class="inv-overlay" id="achievements-panel">
+                <div class="inv-title">ACHIEVEMENTS <span style="font-size:8px;color:#888868;"><span id="ach-count">0</span>/8</span></div>
+                <div id="ach-items" style="width:80%;max-width:400px;display:flex;flex-direction:column;gap:4px;"></div>
+                <button onclick="toggleAchievements()" style="font-family:'Press Start 2P';font-size:8px;padding:8px 16px;background:var(--bg-card2);color:var(--text);border:2px solid var(--border);border-radius:6px;cursor:pointer;margin-top:12px;">CLOSE</button>
               </div>
 
               <!-- Transition -->
@@ -865,6 +881,8 @@
   <!-- ═══ WEB UI BAR ═══ -->
   <div class="web-bar">
     <button class="web-btn" onclick="toggleInventory()">BAG (I)</button>
+    <button class="web-btn" onclick="toggleShop()">SHOP</button>
+    <button class="web-btn" onclick="toggleAchievements()">FEATS</button>
     <button class="web-btn" id="btn-mute" onclick="toggleMute()">MUTE</button>
     <div style="flex:1;"></div>
     <div class="depth-bar" style="align-items:center;">
@@ -953,6 +971,54 @@
       if (!el || !state || !state.log) return;
       el.innerHTML = state.log.slice(-8).map(l => `<div class="log-entry">${l}</div>`).join('');
       el.scrollTop = el.scrollHeight;
+    }
+
+    function toggleShop() {
+      const p = document.getElementById('shop-panel');
+      p.classList.toggle('show');
+      if (p.classList.contains('show')) renderShop();
+    }
+
+    function renderShop() {
+      const goldEl = document.getElementById('shop-gold');
+      if (goldEl) goldEl.textContent = persistentGold;
+      const el = document.getElementById('shop-items');
+      if (!el) return;
+      el.innerHTML = Object.entries(UPGRADES).map(([id, upg]) => {
+        const level = upgradeLevels[id] || 0;
+        const cost = Math.floor(upg.baseCost * Math.pow(upg.costMult, level));
+        const canBuy = persistentGold >= cost;
+        return `<div class="inv-sidebar-item" onclick="buyUpgrade('${id}');renderShop();" style="${canBuy ? '' : 'opacity:0.4;pointer-events:none;'}">
+          <span style="font-size:16px;">⬆</span>
+          <div>
+            <div style="font-size:14px;">${upg.name} Lv.${level}</div>
+            <div style="font-size:11px;color:#585840;">${upg.desc} — ${cost}G</div>
+          </div>
+        </div>`;
+      }).join('');
+    }
+
+    function toggleAchievements() {
+      const p = document.getElementById('achievements-panel');
+      p.classList.toggle('show');
+      if (p.classList.contains('show')) renderAchievements();
+    }
+
+    function renderAchievements() {
+      const countEl = document.getElementById('ach-count');
+      if (countEl) countEl.textContent = unlockedAchievements.size;
+      const el = document.getElementById('ach-items');
+      if (!el) return;
+      el.innerHTML = ACHIEVEMENTS.map(a => {
+        const done = unlockedAchievements.has(a.id);
+        return `<div class="inv-sidebar-item" style="${done ? 'border-color:var(--green);' : 'opacity:0.4;'}">
+          <span style="font-size:16px;">${done ? '🏆' : '🔒'}</span>
+          <div>
+            <div style="font-size:14px;">${a.name}</div>
+            <div style="font-size:11px;color:#585840;">${a.desc}</div>
+          </div>
+        </div>`;
+      }).join('');
     }
   </script>
   </div><!-- /.app -->

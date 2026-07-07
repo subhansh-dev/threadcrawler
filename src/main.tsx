@@ -213,6 +213,14 @@ Devvit.addCustomPostType({
         addLog(`Dungeon loaded: "${dungeonData.threadTitle}"`);
         addLog(`Vibe: ${dungeonData.vibe} | ${dungeonData.commentCount} rooms | Depth: ${dungeonData.totalDepth}`);
 
+        // Send dungeon data to Phaser game via webview
+        try {
+          context.ui.webView.postMessage('default', {
+            type: 'devvit_dungeon',
+            dungeon: dungeonData,
+          });
+        } catch(e) { console.log('WebView not available'); }
+
         // Start at first root room
         if (dungeonData.rootIds.length > 0) {
           const firstRoom = dungeonData.rooms[dungeonData.rootIds[0]];
