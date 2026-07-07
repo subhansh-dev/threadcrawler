@@ -1047,22 +1047,6 @@ class GameScene extends Phaser.Scene {
     const fogColor = theme.fogColor || 0x000000;
     this.cameras.main.setBackgroundColor(fogColor);
 
-    // Force canvas to fill container
-    this.scale.on('resize', (gameSize) => {
-      const canvas = this.game.canvas;
-      if (canvas) {
-        canvas.style.width = '100%';
-        canvas.style.height = '100%';
-      }
-    });
-    // Initial force
-    const canvas = this.game.canvas;
-    if (canvas) {
-      canvas.style.width = '100%';
-      canvas.style.height = '100%';
-      canvas.style.display = 'block';
-    }
-
     // ─── CONTROLS ───
     this.cursors = this.input.keyboard.createCursorKeys();
     this.wasd = this.input.keyboard.addKeys('W,A,S,D');
@@ -2522,7 +2506,7 @@ const config = {
   backgroundColor: '#000000',
   physics: { default: 'arcade', arcade: { gravity: { y: 0 }, debug: false } },
   scene: [BootScene, GameScene],
-  scale: { mode: Phaser.Scale.NONE },
+  scale: { mode: Phaser.Scale.FIT, autoCenter: Phaser.Scale.CENTER_BOTH },
   pixelArt: true,
   antialias: false,
 };
@@ -2703,20 +2687,6 @@ function startGame() {
   document.getElementById('controls-hint').classList.add('show');
   if (game) game.destroy(true);
   game = new Phaser.Game(config);
-
-  // Force canvas to fill container after Phaser creates it
-  game.events.once('ready', () => {
-    const container = document.getElementById('game-container');
-    const canvas = game.canvas;
-    if (container && canvas) {
-      canvas.style.width = '100%';
-      canvas.style.height = '100%';
-      canvas.style.display = 'block';
-      canvas.style.position = 'absolute';
-      canvas.style.top = '0';
-      canvas.style.left = '0';
-    }
-  });
 }
 
 function restartGame() {
