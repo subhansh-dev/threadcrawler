@@ -198,7 +198,7 @@ const BOSSES = [
 // ─── RANDOM EVENTS ────────────────────────────────────────────
 const RANDOM_EVENTS = [
   { id: 'merchant', name: 'Mysterious Merchant', chance: 0.08,
-    apply: (p) => { const cost = 20 + state.depth * 10; if (p.gold >= cost) { p.gold -= cost; p.atk += 3; state.log.push(`Merchant: +3 ATK for ${cost}G`); } else { state.log.push('Merchant: Not enough gold!'); } } },
+    apply: (p) => { const cost = 20 + state.depth * 10; if (p.gold >= cost) { p.gold -= cost; p.atk += 3; state.log.push(`Merchant: +3 ATK for ${cost}G`); } else { const gift = Math.floor(Math.random() * 10) + 5; p.gold += gift; state.log.push(`Merchant: Free sample! +${gift}G`); } } },
   { id: 'fountain', name: 'Healing Fountain', chance: 0.06,
     apply: (p) => { const heal = Math.floor(p.maxHp * 0.5); p.hp = Math.min(p.maxHp, p.hp + heal); state.log.push(`Fountain: +${heal} HP!`); SFX.heal(); } },
   { id: 'altar', name: 'Cursed Altar', chance: 0.05,
@@ -990,8 +990,8 @@ class GameScene extends Phaser.Scene {
 
     // ─── CAMERA ───
     this.cameras.main.setBounds(0, 0, MAP_W * TILE, MAP_H * TILE);
-    this.cameras.main.startFollow(this.player, true, 0.15, 0.15);
-    this.cameras.main.setZoom(2.5);
+    this.cameras.main.startFollow(this.player, true, 0.1, 0.1);
+    this.cameras.main.setZoom(2);
     this.cameras.main.setBackgroundColor(0x000000);
 
     // ─── CONTROLS ───
@@ -1258,14 +1258,12 @@ class GameScene extends Phaser.Scene {
       }
     }
 
-    // ─── RANDOM EVENTS (small chance per second) ───
-    if (Math.random() < 0.001 * dt) {
+    // ─── RANDOM EVENTS ───
+    if (Math.random() < 0.003 * dt) {
       const event = RANDOM_EVENTS[Math.floor(Math.random() * RANDOM_EVENTS.length)];
-      if (Math.random() < event.chance) {
-        this.addLog(`✨ ${event.name}!`);
-        event.apply(state.player);
-        SFX.power();
-      }
+      this.addLog(`✨ ${event.name}!`);
+      event.apply(state.player);
+      SFX.power();
     }
 
     // ─── SHIELD VISUAL ───
@@ -1841,6 +1839,7 @@ class GameScene extends Phaser.Scene {
 
   spawnBoss(bossData) {
     const dungeon = state.dungeon;
+    if (!dungeon || !dungeon.rooms || dungeon.rooms.length === 0) return;
     let bestRoom = null;
     let bestArea = 0;
     dungeon.rooms.forEach(room => {
@@ -2051,11 +2050,14 @@ class GameScene extends Phaser.Scene {
 }
 
 // ─── PHASER CONFIG ───────────────────────────────────────────
+const GAME_W = 480;
+const GAME_H = 340;
+
 const config = {
   type: Phaser.AUTO,
   parent: 'game-container',
-  width: MAP_W * TILE,
-  height: MAP_H * TILE,
+  width: GAME_W,
+  height: GAME_H,
   backgroundColor: '#000000',
   physics: { default: 'arcade', arcade: { gravity: { y: 0 }, debug: false } },
   scene: [BootScene, GameScene],

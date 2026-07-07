@@ -268,7 +268,7 @@
       box-shadow: inset 0 0 24px rgba(0,0,0,0.3);
       overflow: hidden;
       position: relative;
-      height: 340px;
+      height: 400px;
     }
 
     .gb-screen::after {
@@ -344,13 +344,20 @@
       flex: 1;
       position: relative;
       overflow: hidden;
+      min-height: 200px;
     }
 
-    #game-container { width: 100%; height: 100%; }
+    #game-container {
+      width: 100%;
+      height: 100%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
 
     #game-container canvas {
-      width: 100% !important;
-      height: 100% !important;
+      max-width: 100%;
+      max-height: 100%;
       image-rendering: pixelated;
       image-rendering: crisp-edges;
     }
@@ -933,6 +940,9 @@
 
     // Power LED
     setTimeout(() => document.getElementById('power-led').classList.add('on'), 300);
+
+    // Load persistent data on page load
+    loadPersistentData();
 
     // Web UI
     let muted = false;
