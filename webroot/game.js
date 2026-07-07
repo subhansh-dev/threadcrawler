@@ -101,10 +101,39 @@ const T = {
   FLOOR_ALT: 19, CARPET: 20, RUG: 21,
 };
 
+// ─── ITEM DEFINITIONS ────────────────────────────────────────
+const ITEMS = {
+  health_potion: { name: 'Health Potion', desc: 'Restore 40 HP', type: 'consumable', icon: '♥', color: 0x34D399, effect: (p) => { p.hp = Math.min(p.maxHp, p.hp + 40); } },
+  mega_potion: { name: 'Mega Potion', desc: 'Restore 80 HP', type: 'consumable', icon: '♥+', color: 0x22C55E, effect: (p) => { p.hp = Math.min(p.maxHp, p.hp + 80); } },
+  bomb: { name: 'Bomb', desc: 'Deal 50 damage to all nearby enemies', type: 'consumable', icon: '●', color: 0xEF4444, effect: null },
+  shield_item: { name: 'Shield', desc: 'Block the next 3 hits', type: 'equipment', icon: '◆', color: 0x93C5FD, effect: (p) => { p.shield = 3; } },
+  speed_boots: { name: 'Speed Boots', desc: '+30% movement speed', type: 'equipment', icon: '»', color: 0xFBBF24, effect: (p) => { p.speedMult = 1.3; } },
+  atk_gem: { name: 'Attack Gem', desc: '+5 ATK permanently', type: 'consumable', icon: '▲', color: 0xEF4444, effect: (p) => { p.atk += 5; } },
+  def_gem: { name: 'Defense Gem', desc: '+3 DEF permanently', type: 'consumable', icon: '▼', color: 0x3B82F6, effect: (p) => { p.def += 3; } },
+  key: { name: 'Dungeon Key', desc: 'Opens locked doors', type: 'key', icon: '⚷', color: 0xFBBF24, effect: null },
+  compass: { name: 'Compass', desc: 'Reveals exit on minimap', type: 'passive', icon: '◎', color: 0xA882F7, effect: null },
+};
+
+// ─── STATUS EFFECTS ──────────────────────────────────────────
+const STATUS = {
+  POISON: { name: 'Poison', color: 0x34D399, duration: 5, tickDamage: 2 },
+  FREEZE: { name: 'Freeze', color: 0x22D3EE, duration: 3, speedMult: 0.3 },
+  BURN: { name: 'Burn', color: 0xEF4444, duration: 4, tickDamage: 3 },
+  SHIELD: { name: 'Shield', color: 0x3B82F6, duration: -1, blocks: 3 },
+  HASTE: { name: 'Haste', color: 0xFBBF24, duration: 5, speedMult: 1.5 },
+  REGEN: { name: 'Regen', color: 0x34D399, duration: 8, healPerTick: 2 },
+};
+
 // ─── GAME STATE ──────────────────────────────────────────────
 let state = {
   phase: 'title',
-  player: { hp: 100, maxHp: 100, atk: 14, def: 5, level: 1, xp: 0, xpNext: 60, gold: 0, title: 'Newbie', invincible: 0 },
+  player: {
+    hp: 100, maxHp: 100, atk: 14, def: 5, level: 1, xp: 0, xpNext: 60,
+    gold: 0, title: 'Newbie', invincible: 0,
+    inventory: [], maxInventory: 12, equipped: null,
+    speedMult: 1, shield: 0,
+    statusEffects: [],
+  },
   dungeon: null,
   depth: 0,
   totalFloors: 7,
@@ -112,8 +141,9 @@ let state = {
   log: [],
   visited: new Set(),
   keys: 0,
-  hasShield: false,
   floorTheme: 0,
+  transitionAlpha: 0,
+  isTransitioning: false,
 };
 
 const THEMES = [
@@ -270,6 +300,7 @@ class GameScene extends Phaser.Scene {
     this.spawnTimer = 0;
     this.screenShake = 0;
     this.transitioning = false;
+    this.shieldGfx = null;
   }
 
   create() {
@@ -604,6 +635,18 @@ class GameScene extends Phaser.Scene {
     this.wasd = this.input.keyboard.addKeys('W,A,S,D');
     this.spaceKey = this.input.keyboard.addKey('SPACE');
     this.eKey = this.input.keyboard.addKey('E');
+    this.iKey = this.input.keyboard.addKey('I');
+
+    // Inventory toggle
+    this.iKey.on('down', () => {
+      const panel = document.getElementById('inventory-panel');
+      if (panel) {
+        const isVisible = panel.style.display !== 'none';
+        panel.style.display = isVisible ? 'none' : 'block';
+        document.getElementById('inv-count').textContent = state.player.inventory.length;
+        updateInventoryUI();
+      }
+    });
 
     // ─── UI UPDATE ───
     this.updateUI();
@@ -680,7 +723,7 @@ class GameScene extends Phaser.Scene {
       this.playerBody.y = 0;
     }
 
-    this.player.body.setVelocity(vx * PLAYER_SPEED, vy * PLAYER_SPEED);
+    this.player.body.setVelocity(vx * PLAYER_SPEED * state.player.speedMult, vy * PLAYER_SPEED * state.player.speedMult);
 
     // ─── SHOOTING ───
     if (Phaser.Input.Keyboard.JustDown(this.spaceKey)) this.shoot();
@@ -693,9 +736,9 @@ class GameScene extends Phaser.Scene {
       if (tile === T.TRAP) this.triggerTrap(tx, ty);
       else if (tile === T.HEAL) this.triggerHeal(tx, ty);
       else if (tile === T.POWER) this.triggerPower(tx, ty);
+      else if (tile === T.CHEST) this.triggerChest(tx, ty);
       else if (tile === T.WATER) {
-        // Slow in water
-        this.player.body.setVelocity(vx * PLAYER_SPEED * 0.5, vy * PLAYER_SPEED * 0.5);
+        this.player.body.setVelocity(vx * PLAYER_SPEED * 0.3, vy * PLAYER_SPEED * 0.3);
       }
     }
 
@@ -726,6 +769,26 @@ class GameScene extends Phaser.Scene {
         this.damagePlayer(m.getData('damage') || 10);
       }
     });
+
+    // ─── STATUS EFFECTS ───
+    processStatusEffects(dt);
+    updateStatusUI();
+    if (hasStatus('FREEZE')) {
+      this.player.body.setVelocity(vx * PLAYER_SPEED * 0.3, vy * PLAYER_SPEED * 0.3);
+    }
+
+    // ─── SHIELD CHECK ───
+    if (state.player.shield > 0) {
+      // Visual shield indicator
+      if (!this.shieldGfx) {
+        this.shieldGfx = this.add.circle(0, 0, 22, 0x3B82F6, 0.15);
+        this.shieldGfx.setStrokeStyle(2, 0x3B82F6, 0.4);
+        this.player.add(this.shieldGfx);
+      }
+    } else if (this.shieldGfx) {
+      this.shieldGfx.destroy();
+      this.shieldGfx = null;
+    }
 
     // ─── INVINCIBILITY FRAMES ───
     if (state.player.invincible > 0) {
@@ -938,6 +1001,18 @@ class GameScene extends Phaser.Scene {
 
   damagePlayer(amount) {
     if (state.player.invincible > 0) return;
+
+    // Shield check
+    if (state.player.shield > 0) {
+      state.player.shield--;
+      state.player.invincible = 0.5;
+      this.addLog(`Shield blocked! (${state.player.shield} left)`);
+      SFX.power();
+      // Shield break particles
+      for (let i = 0; i < 6; i++) this.spawnParticle(this.player.x, this.player.y, (Math.random() - 0.5) * 60, (Math.random() - 0.5) * 60, 0x3B82F6, 0.8);
+      return;
+    }
+
     const dmg = Math.max(1, amount - state.player.def);
     state.player.hp = Math.max(0, state.player.hp - dmg);
     state.player.invincible = 1.0;
@@ -968,9 +1043,16 @@ class GameScene extends Phaser.Scene {
   triggerTrap(x, y) {
     state.dungeon.map[y][x] = T.FLOOR;
     this.damagePlayer(18 + state.depth * 3);
-    this.addLog('TRAP! Took damage!');
     SFX.trap();
-    // Red flash on tile
+    // Random status effect from trap
+    const trapEffects = ['POISON', 'BURN', 'FREEZE'];
+    if (Math.random() < 0.4) {
+      const effect = trapEffects[Math.floor(Math.random() * trapEffects.length)];
+      addStatusEffect(effect);
+      this.addLog(`TRAP! ${STATUS[effect].name} applied!`);
+    } else {
+      this.addLog('TRAP! Took damage!');
+    }
     const flash = this.add.rectangle(x * TILE + TILE/2, y * TILE + TILE/2, TILE, TILE, 0xEF4444, 0.4);
     this.tweens.add({ targets: flash, alpha: 0, duration: 400, onComplete: () => flash.destroy() });
     for (let i = 0; i < 5; i++) this.spawnParticle(x * TILE + TILE/2, y * TILE + TILE/2, (Math.random() - 0.5) * 50, -Math.random() * 40, 0xEF4444, 0.7);
@@ -998,6 +1080,27 @@ class GameScene extends Phaser.Scene {
     const flash = this.add.rectangle(x * TILE + TILE/2, y * TILE + TILE/2, TILE, TILE, 0xFBBF24, 0.4);
     this.tweens.add({ targets: flash, alpha: 0, duration: 400, onComplete: () => flash.destroy() });
     for (let i = 0; i < 8; i++) this.spawnParticle(x * TILE + TILE/2, y * TILE + TILE/2, (Math.random() - 0.5) * 60, -Math.random() * 60, 0xFBBF24, 0.8);
+  }
+
+  triggerChest(x, y) {
+    state.dungeon.map[y][x] = T.FLOOR;
+    const lootTable = ['health_potion', 'bomb', 'atk_gem', 'def_gem', 'shield_item', 'speed_boots', 'mega_potion', 'compass'];
+    const goldAmount = 15 + Math.floor(Math.random() * 25) + state.depth * 5;
+    state.player.gold += goldAmount;
+
+    // Random chance to get an item
+    if (Math.random() < 0.6) {
+      const itemId = lootTable[Math.floor(Math.random() * lootTable.length)];
+      addToInventory(itemId);
+    } else {
+      state.log.push(`Found ${goldAmount} gold!`);
+      SFX.power();
+    }
+
+    // Chest open animation
+    const flash = this.add.rectangle(x * TILE + TILE/2, y * TILE + TILE/2, TILE, TILE, 0xFBBF24, 0.5);
+    this.tweens.add({ targets: flash, alpha: 0, duration: 500, onComplete: () => flash.destroy() });
+    for (let i = 0; i < 12; i++) this.spawnParticle(x * TILE + TILE/2, y * TILE + TILE/2, (Math.random() - 0.5) * 80, -Math.random() * 80, 0xFBBF24, 0.9);
   }
 
   spawnMonster() {
@@ -1176,7 +1279,8 @@ class GameScene extends Phaser.Scene {
         FLOOR CLEARED!<br>
         Kills: ${state.kills}<br>
         Gold: ${state.player.gold}<br>
-        Level: ${state.player.level} (${state.player.title})
+        Level: ${state.player.level} (${state.player.title})<br>
+        Items: ${state.player.inventory.length}
       `;
       document.querySelector('#gameover-screen h2').textContent = 'VICTORY';
       document.querySelector('#gameover-screen h2').style.color = '#FBBF24';
@@ -1185,7 +1289,7 @@ class GameScene extends Phaser.Scene {
 
     state.player.hp = Math.min(state.player.maxHp, state.player.hp + 20);
     this.addLog(`Descending to floor ${state.depth + 1}...`);
-    this.time.delayedCall(500, () => this.scene.restart());
+    startTransition(() => this.scene.restart());
   }
 
   getTitle(level) {
@@ -1240,11 +1344,175 @@ const config = {
 
 let game = null;
 
+// ─── INVENTORY SYSTEM ────────────────────────────────────────
+function addToInventory(itemId) {
+  if (state.player.inventory.length >= state.player.maxInventory) {
+    state.log.push('Inventory full!');
+    SFX.trap();
+    return false;
+  }
+  const item = ITEMS[itemId];
+  if (!item) return false;
+  state.player.inventory.push({ id: itemId, ...item });
+  state.log.push(`Picked up: ${item.name}`);
+  SFX.power();
+  updateInventoryUI();
+  return true;
+}
+
+function useItem(index) {
+  const item = state.player.inventory[index];
+  if (!item) return;
+  if (item.type === 'consumable') {
+    if (item.effect) item.effect(state.player);
+    state.log.push(`Used: ${item.name}`);
+    SFX.heal();
+    state.player.inventory.splice(index, 1);
+  } else if (item.type === 'equipment') {
+    if (state.player.equipped === item.id) {
+      state.player.equipped = null;
+      if (item.id === 'speed_boots') state.player.speedMult = 1;
+      if (item.id === 'shield_item') state.player.shield = 0;
+      state.log.push(`Unequipped: ${item.name}`);
+    } else {
+      if (state.player.equipped === 'speed_boots') state.player.speedMult = 1;
+      if (state.player.equipped === 'shield_item') state.player.shield = 0;
+      state.player.equipped = item.id;
+      if (item.effect) item.effect(state.player);
+      state.log.push(`Equipped: ${item.name}`);
+    }
+    SFX.power();
+  }
+  updateInventoryUI();
+}
+
+function dropItem(index) {
+  const item = state.player.inventory[index];
+  if (!item) return;
+  if (state.player.equipped === item.id) {
+    if (item.id === 'speed_boots') state.player.speedMult = 1;
+    if (item.id === 'shield_item') state.player.shield = 0;
+    state.player.equipped = null;
+  }
+  state.log.push(`Dropped: ${item.name}`);
+  state.player.inventory.splice(index, 1);
+  updateInventoryUI();
+}
+
+// ─── STATUS EFFECT SYSTEM ────────────────────────────────────
+function addStatusEffect(effectKey) {
+  const effect = STATUS[effectKey];
+  if (!effect) return;
+  const existing = state.player.statusEffects.find(e => e.key === effectKey);
+  if (existing) {
+    existing.remaining = effect.duration;
+  } else {
+    state.player.statusEffects.push({ key: effectKey, remaining: effect.duration, tickTimer: 0 });
+    state.log.push(`${effect.name} applied!`);
+    SFX.trap();
+  }
+}
+
+function processStatusEffects(dt) {
+  state.player.statusEffects = state.player.statusEffects.filter(e => {
+    const effect = STATUS[e.key];
+    if (e.remaining <= 0) {
+      state.log.push(`${effect.name} wore off`);
+      return false;
+    }
+    e.tickTimer += dt;
+    if (e.tickTimer >= 1) {
+      e.tickTimer = 0;
+      e.remaining--;
+      if (effect.tickDamage) {
+        state.player.hp = Math.max(0, state.player.hp - effect.tickDamage);
+        state.log.push(`${effect.name}: -${effect.tickDamage} HP`);
+      }
+      if (effect.healPerTick) {
+        state.player.hp = Math.min(state.player.maxHp, state.player.hp + effect.healPerTick);
+      }
+    }
+    return true;
+  });
+}
+
+function hasStatus(effectKey) {
+  return state.player.statusEffects.some(e => e.key === effectKey);
+}
+
+// ─── ROOM TRANSITION SYSTEM ──────────────────────────────────
+function startTransition(callback) {
+  state.isTransitioning = true;
+  state.transitionAlpha = 0;
+  const canvas = document.querySelector('#game-container canvas');
+  if (!canvas) { callback(); return; }
+
+  // Create overlay
+  const overlay = document.createElement('div');
+  overlay.id = 'transition-overlay';
+  overlay.style.cssText = `
+    position: absolute; inset: 0; z-index: 100;
+    background: #010103; opacity: 0;
+    transition: opacity 0.3s ease-in;
+    pointer-events: none;
+  `;
+  canvas.parentElement.appendChild(overlay);
+
+  requestAnimationFrame(() => {
+    overlay.style.opacity = '1';
+    setTimeout(() => {
+      callback();
+      setTimeout(() => {
+        overlay.style.opacity = '0';
+        setTimeout(() => {
+          overlay.remove();
+          state.isTransitioning = false;
+        }, 300);
+      }, 200);
+    }, 350);
+  });
+}
+
+// ─── INVENTORY UI UPDATE ─────────────────────────────────────
+function updateInventoryUI() {
+  const invEl = document.getElementById('inventory-items');
+  if (!invEl) return;
+  const p = state.player;
+  invEl.innerHTML = p.inventory.map((item, i) => `
+    <div class="inv-item ${p.equipped === item.id ? 'equipped' : ''}" onclick="useItem(${i})" title="${item.desc}">
+      <span class="inv-icon" style="color:${'#' + item.color.toString(16).padStart(6,'0')}">${item.icon}</span>
+      <span class="inv-name">${item.name}</span>
+      ${p.equipped === item.id ? '<span class="inv-equipped">E</span>' : ''}
+    </div>
+  `).join('');
+}
+
+function updateStatusUI() {
+  const statusEl = document.getElementById('status-effects');
+  if (!statusEl) return;
+  const p = state.player;
+  statusEl.innerHTML = p.statusEffects.map(e => {
+    const effect = STATUS[e.key];
+    return `<span class="status-badge" style="background:${'#' + effect.color.toString(16).padStart(6,'0')}22;color:${'#' + effect.color.toString(16).padStart(6,'0')};border:1px solid ${'#' + effect.color.toString(16).padStart(6,'0')}33;">
+      ${effect.name} ${e.remaining > 0 ? e.remaining + 's' : ''}
+    </span>`;
+  }).join('');
+}
+
+let game = null;
+
 function startGame() {
   state = {
     phase: 'explore',
-    player: { hp: 100, maxHp: 100, atk: 14, def: 5, level: 1, xp: 0, xpNext: 60, gold: 0, title: 'Newbie', invincible: 0 },
-    dungeon: null, depth: 0, totalFloors: 7, kills: 0, log: [], visited: new Set(), keys: 0, hasShield: false, floorTheme: 0,
+    player: {
+      hp: 100, maxHp: 100, atk: 14, def: 5, level: 1, xp: 0, xpNext: 60,
+      gold: 0, title: 'Newbie', invincible: 0,
+      inventory: [], maxInventory: 12, equipped: null,
+      speedMult: 1, shield: 0, statusEffects: [],
+    },
+    dungeon: null, depth: 0, totalFloors: 7, kills: 0, log: [],
+    visited: new Set(), keys: 0, floorTheme: 0,
+    transitionAlpha: 0, isTransitioning: false,
   };
   document.getElementById('title-screen').style.display = 'none';
   document.getElementById('game-screen').style.display = 'flex';

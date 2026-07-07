@@ -545,6 +545,63 @@
 
     .controls-hint span { color: var(--sakura); font-weight: 500; }
 
+    /* ─── INVENTORY ─── */
+    .inv-item {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      padding: 5px 10px;
+      background: rgba(255,255,255,0.03);
+      border: 1px solid rgba(255,255,255,0.06);
+      border-radius: 8px;
+      cursor: pointer;
+      transition: all 0.2s;
+      font-size: 11px;
+    }
+
+    .inv-item:hover {
+      background: rgba(232,130,155,0.08);
+      border-color: rgba(232,130,155,0.2);
+    }
+
+    .inv-item.equipped {
+      background: rgba(147,197,253,0.1);
+      border-color: rgba(147,197,253,0.3);
+    }
+
+    .inv-icon {
+      font-size: 14px;
+      width: 20px;
+      text-align: center;
+    }
+
+    .inv-name {
+      font-family: 'Share Tech Mono', monospace;
+      font-size: 10px;
+      color: var(--text-dim);
+    }
+
+    .inv-equipped {
+      font-family: 'Share Tech Mono', monospace;
+      font-size: 9px;
+      color: var(--sky);
+      background: rgba(147,197,253,0.15);
+      padding: 1px 4px;
+      border-radius: 4px;
+    }
+
+    /* ─── STATUS EFFECTS ─── */
+    .status-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+      padding: 3px 8px;
+      border-radius: 100px;
+      font-family: 'Share Tech Mono', monospace;
+      font-size: 9px;
+      font-weight: 500;
+    }
+
     /* ─── SCROLLBAR ─── */
     ::-webkit-scrollbar { width: 4px; }
     ::-webkit-scrollbar-track { background: transparent; }
@@ -600,14 +657,22 @@
     <!-- Game Screen -->
     <div class="glass thread-card" id="game-screen" style="flex:1;display:none;flex-direction:column;overflow:hidden;">
       <div id="game-container" style="flex:1;border-radius:12px;overflow:hidden;"></div>
-      <div class="depth-bar" style="margin-top:8px;">
-        <div class="depth-pip active"></div><div class="depth-pip"></div><div class="depth-pip"></div>
-        <div class="depth-pip"></div><div class="depth-pip"></div><div class="depth-pip"></div><div class="depth-pip"></div>
-        <span style="margin-left:auto;font-family:'Share Tech Mono',monospace;font-size:10px;color:var(--text-muted);" id="depth-text">Floor 1/7</span>
+      <div style="display:flex;gap:8px;margin-top:8px;">
+        <div class="depth-bar" style="flex:1;">
+          <div class="depth-pip active"></div><div class="depth-pip"></div><div class="depth-pip"></div>
+          <div class="depth-pip"></div><div class="depth-pip"></div><div class="depth-pip"></div><div class="depth-pip"></div>
+          <span style="margin-left:auto;font-family:'Share Tech Mono',monospace;font-size:10px;color:var(--text-muted);" id="depth-text">Floor 1/7</span>
+        </div>
+        <div id="status-effects" style="display:flex;gap:4px;align-items:center;flex-wrap:wrap;"></div>
       </div>
       <div class="log-card" style="margin-top:8px;">
         <div class="log-title">Activity Log</div>
         <div id="game-log"></div>
+      </div>
+      <!-- Inventory Panel -->
+      <div id="inventory-panel" class="glass" style="margin-top:8px;padding:10px 14px;display:none;">
+        <div class="log-title">Inventory (<span id="inv-count">0</span>/12)</div>
+        <div id="inventory-items" style="display:flex;flex-wrap:wrap;gap:6px;"></div>
       </div>
     </div>
 
@@ -623,7 +688,7 @@
   </div>
 
   <div class="controls-hint glass glass-pill" id="controls-hint" style="display:none;">
-    <span>WASD</span> Move · <span>SPACE</span> Shoot · <span>E</span> Interact
+    <span>WASD</span> Move · <span>SPACE</span> Shoot · <span>E</span> Interact · <span>I</span> Inventory
   </div>
 
   <script src="https://cdn.jsdelivr.net/npm/phaser@3.60.0/dist/phaser.min.js"></script>
