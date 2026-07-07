@@ -1041,14 +1041,13 @@ class GameScene extends Phaser.Scene {
 
     // ─── CAMERA ───
     this.cameras.main.setBounds(0, 0, MAP_W * TILE, MAP_H * TILE);
-    this.cameras.main.startFollow(this.player, true, 0.1, 0.1);
     this.cameras.main.setZoom(2);
-    // Use theme fog color for background
     const fogColor = theme.fogColor || 0x000000;
     this.cameras.main.setBackgroundColor(fogColor);
 
-    // Force camera to center on player immediately
-    this.cameras.main.centerOn(this.player.x, this.player.y);
+    // Manual camera follow (more reliable than startFollow)
+    this.cameras.main.scrollX = this.player.x - this.cameras.main.width / (2 * this.cameras.main.zoom);
+    this.cameras.main.scrollY = this.player.y - this.cameras.main.height / (2 * this.cameras.main.zoom);
 
     // ─── CONTROLS ───
     this.cursors = this.input.keyboard.createCursorKeys();
@@ -1504,6 +1503,16 @@ class GameScene extends Phaser.Scene {
       }
     });
 
+    // ─── MANUAL CAMERA FOLLOW ───
+    const cam = this.cameras.main;
+    const targetX = this.player.x - cam.width / (2 * cam.zoom);
+    const targetY = this.player.y - cam.height / (2 * cam.zoom);
+    cam.scrollX += (targetX - cam.scrollX) * 0.1;
+    cam.scrollY += (targetY - cam.scrollY) * 0.1;
+    // Clamp to bounds
+    cam.scrollX = Math.max(0, Math.min(cam.scrollX, MAP_W * TILE - cam.width / cam.zoom));
+    cam.scrollY = Math.max(0, Math.min(cam.scrollY, MAP_H * TILE - cam.height / cam.zoom));
+
     // ─── FOG OF WAR ───
     this.drawFog(dungeon, tx, ty);
 
@@ -1572,9 +1581,9 @@ class GameScene extends Phaser.Scene {
     const mmScale = 1;
     const mmW = MAP_W * mmScale;
     const mmH = MAP_H * mmScale;
-    // Position relative to camera viewport (stays on screen)
+    // Position at top-right of camera viewport
     const cam = this.cameras.main;
-    const mmX = cam.scrollX + cam.width / cam.zoom - mmW - 8;
+    const mmX = cam.scrollX + (cam.width / cam.zoom) - mmW - 8;
     const mmY = cam.scrollY + 8;
 
     // Background
