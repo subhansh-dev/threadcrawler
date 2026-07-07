@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Thread Crawler — Game Boy</title>
+  <title>Thread Crawler</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&family=VT323&display=swap" rel="stylesheet">
@@ -11,7 +11,6 @@
     *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
 
     :root {
-      /* DMG-01 authentic palette */
       --gb-body: #C4CFA1;
       --gb-body-light: #D4DFAE;
       --gb-body-dark: #A4AF84;
@@ -23,122 +22,69 @@
       --gb-bezel: #65655B;
       --gb-bezel-light: #7A7A70;
       --gb-bezel-dark: #4A4A42;
-      --gb-label: #5A5A50;
-      --gb-power-led: #FF2020;
-      --gb-speaker-grille: #A4AF84;
-      --gb-accent-purple: #705090;
-      --gb-accent-blue: #3890F8;
-      --gb-accent-red: #E83838;
-      --gb-accent-green: #48A848;
-      --gb-accent-yellow: #F8D838;
       --gb-accent-pink: #E87898;
+      --gb-accent-red: #E83838;
     }
 
-    html, body {
-      height: 100%;
-      overflow: hidden;
-    }
+    html, body { height: 100%; overflow: hidden; }
 
     body {
       font-family: 'VT323', monospace;
       background: #2C2C3A;
-      background-image:
-        radial-gradient(ellipse at 50% 30%, #3A3A4A 0%, #2C2C3A 70%),
-        repeating-linear-gradient(0deg, transparent, transparent 2px, rgba(255,255,255,0.01) 2px, rgba(255,255,255,0.01) 4px);
+      background-image: radial-gradient(ellipse at 50% 30%, #3A3A4A 0%, #2C2C3A 70%);
       display: flex;
       align-items: center;
       justify-content: center;
       min-height: 100vh;
       image-rendering: pixelated;
-      -webkit-font-smoothing: none;
     }
 
-    /* ═══════════════════════════════════════════════════════
-       GAME BOY DMG-01 SHELL
-       ═══════════════════════════════════════════════════════ */
+    /* ─── GAMEBOY SHELL ─── */
     .gameboy {
-      width: 320px;
+      width: 460px;
       position: relative;
       user-select: none;
     }
 
-    /* ─── BODY ─── */
     .gb-body {
-      background: linear-gradient(180deg, var(--gb-body-light) 0%, var(--gb-body) 20%, var(--gb-body-dark) 100%);
-      border-radius: 12px 12px 12px 80px;
-      padding: 16px 16px 80px;
+      background: linear-gradient(180deg, var(--gb-body-light), var(--gb-body), var(--gb-body-dark));
+      border-radius: 12px 12px 12px 60px;
+      padding: 14px 14px 60px;
       box-shadow:
-        /* inner highlight */
         inset 2px 2px 0 rgba(255,255,255,0.25),
         inset -2px -2px 0 rgba(0,0,0,0.08),
-        /* outer shadow */
         0 4px 0 var(--gb-body-shadow),
-        0 6px 0 var(--gb-body-shadow),
-        0 8px 20px rgba(0,0,0,0.4),
-        /* depth */
-        6px 0 0 var(--gb-body-dark),
-        -4px 0 0 var(--gb-body-light);
-      position: relative;
-    }
-
-    /* ─── DOT MATRIX LABEL ─── */
-    .gb-dot-matrix-label {
-      position: absolute;
-      top: 8px;
-      left: 50%;
-      transform: translateX(-50%);
-      font-family: 'Press Start 2P', monospace;
-      font-size: 4px;
-      color: var(--gb-label);
-      letter-spacing: 2px;
-      text-transform: uppercase;
-      white-space: nowrap;
-      opacity: 0.6;
+        0 8px 20px rgba(0,0,0,0.4);
     }
 
     /* ─── SCREEN BEZEL ─── */
     .gb-screen-bezel {
       background: linear-gradient(135deg, var(--gb-bezel-light), var(--gb-bezel), var(--gb-bezel-dark));
-      border-radius: 10px 10px 10px 40px;
-      padding: 16px 16px 8px 16px;
-      margin-top: 18px;
-      box-shadow:
-        inset 2px 2px 0 rgba(255,255,255,0.1),
-        inset -2px -2px 0 rgba(0,0,0,0.2),
-        0 2px 4px rgba(0,0,0,0.3);
-      position: relative;
+      border-radius: 10px 10px 10px 30px;
+      padding: 12px;
+      box-shadow: inset 2px 2px 0 rgba(255,255,255,0.1), inset -2px -2px 0 rgba(0,0,0,0.2);
     }
 
     /* ─── BRAND AREA ─── */
     .gb-brand {
       display: flex;
       align-items: center;
-      gap: 6px;
-      margin-bottom: 8px;
-      padding-left: 4px;
+      justify-content: space-between;
+      margin-bottom: 6px;
+      padding: 0 4px;
     }
 
-    .gb-brand-text {
+    .gb-brand-title {
       font-family: 'Press Start 2P', monospace;
-      font-size: 7px;
+      font-size: 8px;
       color: #9090A0;
       letter-spacing: 1px;
     }
 
-    .gb-brand-model {
-      font-family: 'Press Start 2P', monospace;
-      font-size: 5px;
-      color: #707080;
-      margin-left: auto;
-      letter-spacing: 1px;
-    }
-
-    /* ─── POWER LED ─── */
     .gb-power-indicator {
       display: flex;
       align-items: center;
       gap: 4px;
-      margin-bottom: 6px;
     }
 
     .gb-power-led {
@@ -150,15 +96,14 @@
     }
 
     .gb-power-led.on {
-      background: var(--gb-power-led);
-      box-shadow: 0 0 6px var(--gb-power-led), 0 0 12px rgba(255,32,32,0.3);
+      background: #FF2020;
+      box-shadow: 0 0 6px #FF2020, 0 0 12px rgba(255,32,32,0.3);
     }
 
     .gb-power-text {
       font-family: 'Press Start 2P', monospace;
-      font-size: 4px;
+      font-size: 5px;
       color: #606070;
-      letter-spacing: 1px;
     }
 
     /* ─── SCREEN ─── */
@@ -166,82 +111,42 @@
       background: var(--gb-screen-bg);
       border-radius: 4px;
       border: 3px solid #2A2A2A;
-      box-shadow:
-        inset 0 0 20px rgba(0,0,0,0.15),
-        inset 0 0 4px rgba(0,0,0,0.1);
+      box-shadow: inset 0 0 20px rgba(0,0,0,0.15);
       overflow: hidden;
       position: relative;
-      aspect-ratio: 10/9;
+      height: 380px;
     }
 
-    /* Scanline overlay */
+    /* Scanlines */
     .gb-screen::after {
       content: '';
       position: absolute;
       inset: 0;
-      background: repeating-linear-gradient(
-        0deg,
-        transparent,
-        transparent 1px,
-        rgba(0,0,0,0.03) 1px,
-        rgba(0,0,0,0.03) 2px
-      );
+      background: repeating-linear-gradient(0deg, transparent, transparent 1px, rgba(0,0,0,0.03) 1px, rgba(0,0,0,0.03) 2px);
       pointer-events: none;
       z-index: 50;
     }
 
-    /* Screen glass reflection */
-    .gb-screen::before {
-      content: '';
-      position: absolute;
-      top: -50%;
-      left: -50%;
-      width: 200%;
-      height: 200%;
-      background: linear-gradient(
-        135deg,
-        rgba(255,255,255,0.08) 0%,
-        transparent 40%,
-        transparent 60%,
-        rgba(255,255,255,0.03) 100%
-      );
-      pointer-events: none;
-      z-index: 51;
-    }
-
-    /* ─── SCREEN CONTENT ─── */
     .gb-screen-content {
       width: 100%;
       height: 100%;
       display: flex;
       flex-direction: column;
-      position: relative;
     }
 
-    /* ─── IN-SCREEN HUD ─── */
+    /* ─── HUD ─── */
     .gb-hud {
       display: flex;
       align-items: center;
       justify-content: space-between;
-      padding: 4px 6px;
+      padding: 4px 8px;
       background: rgba(15,56,15,0.15);
       border-bottom: 2px solid rgba(15,56,15,0.2);
-      min-height: 24px;
+      min-height: 22px;
+      flex-shrink: 0;
     }
 
-    .gb-hud-left {
-      display: flex;
-      align-items: center;
-      gap: 6px;
-    }
-
-    .gb-hud-floor {
-      font-family: 'Press Start 2P', monospace;
-      font-size: 7px;
-      color: var(--gb-screen-dark);
-    }
-
-    .gb-hud-right {
+    .gb-hud-left, .gb-hud-right {
       display: flex;
       align-items: center;
       gap: 8px;
@@ -249,7 +154,7 @@
 
     .gb-hud-stat {
       font-family: 'Press Start 2P', monospace;
-      font-size: 6px;
+      font-size: 7px;
       color: var(--gb-screen-dark);
       display: flex;
       align-items: center;
@@ -257,7 +162,7 @@
     }
 
     .gb-hp-bar {
-      width: 40px; height: 6px;
+      width: 50px; height: 6px;
       background: var(--gb-screen-light);
       border: 1px solid var(--gb-screen-dark);
       overflow: hidden;
@@ -268,6 +173,17 @@
       background: var(--gb-screen-dark);
       transition: width 0.3s;
     }
+
+    .gb-depth-bar { display: flex; gap: 2px; }
+
+    .gb-depth-pip {
+      width: 6px; height: 6px;
+      border: 1px solid var(--gb-screen-dark);
+      background: transparent;
+    }
+
+    .gb-depth-pip.active { background: var(--gb-screen-dark); }
+    .gb-depth-pip.visited { background: var(--gb-screen-mid); }
 
     /* ─── GAME AREA ─── */
     .gb-game-area {
@@ -288,375 +204,7 @@
       image-rendering: crisp-edges;
     }
 
-    /* ─── TEXT BOX (bottom of screen, Pokemon dialogue style) ─── */
-    .gb-textbox {
-      background: var(--gb-screen-bg);
-      border-top: 3px solid var(--gb-screen-dark);
-      padding: 4px 6px;
-      min-height: 36px;
-      max-height: 60px;
-      overflow-y: auto;
-      position: relative;
-    }
-
-    .gb-textbox::before {
-      content: '';
-      position: absolute;
-      top: 0; left: 0; right: 0;
-      height: 3px;
-      background: repeating-linear-gradient(90deg,
-        var(--gb-screen-dark) 0px, var(--gb-screen-dark) 3px,
-        var(--gb-screen-mid) 3px, var(--gb-screen-mid) 6px
-      );
-    }
-
-    .gb-textbox-title {
-      font-family: 'Press Start 2P', monospace;
-      font-size: 6px;
-      color: var(--gb-screen-mid);
-      margin-bottom: 2px;
-    }
-
-    .gb-textbox-log {
-      font-family: 'VT323', monospace;
-      font-size: 13px;
-      color: var(--gb-screen-dark);
-      line-height: 1.2;
-    }
-
-    .gb-textbox-log .log-entry {
-      padding: 1px 0;
-    }
-
-    /* ─── ARROW INDICATOR ─── */
-    .gb-textbox-arrow {
-      position: absolute;
-      bottom: 4px;
-      right: 6px;
-      width: 0; height: 0;
-      border-left: 4px solid transparent;
-      border-right: 4px solid transparent;
-      border-top: 5px solid var(--gb-screen-dark);
-      animation: blink-arrow 0.8s steps(1) infinite;
-    }
-
-    @keyframes blink-arrow {
-      0%, 50% { opacity: 1; }
-      51%, 100% { opacity: 0; }
-    }
-
-    /* ─── SCREEN LABELS ─── */
-    .gb-screen-label {
-      position: absolute;
-      top: 50%;
-      left: 50%;
-      transform: translate(-50%, -50%);
-      font-family: 'Press Start 2P', monospace;
-      font-size: 10px;
-      color: var(--gb-screen-dark);
-      text-align: center;
-      z-index: 10;
-      pointer-events: none;
-    }
-
-    .gb-screen-label h1 {
-      font-size: 12px;
-      margin-bottom: 8px;
-      text-shadow: 2px 2px 0 var(--gb-screen-mid);
-      animation: title-bounce 2s ease-in-out infinite;
-    }
-
-    @keyframes title-bounce {
-      0%, 100% { transform: translateY(0); }
-      50% { transform: translateY(-3px); }
-    }
-
-    .gb-screen-label p {
-      font-size: 7px;
-      margin-bottom: 12px;
-      color: var(--gb-screen-mid);
-    }
-
-    .gb-screen-label .blink {
-      animation: blink-text 1s steps(1) infinite;
-    }
-
-    @keyframes blink-text {
-      0%, 50% { opacity: 1; }
-      51%, 100% { opacity: 0; }
-    }
-
-    /* ─── DEPTH PIPS ─── */
-    .gb-depth-bar {
-      display: flex;
-      gap: 2px;
-      align-items: center;
-    }
-
-    .gb-depth-pip {
-      width: 6px; height: 6px;
-      border: 1px solid var(--gb-screen-dark);
-      background: transparent;
-    }
-
-    .gb-depth-pip.active {
-      background: var(--gb-screen-dark);
-    }
-
-    .gb-depth-pip.visited {
-      background: var(--gb-screen-mid);
-    }
-
-    /* ─── NINTENDO SEAL ─── */
-    .gb-seal {
-      position: absolute;
-      bottom: 52px;
-      left: 50%;
-      transform: translateX(-50%);
-      font-family: 'Press Start 2P', monospace;
-      font-size: 4px;
-      color: var(--gb-body-shadow);
-      text-align: center;
-      letter-spacing: 1px;
-      line-height: 1.6;
-    }
-
-    .gb-seal-circle {
-      width: 24px; height: 24px;
-      border: 1.5px solid var(--gb-body-shadow);
-      border-radius: 50%;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      margin: 0 auto 2px;
-      font-size: 6px;
-      font-weight: bold;
-    }
-
-    /* ═══════════════════════════════════════════════════════
-       BUTTONS
-       ═══════════════════════════════════════════════════════ */
-
-    /* ─── D-PAD ─── */
-    .gb-dpad-area {
-      position: absolute;
-      bottom: 24px;
-      left: 20px;
-    }
-
-    .gb-dpad {
-      position: relative;
-      width: 66px;
-      height: 66px;
-    }
-
-    .gb-dpad-btn {
-      position: absolute;
-      background: linear-gradient(180deg, #3A3A3A, #2A2A2A);
-      border: none;
-      cursor: pointer;
-      box-shadow:
-        inset 1px 1px 0 rgba(255,255,255,0.1),
-        inset -1px -1px 0 rgba(0,0,0,0.3),
-        0 2px 0 #1A1A1A;
-      transition: all 0.05s;
-    }
-
-    .gb-dpad-btn:active {
-      box-shadow:
-        inset 1px 1px 0 rgba(0,0,0,0.3),
-        inset -1px -1px 0 rgba(255,255,255,0.1),
-        0 1px 0 #1A1A1A;
-      transform: translateY(1px);
-    }
-
-    .gb-dpad-up {
-      top: 0; left: 22px;
-      width: 22px; height: 22px;
-      border-radius: 4px 4px 0 0;
-    }
-
-    .gb-dpad-down {
-      bottom: 0; left: 22px;
-      width: 22px; height: 22px;
-      border-radius: 0 0 4px 4px;
-    }
-
-    .gb-dpad-left {
-      top: 22px; left: 0;
-      width: 22px; height: 22px;
-      border-radius: 4px 0 0 4px;
-    }
-
-    .gb-dpad-right {
-      top: 22px; right: 0;
-      width: 22px; height: 22px;
-      border-radius: 0 4px 4px 0;
-    }
-
-    .gb-dpad-center {
-      position: absolute;
-      top: 22px; left: 22px;
-      width: 22px; height: 22px;
-      background: #2A2A2A;
-    }
-
-    /* D-pad arrows */
-    .gb-dpad-btn::after {
-      content: '';
-      position: absolute;
-      width: 0; height: 0;
-    }
-
-    .gb-dpad-up::after {
-      top: 6px; left: 50%;
-      transform: translateX(-50%);
-      border-left: 4px solid transparent;
-      border-right: 4px solid transparent;
-      border-bottom: 5px solid #666;
-    }
-
-    .gb-dpad-down::after {
-      bottom: 6px; left: 50%;
-      transform: translateX(-50%);
-      border-left: 4px solid transparent;
-      border-right: 4px solid transparent;
-      border-top: 5px solid #666;
-    }
-
-    .gb-dpad-left::after {
-      left: 6px; top: 50%;
-      transform: translateY(-50%);
-      border-top: 4px solid transparent;
-      border-bottom: 4px solid transparent;
-      border-right: 5px solid #666;
-    }
-
-    .gb-dpad-right::after {
-      right: 6px; top: 50%;
-      transform: translateY(-50%);
-      border-top: 4px solid transparent;
-      border-bottom: 4px solid transparent;
-      border-left: 5px solid #666;
-    }
-
-    /* ─── A/B BUTTONS ─── */
-    .gb-ab-area {
-      position: absolute;
-      bottom: 28px;
-      right: 18px;
-      display: flex;
-      gap: 8px;
-      transform: rotate(-25deg);
-    }
-
-    .gb-ab-btn {
-      width: 30px; height: 30px;
-      border-radius: 50%;
-      border: none;
-      cursor: pointer;
-      font-family: 'Press Start 2P', monospace;
-      font-size: 6px;
-      color: rgba(255,255,255,0.5);
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      box-shadow:
-        inset 2px 2px 0 rgba(255,255,255,0.15),
-        inset -2px -2px 0 rgba(0,0,0,0.2),
-        0 3px 0 #6A2040,
-        0 4px 6px rgba(0,0,0,0.3);
-      transition: all 0.05s;
-    }
-
-    .gb-ab-btn:active {
-      box-shadow:
-        inset 2px 2px 0 rgba(0,0,0,0.2),
-        inset -2px -2px 0 rgba(255,255,255,0.1),
-        0 1px 0 #6A2040;
-      transform: translateY(2px);
-    }
-
-    .gb-btn-a {
-      background: linear-gradient(180deg, #A0325A, #8A2048);
-      margin-top: 10px;
-    }
-
-    .gb-btn-b {
-      background: linear-gradient(180deg, #A0325A, #8A2048);
-    }
-
-    /* ─── START/SELECT ─── */
-    .gb-start-select-area {
-      position: absolute;
-      bottom: 14px;
-      left: 50%;
-      transform: translateX(-50%) rotate(-25deg);
-      display: flex;
-      gap: 12px;
-    }
-
-    .gb-ss-btn {
-      width: 20px; height: 8px;
-      border-radius: 4px;
-      background: linear-gradient(180deg, #8A8A7A, #6A6A5A);
-      border: none;
-      cursor: pointer;
-      box-shadow:
-        inset 1px 1px 0 rgba(255,255,255,0.1),
-        0 2px 0 #4A4A3A;
-      transition: all 0.05s;
-    }
-
-    .gb-ss-btn:active {
-      box-shadow: 0 1px 0 #4A4A3A;
-      transform: translateY(1px);
-    }
-
-    .gb-ss-label {
-      font-family: 'Press Start 2P', monospace;
-      font-size: 4px;
-      color: var(--gb-body-shadow);
-      text-align: center;
-      margin-top: 3px;
-      letter-spacing: 1px;
-    }
-
-    /* ─── SPEAKER GRILLE ─── */
-    .gb-speaker {
-      position: absolute;
-      bottom: 20px;
-      right: -4px;
-      width: 30px;
-      display: flex;
-      flex-direction: column;
-      gap: 4px;
-      transform: rotate(-30deg);
-    }
-
-    .gb-speaker-line {
-      height: 2px;
-      background: var(--gb-body-shadow);
-      border-radius: 1px;
-      opacity: 0.5;
-    }
-
-    /* ─── CARTRIDGE SLOT ─── */
-    .gb-cart-slot {
-      position: absolute;
-      top: -4px;
-      left: 50%;
-      transform: translateX(-50%);
-      width: 80px;
-      height: 8px;
-      background: #2A2A2A;
-      border-radius: 0 0 4px 4px;
-      box-shadow: inset 0 2px 4px rgba(0,0,0,0.5);
-    }
-
-    /* ═══════════════════════════════════════════════════════
-       GAME OVER / VICTORY OVERLAY
-       ═══════════════════════════════════════════════════════ */
+    /* ─── OVERLAYS ─── */
     .gb-overlay {
       position: absolute;
       inset: 0;
@@ -672,7 +220,7 @@
 
     .gb-overlay h2 {
       font-family: 'Press Start 2P', monospace;
-      font-size: 12px;
+      font-size: 14px;
       color: var(--gb-screen-dark);
       margin-bottom: 12px;
       text-shadow: 2px 2px 0 var(--gb-screen-mid);
@@ -680,20 +228,20 @@
 
     .gb-overlay-stats {
       font-family: 'VT323', monospace;
-      font-size: 14px;
+      font-size: 16px;
       color: var(--gb-screen-dark);
       margin-bottom: 16px;
-      line-height: 1.6;
+      line-height: 1.8;
       text-align: center;
     }
 
     .gb-overlay-btn {
       font-family: 'Press Start 2P', monospace;
-      font-size: 8px;
+      font-size: 10px;
       background: var(--gb-screen-dark);
       color: var(--gb-screen-bg);
       border: none;
-      padding: 8px 16px;
+      padding: 10px 24px;
       cursor: pointer;
       box-shadow: 2px 2px 0 var(--gb-screen-mid);
       animation: blink-text 1.2s steps(1) infinite;
@@ -704,9 +252,12 @@
       box-shadow: 1px 1px 0 var(--gb-screen-mid);
     }
 
-    /* ═══════════════════════════════════════════════════════
-       INVENTORY OVERLAY
-       ═══════════════════════════════════════════════════════ */
+    @keyframes blink-text {
+      0%, 50% { opacity: 1; }
+      51%, 100% { opacity: 0; }
+    }
+
+    /* ─── INVENTORY ─── */
     .gb-inventory {
       position: absolute;
       inset: 0;
@@ -714,24 +265,24 @@
       display: none;
       flex-direction: column;
       z-index: 30;
-      padding: 6px;
+      padding: 8px;
     }
 
     .gb-inventory.show { display: flex; }
 
     .gb-inv-title {
       font-family: 'Press Start 2P', monospace;
-      font-size: 8px;
+      font-size: 9px;
       color: var(--gb-screen-dark);
       padding: 4px 0;
       border-bottom: 2px solid var(--gb-screen-dark);
-      margin-bottom: 4px;
+      margin-bottom: 6px;
     }
 
     .gb-inv-grid {
       display: grid;
       grid-template-columns: 1fr 1fr;
-      gap: 3px;
+      gap: 4px;
       flex: 1;
       overflow-y: auto;
     }
@@ -739,13 +290,13 @@
     .gb-inv-item {
       display: flex;
       align-items: center;
-      gap: 4px;
-      padding: 3px 5px;
+      gap: 5px;
+      padding: 4px 6px;
       background: var(--gb-screen-light);
       border: 2px solid var(--gb-screen-mid);
       cursor: pointer;
       font-family: 'VT323', monospace;
-      font-size: 12px;
+      font-size: 14px;
       color: var(--gb-screen-dark);
     }
 
@@ -760,25 +311,57 @@
       color: var(--gb-screen-bg);
     }
 
-    .gb-inv-icon {
-      font-size: 14px;
-      width: 16px;
-      text-align: center;
-    }
-
     .gb-inv-empty {
       font-family: 'Press Start 2P', monospace;
-      font-size: 7px;
+      font-size: 8px;
       color: var(--gb-screen-mid);
       text-align: center;
-      padding: 20px;
+      padding: 30px;
+      grid-column: 1 / -1;
     }
 
-    /* ─── STATUS EFFECTS ─── */
+    .inv-equipped {
+      font-family: 'Press Start 2P', monospace;
+      font-size: 6px;
+      color: var(--gb-screen-dark);
+      background: rgba(15,56,15,0.2);
+      padding: 1px 3px;
+      border: 1px solid var(--gb-screen-dark);
+    }
+
+    /* ─── TEXT BOX ─── */
+    .gb-textbox {
+      background: var(--gb-screen-bg);
+      border-top: 3px solid var(--gb-screen-dark);
+      padding: 4px 8px;
+      min-height: 40px;
+      max-height: 64px;
+      overflow-y: auto;
+      flex-shrink: 0;
+    }
+
+    .gb-textbox-title {
+      font-family: 'Press Start 2P', monospace;
+      font-size: 6px;
+      color: var(--gb-screen-mid);
+      margin-bottom: 2px;
+    }
+
+    .gb-textbox-log {
+      font-family: 'VT323', monospace;
+      font-size: 15px;
+      color: var(--gb-screen-dark);
+      line-height: 1.2;
+    }
+
+    .gb-textbox-log .log-entry { padding: 1px 0; }
+
+    /* ─── STATUS ─── */
     .gb-status-bar {
       display: flex;
       gap: 3px;
-      padding: 2px 0;
+      padding: 2px 4px;
+      flex-shrink: 0;
     }
 
     .gb-status-badge {
@@ -789,23 +372,7 @@
       color: var(--gb-screen-dark);
     }
 
-    /* ─── CONTROLS HINT (tiny, at very bottom) ─── */
-    .gb-controls-hint {
-      position: fixed;
-      bottom: 4px;
-      left: 50%;
-      transform: translateX(-50%);
-      font-family: 'Press Start 2P', monospace;
-      font-size: 5px;
-      color: rgba(255,255,255,0.2);
-      display: none;
-      gap: 8px;
-      z-index: 200;
-    }
-
-    .gb-controls-hint.show { display: flex; }
-
-    /* ─── SCREEN TRANSITION ─── */
+    /* ─── TRANSITION ─── */
     .gb-transition {
       position: absolute;
       inset: 0;
@@ -817,206 +384,396 @@
     }
 
     .gb-transition.active { opacity: 1; }
+
+    /* ─── BUTTONS (below screen) ─── */
+    .gb-controls-area {
+      display: flex;
+      align-items: flex-start;
+      justify-content: space-between;
+      margin-top: 12px;
+      padding: 0 8px;
+    }
+
+    /* D-Pad */
+    .gb-dpad {
+      position: relative;
+      width: 70px;
+      height: 70px;
+    }
+
+    .gb-dpad-btn {
+      position: absolute;
+      background: linear-gradient(180deg, #3A3A3A, #2A2A2A);
+      border: none;
+      cursor: pointer;
+      box-shadow: inset 1px 1px 0 rgba(255,255,255,0.1), 0 2px 0 #1A1A1A;
+    }
+
+    .gb-dpad-btn:active {
+      box-shadow: inset 1px 1px 0 rgba(0,0,0,0.3);
+      transform: translateY(1px);
+    }
+
+    .gb-dpad-up { top: 0; left: 24px; width: 22px; height: 22px; border-radius: 4px 4px 0 0; }
+    .gb-dpad-down { bottom: 0; left: 24px; width: 22px; height: 22px; border-radius: 0 0 4px 4px; }
+    .gb-dpad-left { top: 24px; left: 0; width: 22px; height: 22px; border-radius: 4px 0 0 4px; }
+    .gb-dpad-right { top: 24px; right: 0; width: 22px; height: 22px; border-radius: 0 4px 4px 0; }
+    .gb-dpad-center { position: absolute; top: 24px; left: 24px; width: 22px; height: 22px; background: #2A2A2A; }
+
+    .gb-dpad-btn::after {
+      content: '';
+      position: absolute;
+      width: 0; height: 0;
+    }
+
+    .gb-dpad-up::after { top: 5px; left: 50%; transform: translateX(-50%); border-left: 4px solid transparent; border-right: 4px solid transparent; border-bottom: 5px solid #666; }
+    .gb-dpad-down::after { bottom: 5px; left: 50%; transform: translateX(-50%); border-left: 4px solid transparent; border-right: 4px solid transparent; border-top: 5px solid #666; }
+    .gb-dpad-left::after { left: 5px; top: 50%; transform: translateY(-50%); border-top: 4px solid transparent; border-bottom: 4px solid transparent; border-right: 5px solid #666; }
+    .gb-dpad-right::after { right: 5px; top: 50%; transform: translateY(-50%); border-top: 4px solid transparent; border-bottom: 4px solid transparent; border-left: 5px solid #666; }
+
+    /* A/B Buttons */
+    .gb-ab-area {
+      display: flex;
+      gap: 10px;
+      transform: rotate(-25deg);
+    }
+
+    .gb-ab-btn-wrap { text-align: center; }
+
+    .gb-ab-btn {
+      width: 34px; height: 34px;
+      border-radius: 50%;
+      border: none;
+      cursor: pointer;
+      font-family: 'Press Start 2P', monospace;
+      font-size: 7px;
+      color: rgba(255,255,255,0.5);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: linear-gradient(180deg, #A0325A, #8A2048);
+      box-shadow: inset 2px 2px 0 rgba(255,255,255,0.15), 0 3px 0 #6A2040, 0 4px 6px rgba(0,0,0,0.3);
+    }
+
+    .gb-ab-btn:active {
+      box-shadow: inset 2px 2px 0 rgba(0,0,0,0.2), 0 1px 0 #6A2040;
+      transform: translateY(2px);
+    }
+
+    .gb-ab-label {
+      font-family: 'Press Start 2P', monospace;
+      font-size: 5px;
+      color: var(--gb-body-shadow);
+      margin-top: 4px;
+    }
+
+    /* Start/Select */
+    .gb-ss-area {
+      display: flex;
+      gap: 16px;
+      justify-content: center;
+      margin-top: 8px;
+      transform: rotate(-25deg);
+    }
+
+    .gb-ss-btn-wrap { text-align: center; }
+
+    .gb-ss-btn {
+      width: 24px; height: 8px;
+      border-radius: 4px;
+      background: linear-gradient(180deg, #8A8A7A, #6A6A5A);
+      border: none;
+      cursor: pointer;
+      box-shadow: inset 1px 1px 0 rgba(255,255,255,0.1), 0 2px 0 #4A4A3A;
+    }
+
+    .gb-ss-btn:active {
+      box-shadow: 0 1px 0 #4A4A3A;
+      transform: translateY(1px);
+    }
+
+    .gb-ss-label {
+      font-family: 'Press Start 2P', monospace;
+      font-size: 4px;
+      color: var(--gb-body-shadow);
+      margin-top: 3px;
+    }
+
+    /* Speaker */
+    .gb-speaker {
+      position: absolute;
+      bottom: 16px;
+      right: 8px;
+      width: 30px;
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+      transform: rotate(-30deg);
+    }
+
+    .gb-speaker-line {
+      height: 2px;
+      background: var(--gb-body-shadow);
+      border-radius: 1px;
+      opacity: 0.5;
+    }
+
+    /* ─── WEB UI BAR (below gameboy) ─── */
+    .web-ui-bar {
+      max-width: 460px;
+      margin: 8px auto 0;
+      display: flex;
+      gap: 6px;
+      justify-content: center;
+      flex-wrap: wrap;
+    }
+
+    .web-btn {
+      font-family: 'Press Start 2P', monospace;
+      font-size: 7px;
+      padding: 6px 12px;
+      background: #4A4A5A;
+      color: #C0C0D0;
+      border: 2px solid #5A5A6A;
+      border-radius: 4px;
+      cursor: pointer;
+      box-shadow: inset 1px 1px 0 rgba(255,255,255,0.1), 0 2px 0 #3A3A4A;
+    }
+
+    .web-btn:active {
+      transform: translateY(1px);
+      box-shadow: 0 1px 0 #3A3A4A;
+    }
+
+    .web-btn:hover { background: #5A5A6A; }
+
+    .web-btn.active {
+      background: #6A5A8A;
+      border-color: #8A7AAA;
+    }
+
+    /* ─── CONTROLS HINT ─── */
+    .controls-hint {
+      max-width: 460px;
+      margin: 4px auto 0;
+      text-align: center;
+      font-family: 'Press Start 2P', monospace;
+      font-size: 6px;
+      color: rgba(255,255,255,0.25);
+      display: none;
+    }
+
+    .controls-hint.show { display: block; }
+
+    .controls-hint span { color: rgba(232,120,152,0.5); }
   </style>
 </head>
 <body>
 
-  <div class="gameboy">
-    <div class="gb-body">
-      <!-- Cartridge slot -->
-      <div class="gb-cart-slot"></div>
-
-      <!-- Dot Matrix label -->
-      <div class="gb-dot-matrix-label">DOT MATRIX WITH STEREO SOUND</div>
-
-      <!-- Screen bezel -->
-      <div class="gb-screen-bezel">
-        <!-- Brand -->
-        <div class="gb-brand">
-          <span class="gb-brand-text">Nintendo</span>
-          <span class="gb-brand-model">DMG-01</span>
-        </div>
-
-        <!-- Power LED -->
-        <div class="gb-power-indicator">
-          <div class="gb-power-led" id="power-led"></div>
-          <span class="gb-power-text">POWER</span>
-        </div>
-
-        <!-- SCREEN -->
-        <div class="gb-screen" id="gb-screen">
-          <div class="gb-screen-content">
-            <!-- HUD -->
-            <div class="gb-hud" id="gb-hud">
-              <div class="gb-hud-left">
-                <span class="gb-hud-floor" id="hud-floor">F1</span>
-                <div class="gb-depth-bar" id="depth-bar">
-                  <div class="gb-depth-pip active"></div><div class="gb-depth-pip"></div><div class="gb-depth-pip"></div>
-                  <div class="gb-depth-pip"></div><div class="gb-depth-pip"></div><div class="gb-depth-pip"></div><div class="gb-depth-pip"></div>
-                </div>
-              </div>
-              <div class="gb-hud-right">
-                <div class="gb-hud-stat">
-                  HP
-                  <div class="gb-hp-bar"><div class="gb-hp-fill" id="hp-fill" style="width:100%"></div></div>
-                </div>
-                <div class="gb-hud-stat">
-                  XP
-                  <div class="gb-hp-bar" style="width:30px;"><div class="gb-hp-fill" id="xp-fill" style="width:0%;background:var(--gb-screen-mid);"></div></div>
-                </div>
-                <span class="gb-hud-stat" id="hud-gold">G:0</span>
-                <span class="gb-hud-stat" id="hud-level">Lv1</span>
-              </div>
-            </div>
-
-            <!-- Status effects -->
-            <div class="gb-status-bar" id="status-effects"></div>
-
-            <!-- Game area -->
-            <div class="gb-game-area" id="game-area">
-              <div id="game-container"></div>
-
-              <!-- Title overlay -->
-              <div class="gb-overlay show" id="title-screen">
-                <h1 style="font-family:'Press Start 2P';font-size:11px;color:var(--gb-screen-dark);margin-bottom:6px;text-shadow:2px 2px 0 var(--gb-screen-mid);">THREAD<br>CRAWLER</h1>
-                <p style="font-family:'Press Start 2P';font-size:6px;color:var(--gb-screen-mid);margin-bottom:16px;">DUNGEON ADVENTURE</p>
-                <!-- Pixel art dungeon entrance -->
-                <div style="width:48px;height:48px;margin-bottom:16px;position:relative;">
-                  <div style="position:absolute;inset:0;background:var(--gb-screen-mid);border:2px solid var(--gb-screen-dark);"></div>
-                  <div style="position:absolute;top:8px;left:8px;right:8px;bottom:8px;background:var(--gb-screen-dark);"></div>
-                  <div style="position:absolute;top:14px;left:14px;width:20px;height:20px;background:var(--gb-screen-mid);border:2px solid var(--gb-screen-dark);"></div>
-                </div>
-                <button class="gb-overlay-btn" id="btn-start" onclick="startGame()">▶ START</button>
-                <p style="font-family:'Press Start 2P';font-size:5px;color:var(--gb-screen-mid);margin-top:12px;">PRESS START</p>
-              </div>
-
-              <!-- Game Over overlay -->
-              <div class="gb-overlay" id="gameover-screen">
-                <h2 id="go-title">GAME OVER</h2>
-                <div class="gb-overlay-stats" id="go-stats"></div>
-                <button class="gb-overlay-btn" onclick="restartGame()">▶ RETRY</button>
-              </div>
-
-              <!-- Inventory overlay -->
-              <div class="gb-inventory" id="inventory-panel">
-                <div class="gb-inv-title">BAG <span id="inv-count">0</span>/12</div>
-                <div class="gb-inv-grid" id="inventory-items"></div>
-              </div>
-            </div>
-
-            <!-- Text box -->
-            <div class="gb-textbox" id="gb-textbox">
-              <div class="gb-textbox-title" id="textbox-title">▸ LOG</div>
-              <div class="gb-textbox-log" id="game-log">
-                <div class="log-entry" style="color:var(--gb-screen-mid);">Press START to begin...</div>
-              </div>
-              <div class="gb-textbox-arrow" id="textbox-arrow"></div>
+  <div style="display:flex;flex-direction:column;align-items:center;">
+    <div class="gameboy">
+      <div class="gb-body">
+        <!-- Screen bezel -->
+        <div class="gb-screen-bezel">
+          <!-- Brand -->
+          <div class="gb-brand">
+            <span class="gb-brand-title">THREAD CRAWLER</span>
+            <div class="gb-power-indicator">
+              <div class="gb-power-led" id="power-led"></div>
+              <span class="gb-power-text">POWER</span>
             </div>
           </div>
 
-          <!-- Screen transition -->
-          <div class="gb-transition" id="gb-transition"></div>
-        </div>
-      </div>
+          <!-- SCREEN -->
+          <div class="gb-screen" id="gb-screen">
+            <div class="gb-screen-content">
+              <!-- HUD -->
+              <div class="gb-hud">
+                <div class="gb-hud-left">
+                  <span class="gb-hud-stat" id="hud-floor">F1</span>
+                  <div class="gb-depth-bar" id="depth-bar">
+                    <div class="gb-depth-pip active"></div><div class="gb-depth-pip"></div><div class="gb-depth-pip"></div>
+                    <div class="gb-depth-pip"></div><div class="gb-depth-pip"></div><div class="gb-depth-pip"></div><div class="gb-depth-pip"></div>
+                  </div>
+                </div>
+                <div class="gb-hud-right">
+                  <div class="gb-hud-stat">HP <div class="gb-hp-bar"><div class="gb-hp-fill" id="hp-fill" style="width:100%"></div></div></div>
+                  <div class="gb-hud-stat">XP <div class="gb-hp-bar" style="width:30px;"><div class="gb-hp-fill" id="xp-fill" style="width:0%;background:var(--gb-screen-mid);"></div></div></div>
+                  <span class="gb-hud-stat" id="hud-gold">G:0</span>
+                  <span class="gb-hud-stat" id="hud-level">Lv1</span>
+                </div>
+              </div>
 
-      <!-- Nintendo Seal -->
-      <div class="gb-seal">
-        <div class="gb-seal-circle">★</div>
-        Nintendo
-      </div>
+              <!-- Status -->
+              <div class="gb-status-bar" id="status-effects"></div>
 
-      <!-- D-Pad -->
-      <div class="gb-dpad-area">
-        <div class="gb-dpad">
-          <button class="gb-dpad-btn gb-dpad-up" data-key="up"></button>
-          <button class="gb-dpad-btn gb-dpad-down" data-key="down"></button>
-          <button class="gb-dpad-btn gb-dpad-left" data-key="left"></button>
-          <button class="gb-dpad-btn gb-dpad-right" data-key="right"></button>
-          <div class="gb-dpad-center"></div>
-        </div>
-      </div>
+              <!-- Game area -->
+              <div class="gb-game-area" id="game-area">
+                <div id="game-container"></div>
 
-      <!-- A/B Buttons -->
-      <div class="gb-ab-area">
-        <div style="text-align:center;">
-          <button class="gb-ab-btn gb-btn-b" data-key="b">B</button>
-          <div class="gb-ss-label">B</div>
-        </div>
-        <div style="text-align:center;">
-          <button class="gb-ab-btn gb-btn-a" data-key="a">A</button>
-          <div class="gb-ss-label">A</div>
-        </div>
-      </div>
+                <!-- Title -->
+                <div class="gb-overlay show" id="title-screen">
+                  <h1 style="font-family:'Press Start 2P';font-size:13px;color:var(--gb-screen-dark);margin-bottom:8px;text-shadow:2px 2px 0 var(--gb-screen-mid);">THREAD<br>CRAWLER</h1>
+                  <p style="font-family:'Press Start 2P';font-size:7px;color:var(--gb-screen-mid);margin-bottom:20px;">DUNGEON ADVENTURE</p>
+                  <div style="width:48px;height:48px;margin-bottom:20px;background:var(--gb-screen-mid);border:2px solid var(--gb-screen-dark);position:relative;">
+                    <div style="position:absolute;top:8px;left:8px;right:8px;bottom:8px;background:var(--gb-screen-dark);"></div>
+                    <div style="position:absolute;top:14px;left:14px;width:20px;height:20px;background:var(--gb-screen-mid);border:2px solid var(--gb-screen-dark);"></div>
+                  </div>
+                  <button class="gb-overlay-btn" onclick="startGame()">START</button>
+                  <p style="font-family:'Press Start 2P';font-size:6px;color:var(--gb-screen-mid);margin-top:16px;">PRESS START</p>
+                </div>
 
-      <!-- Start/Select -->
-      <div class="gb-start-select-area">
-        <div style="text-align:center;">
-          <button class="gb-ss-btn" data-key="select"></button>
-          <div class="gb-ss-label">SELECT</div>
-        </div>
-        <div style="text-align:center;">
-          <button class="gb-ss-btn" data-key="start"></button>
-          <div class="gb-ss-label">START</div>
-        </div>
-      </div>
+                <!-- Game Over -->
+                <div class="gb-overlay" id="gameover-screen">
+                  <h2 id="go-title">GAME OVER</h2>
+                  <div class="gb-overlay-stats" id="go-stats"></div>
+                  <button class="gb-overlay-btn" onclick="restartGame()">RETRY</button>
+                </div>
 
-      <!-- Speaker -->
-      <div class="gb-speaker">
-        <div class="gb-speaker-line"></div>
-        <div class="gb-speaker-line"></div>
-        <div class="gb-speaker-line"></div>
-        <div class="gb-speaker-line"></div>
-        <div class="gb-speaker-line"></div>
-        <div class="gb-speaker-line"></div>
-        <div class="gb-speaker-line"></div>
+                <!-- Inventory -->
+                <div class="gb-inventory" id="inventory-panel">
+                  <div class="gb-inv-title">BAG <span id="inv-count">0</span>/12</div>
+                  <div class="gb-inv-grid" id="inventory-items"></div>
+                </div>
+              </div>
+
+              <!-- Text box -->
+              <div class="gb-textbox">
+                <div class="gb-textbox-title">LOG</div>
+                <div class="gb-textbox-log" id="game-log">
+                  <div class="log-entry" style="color:var(--gb-screen-mid);">Press START...</div>
+                </div>
+              </div>
+            </div>
+
+            <!-- Transition -->
+            <div class="gb-transition" id="gb-transition"></div>
+          </div>
+        </div>
+
+        <!-- Controls -->
+        <div class="gb-controls-area">
+          <!-- D-Pad -->
+          <div class="gb-dpad">
+            <button class="gb-dpad-btn gb-dpad-up" data-key="up"></button>
+            <button class="gb-dpad-btn gb-dpad-down" data-key="down"></button>
+            <button class="gb-dpad-btn gb-dpad-left" data-key="left"></button>
+            <button class="gb-dpad-btn gb-dpad-right" data-key="right"></button>
+            <div class="gb-dpad-center"></div>
+          </div>
+
+          <!-- A/B -->
+          <div class="gb-ab-area">
+            <div class="gb-ab-btn-wrap">
+              <button class="gb-ab-btn" data-key="b">B</button>
+              <div class="gb-ab-label">B</div>
+            </div>
+            <div class="gb-ab-btn-wrap">
+              <button class="gb-ab-btn" data-key="a">A</button>
+              <div class="gb-ab-label">A</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Start/Select -->
+        <div class="gb-ss-area">
+          <div class="gb-ss-btn-wrap">
+            <button class="gb-ss-btn" data-key="select"></button>
+            <div class="gb-ss-label">SELECT</div>
+          </div>
+          <div class="gb-ss-btn-wrap">
+            <button class="gb-ss-btn" data-key="start"></button>
+            <div class="gb-ss-label">START</div>
+          </div>
+        </div>
+
+        <!-- Speaker -->
+        <div class="gb-speaker">
+          <div class="gb-speaker-line"></div>
+          <div class="gb-speaker-line"></div>
+          <div class="gb-speaker-line"></div>
+          <div class="gb-speaker-line"></div>
+          <div class="gb-speaker-line"></div>
+          <div class="gb-speaker-line"></div>
+          <div class="gb-speaker-line"></div>
+        </div>
       </div>
     </div>
-  </div>
 
-  <!-- Controls hint -->
-  <div class="gb-controls-hint" id="controls-hint">
-    <span>WASD</span> Move
-    <span>SPACE</span> Attack
-    <span>E</span> Exit
-    <span>I</span> Bag
+    <!-- Web UI buttons -->
+    <div class="web-ui-bar" id="web-ui-bar">
+      <button class="web-btn" onclick="toggleBag()">BAG (I)</button>
+      <button class="web-btn" onclick="toggleMinimap()">MAP (M)</button>
+      <button class="web-btn" id="btn-mute" onclick="toggleMute()">MUTE</button>
+    </div>
+
+    <!-- Controls hint -->
+    <div class="controls-hint" id="controls-hint">
+      <span>WASD</span> Move · <span>SPACE</span> Attack · <span>E</span> Exit · <span>I</span> Bag · <span>M</span> Map
+    </div>
   </div>
 
   <script src="https://cdn.jsdelivr.net/npm/phaser@3.60.0/dist/phaser.min.js"></script>
   <script>
     window.onerror = function(msg, url, line) {
-      document.getElementById('game-area').innerHTML = '<div style="padding:20px;text-align:center;font-family:monospace;"><p style="font-size:10px;color:var(--gb-screen-dark);">ERROR</p><p style="font-size:8px;color:var(--gb-screen-mid);">' + msg + '</p></div>';
+      document.getElementById('game-area').innerHTML = '<div style="padding:20px;text-align:center;"><p style="font-family:Press Start 2P;font-size:8px;color:var(--gb-screen-dark);">ERROR</p><p style="font-family:VT323;font-size:14px;color:var(--gb-screen-dark);margin-top:8px;">' + msg + '</p><p style="font-family:VT323;font-size:12px;color:var(--gb-screen-mid);">Line ' + line + '</p></div>';
     };
   </script>
   <script src="game.js"></script>
 
   <script>
-    // ─── TOUCH D-PAD SUPPORT ───────────────────────────────────
+    // ─── TOUCH D-PAD ──────────────────────────────────────────
     document.querySelectorAll('.gb-dpad-btn, .gb-ab-btn, .gb-ss-btn').forEach(btn => {
       const key = btn.dataset.key;
       if (!key) return;
-
       const keyMap = {
         'up': 'ArrowUp', 'down': 'ArrowDown', 'left': 'ArrowLeft', 'right': 'ArrowRight',
         'a': ' ', 'b': 'e', 'start': 'Enter', 'select': 'Tab'
       };
-
       const dispatchKey = (type) => {
         const mapped = keyMap[key];
         if (!mapped) return;
         window.dispatchEvent(new KeyboardEvent(type, { key: mapped, code: mapped === ' ' ? 'Space' : mapped, bubbles: true }));
       };
-
-      btn.addEventListener('touchstart', (e) => { e.preventDefault(); dispatchKey('keydown'); btn.style.opacity = '0.7'; });
-      btn.addEventListener('touchend', (e) => { e.preventDefault(); dispatchKey('keyup'); btn.style.opacity = '1'; });
-      btn.addEventListener('mousedown', (e) => { dispatchKey('keydown'); });
-      btn.addEventListener('mouseup', (e) => { dispatchKey('keyup'); });
-      btn.addEventListener('mouseleave', (e) => { dispatchKey('keyup'); });
+      btn.addEventListener('touchstart', (e) => { e.preventDefault(); dispatchKey('keydown'); });
+      btn.addEventListener('touchend', (e) => { e.preventDefault(); dispatchKey('keyup'); });
+      btn.addEventListener('mousedown', () => dispatchKey('keydown'));
+      btn.addEventListener('mouseup', () => dispatchKey('keyup'));
+      btn.addEventListener('mouseleave', () => dispatchKey('keyup'));
     });
 
     // Power LED
-    setTimeout(() => {
-      document.getElementById('power-led').classList.add('on');
-    }, 500);
+    setTimeout(() => document.getElementById('power-led').classList.add('on'), 500);
+
+    // ─── WEB UI FUNCTIONS ─────────────────────────────────────
+    let minimapVisible = true;
+    let muted = false;
+
+    function toggleBag() {
+      const panel = document.getElementById('inventory-panel');
+      if (panel) {
+        panel.classList.toggle('show');
+        if (panel.classList.contains('show')) {
+          document.getElementById('inv-count').textContent = state.player.inventory.length;
+          updateInventoryUI();
+        }
+      }
+    }
+
+    function toggleMinimap() {
+      minimapVisible = !minimapVisible;
+      // Will be picked up by game loop
+    }
+
+    function toggleMute() {
+      muted = !muted;
+      document.getElementById('btn-mute').classList.toggle('active', muted);
+      // Mute audio context
+      if (audioCtx) {
+        if (muted) audioCtx.suspend();
+        else audioCtx.resume();
+      }
+    }
   </script>
 </body>
 </html>

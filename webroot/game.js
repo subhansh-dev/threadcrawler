@@ -948,13 +948,17 @@ class GameScene extends Phaser.Scene {
       vx *= 0.707; vy *= 0.707;
     }
 
+    // Get tile position early (needed for speed + interactions)
+    const tx = Math.floor(this.player.x / TILE);
+    const ty = Math.floor(this.player.y / TILE);
+
     let speedMult = state.player.speedMult;
 
     // Tile-based speed: water/grass/ice slow you down
-    const currentTile = dungeon.map[ty] && dungeon.map[ty][tx];
+    const currentTile = (ty >= 0 && ty < MAP_H && tx >= 0 && tx < MAP_W) ? dungeon.map[ty][tx] : T.FLOOR;
     if (currentTile === T.WATER) speedMult *= 0.5;
     else if (currentTile === T.GRASS_TALL) speedMult *= 0.7;
-    else if (currentTile === T.ICE) speedMult *= 1.4; // ice = slippery fast
+    else if (currentTile === T.ICE) speedMult *= 1.4;
 
     // Status effect: FREEZE (capped, doesn't stack multiplicatively)
     if (hasStatus('FREEZE')) {
@@ -990,9 +994,6 @@ class GameScene extends Phaser.Scene {
     if (Phaser.Input.Keyboard.JustDown(this.spaceKey)) this.shoot();
 
     // ─── TILE INTERACTIONS (with cooldown) ───
-    const tx = Math.floor(this.player.x / TILE);
-    const ty = Math.floor(this.player.y / TILE);
-
     if (tx >= 0 && tx < MAP_W && ty >= 0 && ty < MAP_H && this.interactionCooldown <= 0) {
       const tile = dungeon.map[ty][tx];
       if (tile === T.TRAP) {
@@ -1175,7 +1176,7 @@ class GameScene extends Phaser.Scene {
   drawMinimap(dungeon, px, py) {
     const g = this.minimapGraphics;
     g.clear();
-    // Fixed-size minimap in world space (doesn't scale with camera zoom)
+    if (typeof minimapVisible !== 'undefined' && !minimapVisible) return;
     const mmScale = 1;
     const mmW = MAP_W * mmScale;
     const mmH = MAP_H * mmScale;
