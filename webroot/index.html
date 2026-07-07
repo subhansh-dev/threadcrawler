@@ -26,25 +26,20 @@
       --red: #E83838;
       --yellow: #F8D838;
       --gold: #F8B800;
-      /* DMG-01 green palette */
-      --gb-light: #9BBC0F;
-      --gb-mid: #8BAC0F;
-      --gb-dark: #306230;
-      --gb-darkest: #0F380F;
-      --gb-body: #C4CFA1;
-      --gb-body-light: #D4DFAE;
-      --gb-body-dark: #A4AF84;
-      --gb-body-shadow: #8A946A;
-      --gb-bezel: #65655B;
-      --gb-bezel-light: #7A7A70;
-      --gb-bezel-dark: #4A4A42;
+      --sky: #5C94FC;
+      --sky-light: #88B4F8;
+      --ground: #C84C0C;
+      --ground-dark: #A0340C;
+      --brick: #D87050;
+      --grass: #48A838;
+      --grass-light: #68C858;
     }
 
     html { height: 100%; }
 
     body {
       font-family: 'VT323', monospace;
-      background: #0A0A0A;
+      background: var(--sky);
       color: var(--text);
       min-height: 100vh;
       display: flex;
@@ -55,125 +50,387 @@
       overflow-x: hidden;
     }
 
-    /* ═══ RETRO GRID BACKGROUND ═══ */
+    /* ═══ MARIO SKY BACKGROUND ═══ */
     body::before {
       content: '';
       position: fixed;
       inset: 0;
       z-index: 0;
       background:
-        /* Pixel grid */
-        repeating-linear-gradient(
-          0deg,
-          transparent,
-          transparent 3px,
-          rgba(255,255,255,0.008) 3px,
-          rgba(255,255,255,0.008) 4px
-        ),
-        repeating-linear-gradient(
-          90deg,
-          transparent,
-          transparent 3px,
-          rgba(255,255,255,0.008) 3px,
-          rgba(255,255,255,0.008) 4px
-        ),
-        /* DMG green glow spots */
-        radial-gradient(ellipse at 50% 40%, rgba(155,188,15,0.04) 0%, transparent 60%),
-        radial-gradient(ellipse at 20% 70%, rgba(48,98,48,0.03) 0%, transparent 40%),
-        radial-gradient(ellipse at 80% 20%, rgba(155,188,15,0.02) 0%, transparent 40%);
+        /* Sky gradient */
+        linear-gradient(180deg,
+          #5C94FC 0%,
+          #5C94FC 40%,
+          #88B4F8 60%,
+          #A8D0F8 80%,
+          #C8E0F8 100%
+        );
       pointer-events: none;
     }
 
-    /* ═══ SCANLINE OVERLAY ═══ */
-    body::after {
-      content: '';
+    /* ═══ PIXEL CLOUDS ═══ */
+    .clouds {
       position: fixed;
-      inset: 0;
-      z-index: 999;
+      top: 0;
+      left: 0;
+      width: 200%;
+      height: 100%;
+      z-index: 0;
+      pointer-events: none;
+      animation: cloudScroll 60s linear infinite;
+    }
+
+    .cloud {
+      position: absolute;
+      background: white;
+      border-radius: 0;
+      image-rendering: pixelated;
+    }
+
+    /* Pixel cloud shape using box-shadow */
+    .cloud::before {
+      content: '';
+      position: absolute;
+      width: 8px;
+      height: 8px;
+      background: white;
+    }
+
+    .cloud::after {
+      content: '';
+      position: absolute;
+      width: 8px;
+      height: 8px;
+      background: white;
+    }
+
+    .cloud-1 {
+      width: 64px; height: 24px;
+      top: 8%;
+      left: 10%;
+      box-shadow:
+        8px -8px 0 0 white,
+        16px -16px 0 0 white,
+        24px -16px 0 0 white,
+        32px -8px 0 0 white,
+        40px 0 0 0 white,
+        16px 0 0 0 white;
+    }
+
+    .cloud-2 {
+      width: 48px; height: 16px;
+      top: 15%;
+      left: 45%;
+      box-shadow:
+        8px -8px 0 0 white,
+        16px -8px 0 0 white,
+        24px 0 0 0 white;
+    }
+
+    .cloud-3 {
+      width: 56px; height: 20px;
+      top: 5%;
+      left: 75%;
+      box-shadow:
+        8px -8px 0 0 white,
+        16px -12px 0 0 white,
+        24px -12px 0 0 white,
+        32px -8px 0 0 white,
+        40px 0 0 0 white;
+    }
+
+    .cloud-4 {
+      width: 40px; height: 16px;
+      top: 20%;
+      left: 30%;
+      box-shadow:
+        8px -8px 0 0 white,
+        16px 0 0 0 white;
+    }
+
+    .cloud-5 {
+      width: 72px; height: 24px;
+      top: 10%;
+      left: 60%;
+      box-shadow:
+        8px -8px 0 0 white,
+        16px -16px 0 0 white,
+        24px -16px 0 0 white,
+        32px -16px 0 0 white,
+        40px -8px 0 0 white,
+        48px 0 0 0 white;
+    }
+
+    @keyframes cloudScroll {
+      0% { transform: translateX(0); }
+      100% { transform: translateX(-50%); }
+    }
+
+    /* ═══ PIXEL HILLS ═══ */
+    .hills {
+      position: fixed;
+      bottom: 0;
+      left: 0;
+      width: 100%;
+      height: 30%;
+      z-index: 0;
+      pointer-events: none;
+    }
+
+    .hill {
+      position: absolute;
+      bottom: 0;
+      border-radius: 0;
+      image-rendering: pixelated;
+    }
+
+    .hill-1 {
+      left: -5%;
+      width: 40%;
+      height: 60%;
+      background: #48A838;
+      clip-path: polygon(0% 100%, 20% 40%, 40% 20%, 60% 30%, 80% 50%, 100% 100%);
+    }
+
+    .hill-2 {
+      left: 30%;
+      width: 35%;
+      height: 50%;
+      background: #388828;
+      clip-path: polygon(0% 100%, 25% 50%, 50% 30%, 75% 45%, 100% 100%);
+    }
+
+    .hill-3 {
+      left: 60%;
+      width: 45%;
+      height: 70%;
+      background: #48A838;
+      clip-path: polygon(0% 100%, 15% 60%, 35% 25%, 55% 35%, 75% 55%, 100% 100%);
+    }
+
+    /* ═══ PIXEL GROUND ═══ */
+    .ground {
+      position: fixed;
+      bottom: 0;
+      left: 0;
+      width: 100%;
+      height: 80px;
+      z-index: 0;
+      pointer-events: none;
+    }
+
+    .ground-top {
+      height: 16px;
+      background: var(--grass);
+      position: relative;
+    }
+
+    .ground-top::after {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 8px;
+      background: var(--grass-light);
+    }
+
+    .ground-body {
+      height: 64px;
       background: repeating-linear-gradient(
         0deg,
-        transparent,
-        transparent 2px,
-        rgba(0,0,0,0.03) 2px,
-        rgba(0,0,0,0.03) 4px
+        var(--ground) 0px,
+        var(--ground) 16px,
+        var(--ground-dark) 16px,
+        var(--ground-dark) 32px
       );
-      pointer-events: none;
+      position: relative;
     }
 
-    /* ═══ PIXEL DECORATIONS ═══ */
-    .pixel-deco {
+    /* Brick pattern */
+    .ground-body::before {
+      content: '';
+      position: absolute;
+      inset: 0;
+      background: repeating-linear-gradient(
+        90deg,
+        transparent 0px,
+        transparent 32px,
+        rgba(0,0,0,0.1) 32px,
+        rgba(0,0,0,0.1) 34px
+      );
+    }
+
+    /* ═══ FLOATING PIXEL DECORATIONS ═══ */
+    .pixel-deco-container {
       position: fixed;
+      inset: 0;
       z-index: 0;
-      width: 4px;
-      height: 4px;
-      opacity: 0.15;
       pointer-events: none;
+      overflow: hidden;
     }
 
-    .pixel-deco-tl {
-      top: 20px;
-      left: 20px;
-      box-shadow:
-        0px 0px 0 2px var(--gb-light),
-        6px 0px 0 2px var(--gb-light),
-        12px 0px 0 2px var(--gb-light),
-        0px 6px 0 2px var(--gb-light),
-        6px 6px 0 2px var(--gb-dark),
-        12px 6px 0 2px var(--gb-light),
-        0px 12px 0 2px var(--gb-light),
-        6px 12px 0 2px var(--gb-light),
-        12px 12px 0 2px var(--gb-light);
+    .pixel-coin {
+      position: absolute;
+      width: 16px;
+      height: 16px;
+      animation: coinFloat 4s ease-in-out infinite;
     }
 
-    .pixel-deco-tr {
-      top: 20px;
-      right: 20px;
+    .pixel-coin::before {
+      content: '';
+      position: absolute;
+      inset: 2px;
+      background: var(--gold);
       box-shadow:
-        0px 0px 0 2px var(--gb-light),
-        6px 0px 0 2px var(--gb-light),
-        12px 0px 0 2px var(--gb-light),
-        0px 6px 0 2px var(--gb-light),
-        6px 6px 0 2px var(--gb-darkest),
-        12px 6px 0 2px var(--gb-light),
-        0px 12px 0 2px var(--gb-light),
-        6px 12px 0 2px var(--gb-light),
-        12px 12px 0 2px var(--gb-light);
+        inset 2px 2px 0 #FFE880,
+        inset -2px -2px 0 #C89800;
     }
 
-    .pixel-deco-bl {
-      bottom: 20px;
-      left: 20px;
-      box-shadow:
-        0px 0px 0 2px var(--gb-light),
-        6px 0px 0 2px var(--gb-light),
-        12px 0px 0 2px var(--gb-light),
-        0px 6px 0 2px var(--gb-light),
-        6px 6px 0 2px var(--gb-darkest),
-        12px 6px 0 2px var(--gb-light),
-        0px 12px 0 2px var(--gb-light),
-        6px 12px 0 2px var(--gb-light),
-        12px 12px 0 2px var(--gb-light);
+    .pixel-coin::after {
+      content: '';
+      position: absolute;
+      top: 4px;
+      left: 6px;
+      width: 4px;
+      height: 8px;
+      background: #C89800;
     }
 
-    .pixel-deco-br {
-      bottom: 20px;
-      right: 20px;
+    .pixel-star {
+      position: absolute;
+      width: 16px;
+      height: 16px;
+      animation: starFloat 5s ease-in-out infinite;
+    }
+
+    .pixel-star::before {
+      content: '';
+      position: absolute;
+      top: 2px;
+      left: 6px;
+      width: 4px;
+      height: 12px;
+      background: var(--yellow);
       box-shadow:
-        0px 0px 0 2px var(--gb-light),
-        6px 0px 0 2px var(--gb-light),
-        12px 0px 0 2px var(--gb-light),
-        0px 6px 0 2px var(--gb-light),
-        6px 6px 0 2px var(--gb-light),
-        12px 6px 0 2px var(--gb-light),
-        0px 12px 0 2px var(--gb-light),
-        6px 12px 0 2px var(--gb-light),
-        12px 12px 0 2px var(--gb-light);
+        -4px 4px 0 0 var(--yellow),
+        4px 4px 0 0 var(--yellow),
+        -6px 2px 0 0 var(--yellow),
+        6px 2px 0 0 var(--yellow);
+    }
+
+    .pixel-mushroom {
+      position: absolute;
+      width: 16px;
+      height: 16px;
+      animation: mushroomBounce 3s ease-in-out infinite;
+    }
+
+    .pixel-mushroom::before {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: 2px;
+      width: 12px;
+      height: 8px;
+      background: var(--red);
+      box-shadow:
+        inset 2px 2px 0 #FF6060,
+        inset -2px -2px 0 #C02020,
+        4px 0 0 0 white,
+        -4px 2px 0 0 white;
+    }
+
+    .pixel-mushroom::after {
+      content: '';
+      position: absolute;
+      bottom: 0;
+      left: 4px;
+      width: 8px;
+      height: 8px;
+      background: #F8D8B0;
+      box-shadow: inset 2px 2px 0 #F8E8C8;
+    }
+
+    @keyframes coinFloat {
+      0%, 100% { transform: translateY(0) rotate(0deg); }
+      50% { transform: translateY(-15px) rotate(10deg); }
+    }
+
+    @keyframes starFloat {
+      0%, 100% { transform: translateY(0) scale(1); }
+      50% { transform: translateY(-20px) scale(1.1); }
+    }
+
+    @keyframes mushroomBounce {
+      0%, 100% { transform: translateY(0); }
+      50% { transform: translateY(-10px); }
+    }
+
+    /* ═══ QUESTION BLOCKS ═══ */
+    .qblock {
+      position: absolute;
+      width: 32px;
+      height: 32px;
+      background: var(--gold);
+      border: 3px solid #C89800;
+      box-shadow:
+        inset 3px 3px 0 #FFE880,
+        inset -3px -3px 0 #A07000,
+        4px 4px 0 rgba(0,0,0,0.3);
+      animation: qblockBounce 2s ease-in-out infinite;
+    }
+
+    .qblock::before {
+      content: '?';
+      position: absolute;
+      inset: 0;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-family: 'Press Start 2P', monospace;
+      font-size: 14px;
+      color: #A07000;
+      text-shadow: 1px 1px 0 #FFE880;
+    }
+
+    @keyframes qblockBounce {
+      0%, 100% { transform: translateY(0); }
+      50% { transform: translateY(-8px); }
+    }
+
+    /* ═══ PIXEL PIPES ═══ */
+    .pixel-pipe {
+      position: absolute;
+      bottom: 80px;
+      width: 32px;
+      z-index: 0;
+    }
+
+    .pixel-pipe-top {
+      height: 24px;
+      background: var(--green);
+      border: 3px solid #288828;
+      box-shadow:
+        inset 4px 0 0 #68C858,
+        inset -4px 0 0 #388828;
+    }
+
+    .pixel-pipe-body {
+      height: 60px;
+      background: var(--green);
+      border-left: 3px solid #288828;
+      border-right: 3px solid #288828;
+      box-shadow:
+        inset 4px 0 0 #68C858,
+        inset -4px 0 0 #388828;
     }
 
     /* ═══ MAIN CONTENT ═══ */
     .app {
       position: relative;
       z-index: 1;
+      padding-bottom: 100px;
     }
 
     /* ═══ PIXEL BORDER UTILITY ═══ */
@@ -185,13 +442,6 @@
         4px 4px 0 rgba(0,0,0,0.25);
     }
 
-    .pixel-border-light {
-      border: 2px solid var(--border-light);
-      box-shadow:
-        inset 1px 1px 0 rgba(255,255,255,0.05),
-        3px 3px 0 rgba(0,0,0,0.2);
-    }
-
     /* ═══ GAMEBOY SHELL ═══ */
     .gameboy {
       width: 520px;
@@ -200,21 +450,21 @@
     }
 
     .gb-body {
-      background: linear-gradient(180deg, var(--gb-body-light), var(--gb-body), var(--gb-body-dark));
+      background: linear-gradient(180deg, #D4DFAE, #C4CFA1, #A4AF84);
       border-radius: 14px 14px 14px 70px;
       padding: 14px 14px 65px;
       box-shadow:
         inset 2px 2px 0 rgba(255,255,255,0.3),
         inset -2px -2px 0 rgba(0,0,0,0.08),
-        0 5px 0 var(--gb-body-shadow),
+        0 5px 0 #8A946A,
         0 8px 24px rgba(0,0,0,0.5),
-        6px 0 0 var(--gb-body-dark),
-        -4px 0 0 var(--gb-body-light);
+        6px 0 0 #A4AF84,
+        -4px 0 0 #D4DFAE;
       position: relative;
     }
 
     .gb-screen-bezel {
-      background: linear-gradient(135deg, var(--gb-bezel-light), var(--gb-bezel), var(--gb-bezel-dark));
+      background: linear-gradient(135deg, #7A7A70, #65655B, #4A4A42);
       border-radius: 10px 10px 10px 35px;
       padding: 12px 14px 10px;
       box-shadow: inset 2px 2px 0 rgba(255,255,255,0.1), inset -2px -2px 0 rgba(0,0,0,0.25);
@@ -260,7 +510,7 @@
       color: #606070;
     }
 
-    /* ═══ SCREEN (colorful, not green) ═══ */
+    /* ═══ SCREEN ═══ */
     .gb-screen {
       background: #000000;
       border-radius: 4px;
@@ -288,7 +538,7 @@
       position: relative;
     }
 
-    /* ═══ HUD (inside screen) ═══ */
+    /* ═══ HUD ═══ */
     .gb-hud {
       display: flex;
       align-items: center;
@@ -476,7 +726,7 @@
     .inv-equipped-tag { font-family: 'Press Start 2P'; font-size: 6px; color: var(--blue); margin-left: auto; }
     .inv-empty { font-family: 'Press Start 2P'; font-size: 7px; color: var(--text-muted); text-align: center; padding: 24px; grid-column: 1/-1; }
 
-    /* ═══ TEXT BOX (inside screen) ═══ */
+    /* ═══ TEXT BOX ═══ */
     .gb-textbox {
       background: rgba(0,0,0,0.25);
       border-top: 2px solid rgba(255,255,255,0.06);
@@ -571,7 +821,7 @@
     }
 
     .gb-ab-btn:active { box-shadow: inset 2px 2px 0 rgba(0,0,0,0.2), 0 1px 0 #6A2040; transform: translateY(2px); }
-    .gb-ab-label { font-family: 'Press Start 2P'; font-size: 5px; color: var(--gb-body-shadow); margin-top: 4px; }
+    .gb-ab-label { font-family: 'Press Start 2P'; font-size: 5px; color: #8A946A; margin-top: 4px; }
 
     .gb-ss-area { display: flex; gap: 16px; justify-content: center; margin-top: 8px; transform: rotate(-25deg); }
     .gb-ss-wrap { text-align: center; }
@@ -586,7 +836,7 @@
     }
 
     .gb-ss-btn:active { box-shadow: 0 1px 0 #4A4A3A; transform: translateY(1px); }
-    .gb-ss-label { font-family: 'Press Start 2P'; font-size: 4px; color: var(--gb-body-shadow); margin-top: 3px; }
+    .gb-ss-label { font-family: 'Press Start 2P'; font-size: 4px; color: #8A946A; margin-top: 3px; }
 
     .gb-speaker {
       position: absolute;
@@ -599,7 +849,7 @@
       transform: rotate(-30deg);
     }
 
-    .gb-speaker-line { height: 2px; background: var(--gb-body-shadow); border-radius: 1px; opacity: 0.5; }
+    .gb-speaker-line { height: 2px; background: #8A946A; border-radius: 1px; opacity: 0.5; }
 
     .gb-nintendo-seal {
       position: absolute;
@@ -608,14 +858,14 @@
       transform: translateX(-50%);
       font-family: 'Press Start 2P', monospace;
       font-size: 4px;
-      color: var(--gb-body-shadow);
+      color: #8A946A;
       text-align: center;
       line-height: 1.6;
     }
 
     .gb-seal-star {
       width: 20px; height: 20px;
-      border: 1.5px solid var(--gb-body-shadow);
+      border: 1.5px solid #8A946A;
       border-radius: 50%;
       display: flex;
       align-items: center;
@@ -624,7 +874,7 @@
       font-size: 8px;
     }
 
-    /* ═══ WEB UI BELOW GAMEBOY ═══ */
+    /* ═══ WEB UI BAR ═══ */
     .web-bar {
       width: 520px;
       display: flex;
@@ -647,14 +897,12 @@
       border: 2px solid #2A2A2A;
       border-radius: 6px;
       cursor: pointer;
-      box-shadow:
-        inset 1px 1px 0 rgba(255,255,255,0.03),
-        3px 3px 0 rgba(0,0,0,0.4);
+      box-shadow: inset 1px 1px 0 rgba(255,255,255,0.03), 3px 3px 0 rgba(0,0,0,0.4);
       transition: all 0.1s;
     }
 
-    .web-btn:active { transform: translate(2px, 2px); box-shadow: 1px 1px 0 rgba(0,0,0,0.2); }
-    .web-btn:hover { background: var(--border); color: var(--text); }
+    .web-btn:active { transform: translate(2px, 2px); box-shadow: 1px 1px 0 rgba(0,0,0,0.4); }
+    .web-btn:hover { background: #2A2A2A; color: var(--text); }
     .web-btn.active { background: var(--purple); color: white; border-color: var(--purple); }
 
     /* ═══ SIDEBAR PANELS ═══ */
@@ -723,22 +971,76 @@
       text-align: center;
       font-family: 'Press Start 2P', monospace;
       font-size: 6px;
-      color: rgba(168,130,247,0.3);
+      color: rgba(255,255,255,0.3);
       margin-top: 4px;
       padding-bottom: 8px;
       display: none;
     }
 
     .controls-hint.show { display: block; }
-    .controls-hint span { color: rgba(232,120,152,0.4); }
+    .controls-hint span { color: rgba(232,120,152,0.5); }
 
     /* ═══ SCROLLBAR ═══ */
     ::-webkit-scrollbar { width: 4px; }
     ::-webkit-scrollbar-track { background: transparent; }
     ::-webkit-scrollbar-thumb { background: rgba(168,130,247,0.15); border-radius: 2px; }
+
+    /* ═══ RESPONSIVE ═══ */
+    @media (max-width: 600px) {
+      .gameboy { width: 100%; }
+      .web-bar, .panels-row, .controls-hint { width: 100%; }
+      .gb-screen { height: 300px; }
+    }
   </style>
 </head>
 <body>
+
+  <!-- ═══ MARIO BACKGROUND ═══ -->
+  <div class="clouds">
+    <div class="cloud cloud-1"></div>
+    <div class="cloud cloud-2"></div>
+    <div class="cloud cloud-3"></div>
+    <div class="cloud cloud-4"></div>
+    <div class="cloud cloud-5"></div>
+    <div class="cloud cloud-1" style="left:110%"></div>
+    <div class="cloud cloud-3" style="left:130%"></div>
+    <div class="cloud cloud-2" style="left:150%"></div>
+    <div class="cloud cloud-5" style="left:170%"></div>
+    <div class="cloud cloud-4" style="left:190%"></div>
+  </div>
+
+  <div class="hills">
+    <div class="hill hill-1"></div>
+    <div class="hill hill-2"></div>
+    <div class="hill hill-3"></div>
+  </div>
+
+  <div class="ground">
+    <div class="ground-top"></div>
+    <div class="ground-body"></div>
+  </div>
+
+  <div class="pixel-deco-container">
+    <div class="pixel-coin" style="left:8%; top:30%;"></div>
+    <div class="pixel-coin" style="left:92%; top:25%;"></div>
+    <div class="pixel-coin" style="left:15%; top:45%;"></div>
+    <div class="pixel-star" style="left:5%; top:20%;"></div>
+    <div class="pixel-star" style="left:95%; top:35%;"></div>
+    <div class="pixel-mushroom" style="left:88%; top:40%;"></div>
+    <div class="pixel-mushroom" style="left:12%; top:55%;"></div>
+    <div class="qblock" style="left:3%; top:50%;"></div>
+    <div class="qblock" style="left:97%; top:45%;"></div>
+  </div>
+
+  <div class="pixel-pipe" style="left:6%;">
+    <div class="pixel-pipe-top"></div>
+    <div class="pixel-pipe-body"></div>
+  </div>
+
+  <div class="pixel-pipe" style="right:6%;">
+    <div class="pixel-pipe-top"></div>
+    <div class="pixel-pipe-body"></div>
+  </div>
 
   <div class="app">
 
@@ -791,7 +1093,6 @@
               <!-- Title -->
               <div class="overlay show" id="title-screen">
                 <div class="pixel-icon">
-                  <!-- Pixel art dungeon entrance -->
                   <svg viewBox="0 0 32 32" width="40" height="40" fill="none">
                     <rect x="6" y="4" width="20" height="4" fill="#4A3A6A"/>
                     <rect x="4" y="8" width="24" height="16" fill="#3A2A5A"/>
@@ -800,23 +1101,21 @@
                     <rect x="12" y="14" width="8" height="10" fill="#1A1028"/>
                     <rect x="14" y="16" width="4" height="2" fill="#E87898"/>
                     <rect x="10" y="24" width="12" height="4" fill="#4A3A6A"/>
-                    <!-- Steps -->
                     <rect x="8" y="24" width="16" height="2" fill="#2A1A44"/>
                     <rect x="6" y="26" width="20" height="2" fill="#221438"/>
-                    <!-- Skull decoration -->
                     <rect x="14" y="6" width="4" height="2" fill="#A882F7"/>
                   </svg>
                 </div>
                 <h1>THREAD CRAWLER</h1>
                 <p>Every comment is a room. Every reply is a path deeper. Explore procedurally generated dungeons.</p>
-                <button class="btn-start" onclick="startGame()" style="font-family:'Press Start 2P';font-size:12px;padding:14px 36px;background:linear-gradient(135deg,var(--green),#38A838);color:white;border:none;border-radius:8px;cursor:pointer;box-shadow:0 4px 0 #288828,0 6px 20px rgba(72,200,72,0.3);">START</button>
+                <button onclick="startGame()" style="font-family:'Press Start 2P';font-size:12px;padding:14px 36px;background:linear-gradient(135deg,#48C848,#38A838);color:white;border:none;border-radius:8px;cursor:pointer;box-shadow:0 4px 0 #288828,0 6px 20px rgba(72,200,72,0.3);">START</button>
               </div>
 
               <!-- Game Over -->
               <div class="overlay" id="gameover-screen">
                 <h2 id="go-title">GAME OVER</h2>
                 <div class="overlay-stats" id="go-stats"></div>
-                <button onclick="restartGame()" style="font-family:'Press Start 2P';font-size:12px;padding:14px 36px;background:linear-gradient(135deg,var(--pink),#D46888);color:white;border:none;border-radius:8px;cursor:pointer;box-shadow:0 4px 0 #A04868,0 6px 20px rgba(232,120,152,0.3);">RETRY</button>
+                <button onclick="restartGame()" style="font-family:'Press Start 2P';font-size:12px;padding:14px 36px;background:linear-gradient(135deg,#E87898,#D46888);color:white;border:none;border-radius:8px;cursor:pointer;box-shadow:0 4px 0 #A04868,0 6px 20px rgba(232,120,152,0.3);">RETRY</button>
               </div>
 
               <!-- Inventory overlay -->
@@ -828,14 +1127,14 @@
 
               <!-- Shop overlay -->
               <div class="inv-overlay" id="shop-panel">
-                <div class="inv-title">UPGRADE SHOP <span style="font-size:8px;color:#888868;">(Gold: <span id="shop-gold">0</span>G)</span></div>
+                <div class="inv-title">UPGRADE SHOP <span style="font-size:8px;color:#585840;">(Gold: <span id="shop-gold">0</span>G)</span></div>
                 <div id="shop-items" style="width:80%;max-width:400px;display:flex;flex-direction:column;gap:4px;"></div>
                 <button onclick="toggleShop()" style="font-family:'Press Start 2P';font-size:8px;padding:8px 16px;background:var(--bg-card2);color:var(--text);border:2px solid var(--border);border-radius:6px;cursor:pointer;margin-top:12px;">CLOSE</button>
               </div>
 
               <!-- Achievements overlay -->
               <div class="inv-overlay" id="achievements-panel">
-                <div class="inv-title">ACHIEVEMENTS <span style="font-size:8px;color:#888868;"><span id="ach-count">0</span>/8</span></div>
+                <div class="inv-title">ACHIEVEMENTS <span style="font-size:8px;color:#585840;"><span id="ach-count">0</span>/8</span></div>
                 <div id="ach-items" style="width:80%;max-width:400px;display:flex;flex-direction:column;gap:4px;"></div>
                 <button onclick="toggleAchievements()" style="font-family:'Press Start 2P';font-size:8px;padding:8px 16px;background:var(--bg-card2);color:var(--text);border:2px solid var(--border);border-radius:6px;cursor:pointer;margin-top:12px;">CLOSE</button>
               </div>
@@ -894,7 +1193,7 @@
     <button class="web-btn" onclick="toggleAchievements()">FEATS</button>
     <button class="web-btn" id="btn-mute" onclick="toggleMute()">MUTE</button>
     <div style="flex:1;"></div>
-    <div class="depth-bar" style="align-items:center;">
+    <div class="gb-depth-bar" style="align-items:center;">
       <span style="font-family:'Press Start 2P';font-size:7px;color:var(--text-muted);margin-right:6px;">FLOOR</span>
       <span style="font-family:'Press Start 2P';font-size:8px;color:var(--text-dim);" id="depth-text">F1 / 7</span>
     </div>
@@ -916,6 +1215,8 @@
   <div class="controls-hint" id="controls-hint">
     <span>WASD</span> Move · <span>SPACE</span> Attack · <span>E</span> Exit · <span>I</span> Bag
   </div>
+
+  </div><!-- /.app -->
 
   <script src="https://cdn.jsdelivr.net/npm/phaser@3.60.0/dist/phaser.min.js"></script>
   <script>
@@ -943,7 +1244,7 @@
     // Power LED
     setTimeout(() => document.getElementById('power-led').classList.add('on'), 300);
 
-    // Load persistent data on page load
+    // Load persistent data
     loadPersistentData();
 
     // Web UI
@@ -1033,6 +1334,5 @@
       }).join('');
     }
   </script>
-  </div><!-- /.app -->
 </body>
 </html>
