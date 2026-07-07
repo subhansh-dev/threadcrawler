@@ -1379,8 +1379,9 @@ class GameScene extends Phaser.Scene {
       SFX.death();
       document.getElementById('gameover-screen').classList.add('show');
       document.getElementById('go-title').textContent = 'GAME OVER';
+      document.getElementById('go-title').style.color = '#E83838';
       document.getElementById('go-stats').innerHTML = `
-        Depth: ${state.depth + 1}<br>
+        Floor: ${state.depth + 1} / ${state.totalFloors}<br>
         Kills: ${state.kills}<br>
         Gold: ${state.player.gold}<br>
         Level: ${state.player.level} (${state.player.title})
@@ -1621,8 +1622,9 @@ class GameScene extends Phaser.Scene {
       state.phase = 'victory';
       document.getElementById('gameover-screen').classList.add('show');
       document.getElementById('go-title').textContent = 'VICTORY!';
+      document.getElementById('go-title').style.color = '#F8D838';
       document.getElementById('go-stats').innerHTML = `
-        Floors Cleared: ${state.totalFloors}<br>
+        All ${state.totalFloors} Floors Cleared!<br>
         Kills: ${state.kills}<br>
         Gold: ${state.player.gold}<br>
         Level: ${state.player.level} (${state.player.title})<br>
@@ -1655,30 +1657,35 @@ class GameScene extends Phaser.Scene {
   updateUI() {
     const p = state.player;
     const hpBar = document.getElementById('hp-fill');
+    const hpText = document.getElementById('hp-text');
     const goldText = document.getElementById('hud-gold');
     const levelText = document.getElementById('hud-level');
-    const floorText = document.getElementById('hud-floor');
+    const depthText = document.getElementById('depth-text');
     const logEl = document.getElementById('game-log');
 
     if (hpBar) hpBar.style.width = `${(p.hp / p.maxHp) * 100}%`;
+    if (hpText) hpText.textContent = `${p.hp}/${p.maxHp}`;
     const xpBar = document.getElementById('xp-fill');
     if (xpBar) xpBar.style.width = `${(p.xp / p.xpNext) * 100}%`;
-    if (goldText) goldText.textContent = `G:${p.gold}`;
-    if (levelText) levelText.textContent = `Lv${p.level}`;
-    if (floorText) floorText.textContent = `F${state.depth + 1}`;
+    if (goldText) goldText.textContent = p.gold;
+    if (levelText) levelText.textContent = `Lv.${p.level}`;
+    if (depthText) depthText.textContent = `F${state.depth + 1} / ${state.totalFloors}`;
 
     // Update depth pips
-    const pips = document.querySelectorAll('.gb-depth-pip');
+    const pips = document.querySelectorAll('.depth-pip');
     pips.forEach((pip, i) => {
-      pip.className = 'gb-depth-pip';
+      pip.className = 'depth-pip';
       if (i < state.depth) pip.classList.add('visited');
       if (i === state.depth) pip.classList.add('active');
     });
 
     if (logEl) {
-      logEl.innerHTML = state.log.slice(-4).map(l => `<div class="log-entry">${l}</div>`).join('');
+      logEl.innerHTML = state.log.slice(-8).map(l => `<div class="log-entry">${l}</div>`).join('');
       logEl.scrollTop = logEl.scrollHeight;
     }
+
+    // Sync sidebar inventory
+    if (typeof syncSidebarInventory === 'function') syncSidebarInventory();
   }
 }
 
@@ -1688,7 +1695,7 @@ const config = {
   parent: 'game-container',
   width: MAP_W * TILE,
   height: MAP_H * TILE,
-  backgroundColor: '#1a1a2e',
+  backgroundColor: '#0C0C1A',
   physics: { default: 'arcade', arcade: { gravity: { y: 0 }, debug: false } },
   scene: [BootScene, GameScene],
   scale: { mode: Phaser.Scale.FIT, autoCenter: Phaser.Scale.CENTER_BOTH },
@@ -1812,20 +1819,24 @@ function startTransition(callback) {
 
 // ─── INVENTORY UI ────────────────────────────────────────────
 function updateInventoryUI() {
+  // Update overlay inventory
   const invEl = document.getElementById('inventory-items');
-  if (!invEl) return;
-  const p = state.player;
-  if (p.inventory.length === 0) {
-    invEl.innerHTML = '<div class="gb-inv-empty">BAG EMPTY</div>';
-    return;
+  if (invEl) {
+    const p = state.player;
+    if (p.inventory.length === 0) {
+      invEl.innerHTML = '<div class="inv-empty">BAG EMPTY</div>';
+    } else {
+      invEl.innerHTML = p.inventory.map((item, i) => `
+        <div class="inv-item ${p.equipped === item.id ? 'equipped' : ''}" onclick="useItem(${i})" title="${item.desc}">
+          <span class="inv-icon">${item.icon}</span>
+          <span>${item.name}</span>
+          ${p.equipped === item.id ? '<span class="inv-equipped">EQUIPPED</span>' : ''}
+        </div>
+      `).join('');
+    }
   }
-  invEl.innerHTML = p.inventory.map((item, i) => `
-    <div class="gb-inv-item ${p.equipped === item.id ? 'equipped' : ''}" onclick="useItem(${i})" title="${item.desc}">
-      <span class="gb-inv-icon">${item.icon}</span>
-      <span>${item.name}</span>
-      ${p.equipped === item.id ? '<span class="inv-equipped">E</span>' : ''}
-    </div>
-  `).join('');
+  // Sync sidebar too
+  if (typeof syncSidebarInventory === 'function') syncSidebarInventory();
 }
 
 function updateStatusUI() {
