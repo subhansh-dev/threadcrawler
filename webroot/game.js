@@ -824,9 +824,9 @@ class GameScene extends Phaser.Scene {
 
     // ─── CAMERA ───
     this.cameras.main.setBounds(0, 0, MAP_W * TILE, MAP_H * TILE);
-    this.cameras.main.startFollow(this.player, true, 0.08, 0.08);
-    this.cameras.main.setZoom(3);
-    this.cameras.main.setBackgroundColor(0x1a1a2e);
+    this.cameras.main.startFollow(this.player, true, 0.15, 0.15);
+    this.cameras.main.setZoom(2.5);
+    this.cameras.main.setBackgroundColor(0x000000);
 
     // ─── CONTROLS ───
     this.cursors = this.input.keyboard.createCursorKeys();
@@ -1696,7 +1696,7 @@ const config = {
   parent: 'game-container',
   width: MAP_W * TILE,
   height: MAP_H * TILE,
-  backgroundColor: '#0C0C1A',
+  backgroundColor: '#000000',
   physics: { default: 'arcade', arcade: { gravity: { y: 0 }, debug: false } },
   scene: [BootScene, GameScene],
   scale: { mode: Phaser.Scale.FIT, autoCenter: Phaser.Scale.CENTER_BOTH },

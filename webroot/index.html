@@ -137,7 +137,7 @@
 
     /* ═══ SCREEN (colorful, not green) ═══ */
     .gb-screen {
-      background: #0C0C1A;
+      background: #000000;
       border-radius: 4px;
       border: 3px solid #2A2A2A;
       box-shadow: inset 0 0 24px rgba(0,0,0,0.3);
@@ -234,7 +234,7 @@
     .overlay {
       position: absolute;
       inset: 0;
-      background: rgba(12,12,26,0.94);
+      background: rgba(0,0,0,0.95);
       display: none;
       flex-direction: column;
       align-items: center;
@@ -272,7 +272,7 @@
     .overlay .pixel-icon {
       width: 56px; height: 56px;
       margin-bottom: 16px;
-      background: linear-gradient(135deg, var(--pink), var(--purple));
+      background: linear-gradient(135deg, #2A1A44, #1A1028);
       border-radius: 10px;
       display: flex; align-items: center; justify-content: center;
       box-shadow: 0 4px 20px rgba(232,120,152,0.3);
@@ -294,7 +294,7 @@
     .inv-overlay {
       position: absolute;
       inset: 0;
-      background: rgba(12,12,26,0.94);
+      background: rgba(0,0,0,0.95);
       display: none;
       flex-direction: column;
       align-items: center;
@@ -637,7 +637,21 @@
               <!-- Title -->
               <div class="overlay show" id="title-screen">
                 <div class="pixel-icon">
-                  <svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="white" stroke-width="2"><path d="M3 21V8l9-5 9 5v13"/><path d="M9 21V13h6v8"/></svg>
+                  <!-- Pixel art dungeon entrance -->
+                  <svg viewBox="0 0 32 32" width="40" height="40" fill="none">
+                    <rect x="6" y="4" width="20" height="4" fill="#4A3A6A"/>
+                    <rect x="4" y="8" width="24" height="16" fill="#3A2A5A"/>
+                    <rect x="4" y="8" width="4" height="16" fill="#4A3A6A"/>
+                    <rect x="24" y="8" width="4" height="16" fill="#4A3A6A"/>
+                    <rect x="12" y="14" width="8" height="10" fill="#1A1028"/>
+                    <rect x="14" y="16" width="4" height="2" fill="#E87898"/>
+                    <rect x="10" y="24" width="12" height="4" fill="#4A3A6A"/>
+                    <!-- Steps -->
+                    <rect x="8" y="24" width="16" height="2" fill="#2A1A44"/>
+                    <rect x="6" y="26" width="20" height="2" fill="#221438"/>
+                    <!-- Skull decoration -->
+                    <rect x="14" y="6" width="4" height="2" fill="#A882F7"/>
+                  </svg>
                 </div>
                 <h1>THREAD CRAWLER</h1>
                 <p>Every comment is a room. Every reply is a path deeper. Explore procedurally generated dungeons.</p>
