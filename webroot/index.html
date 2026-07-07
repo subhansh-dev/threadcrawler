@@ -3,700 +3,1020 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Thread Crawler</title>
+  <title>Thread Crawler — Game Boy</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Quicksand:wght@400;500;600;700&family=Share+Tech+Mono&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&family=VT323&display=swap" rel="stylesheet">
   <style>
     *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
 
     :root {
-      --bg: #010103;
-      --bg-deep: #020204;
-      --sakura: #E8829B;
-      --sakura-dim: rgba(232,130,155,0.12);
-      --miku: #7EDDD6;
-      --miku-dim: rgba(126,221,214,0.1);
-      --lavender: #C4B5FD;
-      --peach: #FDBA74;
-      --sky: #93C5FD;
-      --mint: #86EFAC;
-      --red: #EF4444;
-      --text: #E8D5E0;
-      --text-dim: #9B889E;
-      --text-muted: #6B5070;
-      --border: rgba(232,130,155,0.08);
+      /* DMG-01 authentic palette */
+      --gb-body: #C4CFA1;
+      --gb-body-light: #D4DFAE;
+      --gb-body-dark: #A4AF84;
+      --gb-body-shadow: #8A946A;
+      --gb-screen-bg: #9BBC0F;
+      --gb-screen-light: #8BAC0F;
+      --gb-screen-mid: #306230;
+      --gb-screen-dark: #0F380F;
+      --gb-bezel: #65655B;
+      --gb-bezel-light: #7A7A70;
+      --gb-bezel-dark: #4A4A42;
+      --gb-label: #5A5A50;
+      --gb-power-led: #FF2020;
+      --gb-speaker-grille: #A4AF84;
+      --gb-accent-purple: #705090;
+      --gb-accent-blue: #3890F8;
+      --gb-accent-red: #E83838;
+      --gb-accent-green: #48A848;
+      --gb-accent-yellow: #F8D838;
+      --gb-accent-pink: #E87898;
     }
 
-    html { scroll-behavior: smooth; }
-
-    body {
-      font-family: 'Quicksand', -apple-system, sans-serif;
-      background: var(--bg);
-      color: var(--text);
-      min-height: 100vh;
-      overflow-x: hidden;
-      -webkit-font-smoothing: antialiased;
-    }
-
-    /* ─── BACKGROUND ─── */
-    .bg-layer {
-      position: fixed; inset: 0; z-index: 0;
-      background-image: url('bg.jpg');
-      background-size: cover;
-      background-position: center;
-      filter: blur(30px) brightness(0.3) saturate(1.4);
-      transform: scale(1.1);
-    }
-
-    .bg-overlay {
-      position: fixed; inset: 0; z-index: 1;
-      background: radial-gradient(ellipse at 50% 30%, rgba(232,130,155,0.05) 0%, transparent 60%),
-                  linear-gradient(180deg, rgba(1,1,3,0.7) 0%, rgba(1,1,3,0.85) 100%);
-    }
-
-    .bg-noise {
-      position: fixed; inset: 0; z-index: 2;
-      opacity: 0.02;
-      background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.5'/%3E%3C/svg%3E");
-      pointer-events: none;
-    }
-
-    /* ─── GLASS (MewoOS exact) ─── */
-    .glass {
-      background: linear-gradient(135deg, rgba(16,18,30,0.65) 0%, rgba(10,12,22,0.72) 50%, rgba(18,20,35,0.65) 100%);
-      backdrop-filter: blur(80px) saturate(2.2) brightness(1.08);
-      -webkit-backdrop-filter: blur(80px) saturate(2.2) brightness(1.08);
-      border: 1px solid rgba(255,255,255,0.1);
-      border-top-color: rgba(255,255,255,0.12);
-      border-left-color: rgba(255,255,255,0.1);
-      border-radius: 20px;
-      box-shadow: 0 8px 40px rgba(0,0,0,0.5),
-                  0 2px 0 rgba(255,255,255,0.06) inset,
-                  inset 0 1px 0 rgba(255,255,255,0.1),
-                  inset 0 -1px 0 rgba(255,255,255,0.04),
-                  0 0 0 1px rgba(255,255,255,0.04);
-      position: relative;
+    html, body {
+      height: 100%;
       overflow: hidden;
     }
 
-    .glass::before {
-      content: '';
-      position: absolute; inset: 0;
-      background: linear-gradient(135deg, rgba(255,255,255,0.03) 0%, transparent 50%);
-      pointer-events: none;
-      border-radius: inherit;
+    body {
+      font-family: 'VT323', monospace;
+      background: #2C2C3A;
+      background-image:
+        radial-gradient(ellipse at 50% 30%, #3A3A4A 0%, #2C2C3A 70%),
+        repeating-linear-gradient(0deg, transparent, transparent 2px, rgba(255,255,255,0.01) 2px, rgba(255,255,255,0.01) 4px);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      min-height: 100vh;
+      image-rendering: pixelated;
+      -webkit-font-smoothing: none;
     }
 
-    .glass-pill { border-radius: 100px; }
+    /* ═══════════════════════════════════════════════════════
+       GAME BOY DMG-01 SHELL
+       ═══════════════════════════════════════════════════════ */
+    .gameboy {
+      width: 320px;
+      position: relative;
+      user-select: none;
+    }
 
-    /* ─── APP LAYOUT ─── */
-    .app {
-      position: relative; z-index: 10;
-      max-width: 520px;
-      margin: 0 auto;
-      padding: 12px;
-      min-height: 100vh;
+    /* ─── BODY ─── */
+    .gb-body {
+      background: linear-gradient(180deg, var(--gb-body-light) 0%, var(--gb-body) 20%, var(--gb-body-dark) 100%);
+      border-radius: 12px 12px 12px 80px;
+      padding: 16px 16px 80px;
+      box-shadow:
+        /* inner highlight */
+        inset 2px 2px 0 rgba(255,255,255,0.25),
+        inset -2px -2px 0 rgba(0,0,0,0.08),
+        /* outer shadow */
+        0 4px 0 var(--gb-body-shadow),
+        0 6px 0 var(--gb-body-shadow),
+        0 8px 20px rgba(0,0,0,0.4),
+        /* depth */
+        6px 0 0 var(--gb-body-dark),
+        -4px 0 0 var(--gb-body-light);
+      position: relative;
+    }
+
+    /* ─── DOT MATRIX LABEL ─── */
+    .gb-dot-matrix-label {
+      position: absolute;
+      top: 8px;
+      left: 50%;
+      transform: translateX(-50%);
+      font-family: 'Press Start 2P', monospace;
+      font-size: 4px;
+      color: var(--gb-label);
+      letter-spacing: 2px;
+      text-transform: uppercase;
+      white-space: nowrap;
+      opacity: 0.6;
+    }
+
+    /* ─── SCREEN BEZEL ─── */
+    .gb-screen-bezel {
+      background: linear-gradient(135deg, var(--gb-bezel-light), var(--gb-bezel), var(--gb-bezel-dark));
+      border-radius: 10px 10px 10px 40px;
+      padding: 16px 16px 8px 16px;
+      margin-top: 18px;
+      box-shadow:
+        inset 2px 2px 0 rgba(255,255,255,0.1),
+        inset -2px -2px 0 rgba(0,0,0,0.2),
+        0 2px 4px rgba(0,0,0,0.3);
+      position: relative;
+    }
+
+    /* ─── BRAND AREA ─── */
+    .gb-brand {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      margin-bottom: 8px;
+      padding-left: 4px;
+    }
+
+    .gb-brand-text {
+      font-family: 'Press Start 2P', monospace;
+      font-size: 7px;
+      color: #9090A0;
+      letter-spacing: 1px;
+    }
+
+    .gb-brand-model {
+      font-family: 'Press Start 2P', monospace;
+      font-size: 5px;
+      color: #707080;
+      margin-left: auto;
+      letter-spacing: 1px;
+    }
+
+    /* ─── POWER LED ─── */
+    .gb-power-indicator {
+      display: flex;
+      align-items: center;
+      gap: 4px;
+      margin-bottom: 6px;
+    }
+
+    .gb-power-led {
+      width: 6px; height: 6px;
+      border-radius: 50%;
+      background: #333;
+      border: 1px solid #222;
+      transition: all 0.3s;
+    }
+
+    .gb-power-led.on {
+      background: var(--gb-power-led);
+      box-shadow: 0 0 6px var(--gb-power-led), 0 0 12px rgba(255,32,32,0.3);
+    }
+
+    .gb-power-text {
+      font-family: 'Press Start 2P', monospace;
+      font-size: 4px;
+      color: #606070;
+      letter-spacing: 1px;
+    }
+
+    /* ─── SCREEN ─── */
+    .gb-screen {
+      background: var(--gb-screen-bg);
+      border-radius: 4px;
+      border: 3px solid #2A2A2A;
+      box-shadow:
+        inset 0 0 20px rgba(0,0,0,0.15),
+        inset 0 0 4px rgba(0,0,0,0.1);
+      overflow: hidden;
+      position: relative;
+      aspect-ratio: 10/9;
+    }
+
+    /* Scanline overlay */
+    .gb-screen::after {
+      content: '';
+      position: absolute;
+      inset: 0;
+      background: repeating-linear-gradient(
+        0deg,
+        transparent,
+        transparent 1px,
+        rgba(0,0,0,0.03) 1px,
+        rgba(0,0,0,0.03) 2px
+      );
+      pointer-events: none;
+      z-index: 50;
+    }
+
+    /* Screen glass reflection */
+    .gb-screen::before {
+      content: '';
+      position: absolute;
+      top: -50%;
+      left: -50%;
+      width: 200%;
+      height: 200%;
+      background: linear-gradient(
+        135deg,
+        rgba(255,255,255,0.08) 0%,
+        transparent 40%,
+        transparent 60%,
+        rgba(255,255,255,0.03) 100%
+      );
+      pointer-events: none;
+      z-index: 51;
+    }
+
+    /* ─── SCREEN CONTENT ─── */
+    .gb-screen-content {
+      width: 100%;
+      height: 100%;
       display: flex;
       flex-direction: column;
+      position: relative;
     }
 
-    /* ─── HEADER ─── */
-    .header {
+    /* ─── IN-SCREEN HUD ─── */
+    .gb-hud {
       display: flex;
       align-items: center;
       justify-content: space-between;
-      padding: 10px 16px;
-      margin-bottom: 10px;
+      padding: 4px 6px;
+      background: rgba(15,56,15,0.15);
+      border-bottom: 2px solid rgba(15,56,15,0.2);
+      min-height: 24px;
     }
 
-    .logo {
+    .gb-hud-left {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .gb-hud-floor {
+      font-family: 'Press Start 2P', monospace;
+      font-size: 7px;
+      color: var(--gb-screen-dark);
+    }
+
+    .gb-hud-right {
       display: flex;
       align-items: center;
       gap: 8px;
-      font-size: 13px;
-      font-weight: 700;
     }
 
-    .logo-icon {
-      width: 30px; height: 30px;
-      background: linear-gradient(135deg, var(--sakura), #D4789C);
-      border-radius: 10px;
-      display: flex; align-items: center; justify-content: center;
-      box-shadow: 0 0 20px rgba(232,130,155,0.3);
-    }
-
-    .logo-icon svg { width: 16px; height: 16px; stroke: white; fill: none; stroke-width: 2; }
-
-    .stats-bar {
+    .gb-hud-stat {
+      font-family: 'Press Start 2P', monospace;
+      font-size: 6px;
+      color: var(--gb-screen-dark);
       display: flex;
-      gap: 10px;
-      font-family: 'Share Tech Mono', monospace;
-      font-size: 10px;
-      color: var(--text-dim);
+      align-items: center;
+      gap: 3px;
     }
 
-    .stat { display: flex; align-items: center; gap: 4px; }
-
-    .stat-dot {
-      width: 6px; height: 6px;
-      border-radius: 50%;
-    }
-
-    .stat-hp .stat-dot { background: var(--red); box-shadow: 0 0 8px rgba(239,68,68,0.5); }
-    .stat-gold .stat-dot { background: var(--peach); box-shadow: 0 0 8px rgba(253,186,116,0.5); }
-    .stat-xp .stat-dot { background: var(--sakura); box-shadow: 0 0 8px rgba(232,130,155,0.5); }
-
-    .hp-bar {
-      width: 60px; height: 5px;
-      background: rgba(255,255,255,0.06);
-      border-radius: 3px;
+    .gb-hp-bar {
+      width: 40px; height: 6px;
+      background: var(--gb-screen-light);
+      border: 1px solid var(--gb-screen-dark);
       overflow: hidden;
     }
 
-    .hp-fill {
+    .gb-hp-fill {
       height: 100%;
-      background: linear-gradient(90deg, var(--red), #F87171);
-      border-radius: 3px;
+      background: var(--gb-screen-dark);
       transition: width 0.3s;
-      box-shadow: 0 0 8px rgba(239,68,68,0.4);
     }
 
-    /* ─── THREAD CARD ─── */
-    .thread-card { padding: 16px; margin-bottom: 10px; }
-
-    .thread-title {
-      font-size: 14px;
-      font-weight: 600;
-      margin-bottom: 8px;
-      line-height: 1.4;
+    /* ─── GAME AREA ─── */
+    .gb-game-area {
+      flex: 1;
+      position: relative;
+      overflow: hidden;
     }
 
-    .thread-meta {
-      font-family: 'Share Tech Mono', monospace;
-      font-size: 10px;
-      color: var(--text-muted);
-      display: flex;
-      gap: 10px;
-      margin-bottom: 10px;
-      align-items: center;
+    #game-container {
+      width: 100%;
+      height: 100%;
     }
 
-    .thread-body {
-      font-size: 13px;
-      line-height: 1.6;
-      padding: 14px;
-      background: rgba(255,255,255,0.03);
-      border-radius: 12px;
-      border: 1px solid rgba(255,255,255,0.05);
-      margin-bottom: 10px;
+    #game-container canvas {
+      width: 100% !important;
+      height: 100% !important;
+      image-rendering: pixelated;
+      image-rendering: crisp-edges;
+    }
+
+    /* ─── TEXT BOX (bottom of screen, Pokemon dialogue style) ─── */
+    .gb-textbox {
+      background: var(--gb-screen-bg);
+      border-top: 3px solid var(--gb-screen-dark);
+      padding: 4px 6px;
+      min-height: 36px;
+      max-height: 60px;
+      overflow-y: auto;
       position: relative;
     }
 
-    .thread-body::before {
+    .gb-textbox::before {
       content: '';
       position: absolute;
-      left: 0; top: 10px; bottom: 10px;
-      width: 2px;
-      background: linear-gradient(180deg, var(--sakura), var(--miku));
-      border-radius: 1px;
+      top: 0; left: 0; right: 0;
+      height: 3px;
+      background: repeating-linear-gradient(90deg,
+        var(--gb-screen-dark) 0px, var(--gb-screen-dark) 3px,
+        var(--gb-screen-mid) 3px, var(--gb-screen-mid) 6px
+      );
     }
 
-    /* ─── INDICATORS ─── */
-    .indicators { display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 10px; }
-
-    .indicator {
-      display: inline-flex;
-      align-items: center;
-      gap: 4px;
-      padding: 4px 10px;
-      border-radius: 100px;
-      font-family: 'Share Tech Mono', monospace;
-      font-size: 10px;
-      font-weight: 500;
+    .gb-textbox-title {
+      font-family: 'Press Start 2P', monospace;
+      font-size: 6px;
+      color: var(--gb-screen-mid);
+      margin-bottom: 2px;
     }
 
-    .ind-trap { background: rgba(239,68,68,0.12); color: var(--red); border: 1px solid rgba(239,68,68,0.2); }
-    .ind-heal { background: rgba(52,211,153,0.12); color: var(--mint); border: 1px solid rgba(52,211,153,0.2); }
-    .ind-power { background: rgba(253,186,116,0.12); color: var(--peach); border: 1px solid rgba(253,186,116,0.2); }
-    .ind-monster { background: rgba(196,181,253,0.12); color: var(--lavender); border: 1px solid rgba(196,181,253,0.2); }
-
-    /* ─── EXITS ─── */
-    .exits-label {
-      font-family: 'Share Tech Mono', monospace;
-      font-size: 10px;
-      font-weight: 600;
-      color: var(--text-muted);
-      letter-spacing: 1px;
-      text-transform: uppercase;
-      margin-bottom: 8px;
-    }
-
-    .exit-btn {
-      display: flex;
-      align-items: center;
-      gap: 10px;
-      width: 100%;
-      padding: 12px 14px;
-      background: rgba(255,255,255,0.03);
-      border: 1px solid rgba(255,255,255,0.06);
-      border-radius: 12px;
-      color: var(--text);
-      font-size: 12px;
-      cursor: pointer;
-      transition: all 0.2s ease;
-      margin-bottom: 6px;
-      text-align: left;
-      font-family: 'Quicksand', sans-serif;
-    }
-
-    .exit-btn:hover {
-      background: rgba(232,130,155,0.08);
-      border-color: rgba(232,130,155,0.25);
-      transform: translateX(4px);
-      box-shadow: 0 4px 20px rgba(232,130,155,0.1);
-    }
-
-    .exit-arrow { color: var(--sakura); font-size: 14px; flex-shrink: 0; }
-    .exit-author { color: var(--sakura); font-weight: 600; font-size: 11px; }
-    .exit-preview { color: var(--text-muted); font-size: 10px; margin-top: 2px; line-height: 1.3; }
-    .exit-score { margin-left: auto; font-family: 'Share Tech Mono', monospace; font-size: 10px; color: var(--text-muted); flex-shrink: 0; }
-
-    /* ─── COMBAT ─── */
-    .combat-card {
-      background: rgba(239,68,68,0.05);
-      border: 1px solid rgba(239,68,68,0.15);
-      padding: 16px;
-      margin-bottom: 10px;
-    }
-
-    .combat-header { display: flex; align-items: center; gap: 10px; margin-bottom: 12px; }
-
-    .combat-icon {
-      width: 36px; height: 36px;
-      background: rgba(239,68,68,0.12);
-      border-radius: 10px;
-      display: flex; align-items: center; justify-content: center;
-      border: 1px solid rgba(239,68,68,0.15);
-    }
-
-    .combat-icon svg { width: 18px; height: 18px; stroke: var(--red); fill: none; stroke-width: 2; }
-
-    .combat-name { font-size: 14px; font-weight: 700; color: var(--red); }
-    .combat-sub { font-size: 10px; color: var(--text-muted); font-family: 'Share Tech Mono', monospace; }
-
-    .health-bar {
-      width: 100%; height: 6px;
-      background: rgba(255,255,255,0.06);
-      border-radius: 3px;
-      overflow: hidden;
-      margin-bottom: 8px;
-    }
-
-    .health-fill {
-      height: 100%;
-      background: linear-gradient(90deg, var(--red), #F87171);
-      border-radius: 3px;
-      transition: width 0.3s;
-      box-shadow: 0 0 10px rgba(239,68,68,0.4);
-    }
-
-    .health-text { font-family: 'Share Tech Mono', monospace; font-size: 10px; color: var(--text-muted); margin-bottom: 12px; }
-    .combat-actions { display: flex; gap: 8px; }
-
-    /* ─── BUTTONS ─── */
-    .btn {
-      padding: 10px 20px;
-      border: none;
-      border-radius: 12px;
-      font-family: 'Quicksand', sans-serif;
-      font-size: 12px;
-      font-weight: 600;
-      cursor: pointer;
-      transition: all 0.2s ease;
-      display: inline-flex;
-      align-items: center;
-      gap: 6px;
-      position: relative;
-      overflow: hidden;
-    }
-
-    .btn::after {
-      content: '';
-      position: absolute; inset: 0;
-      background: linear-gradient(135deg, rgba(255,255,255,0.1) 0%, transparent 50%);
-      opacity: 0;
-      transition: opacity 0.2s;
-    }
-
-    .btn:hover::after { opacity: 1; }
-
-    .btn-primary {
-      background: linear-gradient(135deg, var(--sakura), #D4789C);
-      color: white;
-      box-shadow: 0 4px 20px rgba(232,130,155,0.3);
-    }
-
-    .btn-primary:hover {
-      transform: translateY(-1px);
-      box-shadow: 0 6px 28px rgba(232,130,155,0.4);
-    }
-
-    .btn-secondary {
-      background: rgba(255,255,255,0.06);
-      color: var(--text);
-      border: 1px solid rgba(255,255,255,0.08);
-    }
-
-    .btn-secondary:hover { background: rgba(255,255,255,0.1); }
-
-    .btn-start {
-      padding: 14px 36px;
-      font-size: 14px;
-      border-radius: 14px;
-      background: linear-gradient(135deg, var(--sakura), #D4789C);
-      color: white;
-      box-shadow: 0 8px 32px rgba(232,130,155,0.3),
-                  inset 0 1px 0 rgba(255,255,255,0.2);
-    }
-
-    .btn-start:hover {
-      transform: translateY(-2px);
-      box-shadow: 0 12px 40px rgba(232,130,155,0.4);
-    }
-
-    /* ─── LOG ─── */
-    .log-card {
-      flex: 1;
-      overflow-y: auto;
-      padding: 12px 14px;
-      margin-top: 10px;
-      max-height: 140px;
-      min-height: 60px;
-    }
-
-    .log-title {
-      font-family: 'Share Tech Mono', monospace;
-      font-size: 10px;
-      font-weight: 600;
-      color: var(--text-muted);
-      letter-spacing: 1px;
-      text-transform: uppercase;
-      margin-bottom: 6px;
-    }
-
-    .log-entry {
-      font-family: 'Share Tech Mono', monospace;
-      font-size: 10px;
-      color: var(--text-muted);
-      padding: 3px 0;
-      border-bottom: 1px solid rgba(255,255,255,0.03);
-      line-height: 1.5;
-    }
-
-    .log-trap { color: var(--red); }
-    .log-heal { color: var(--mint); }
-    .log-power { color: var(--peach); }
-    .log-combat { color: var(--lavender); }
-    .log-level { color: var(--sky); }
-
-    /* ─── DEPTH BAR ─── */
-    .depth-bar {
-      display: flex;
-      gap: 4px;
-      padding: 8px 12px;
-      background: rgba(255,255,255,0.02);
-      border-radius: 10px;
-      border: 1px solid rgba(255,255,255,0.04);
-    }
-
-    .depth-pip {
-      width: 10px; height: 10px;
-      border-radius: 50%;
-      background: rgba(255,255,255,0.05);
-      border: 1px solid rgba(255,255,255,0.06);
-      transition: all 0.3s ease;
-    }
-
-    .depth-pip.active {
-      background: var(--sakura);
-      border-color: var(--sakura);
-      box-shadow: 0 0 12px rgba(232,130,155,0.5);
-    }
-
-    .depth-pip.visited {
-      background: rgba(232,130,155,0.25);
-      border-color: rgba(232,130,155,0.3);
-    }
-
-    /* ─── VIBE BADGE ─── */
-    .vibe-badge {
-      display: inline-flex;
-      align-items: center;
-      gap: 4px;
-      padding: 3px 10px;
-      border-radius: 100px;
-      font-family: 'Share Tech Mono', monospace;
-      font-size: 9px;
-      font-weight: 600;
-      text-transform: uppercase;
-      letter-spacing: 0.5px;
-    }
-
-    .vibe-horror { background: rgba(239,68,68,0.12); color: var(--red); border: 1px solid rgba(239,68,68,0.2); }
-    .vibe-strategy { background: rgba(147,197,253,0.12); color: var(--sky); border: 1px solid rgba(147,197,253,0.2); }
-    .vibe-zen { background: rgba(52,211,153,0.12); color: var(--mint); border: 1px solid rgba(52,211,153,0.2); }
-    .vibe-chaos { background: rgba(253,186,116,0.12); color: var(--peach); border: 1px solid rgba(253,186,116,0.2); }
-    .vibe-mystery { background: rgba(196,181,253,0.12); color: var(--lavender); border: 1px solid rgba(196,181,253,0.2); }
-
-    /* ─── START SCREEN ─── */
-    .start-screen {
-      flex: 1;
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      justify-content: center;
-      text-align: center;
-      padding: 40px 20px;
-    }
-
-    .start-icon {
-      width: 80px; height: 80px;
-      background: linear-gradient(135deg, rgba(232,130,155,0.15), rgba(126,221,214,0.1));
-      border-radius: 22px;
-      display: flex; align-items: center; justify-content: center;
-      margin-bottom: 24px;
-      border: 1px solid rgba(232,130,155,0.15);
-      box-shadow: 0 8px 40px rgba(232,130,155,0.12);
-      animation: float 3s ease-in-out infinite;
-    }
-
-    .start-icon svg { width: 36px; height: 36px; stroke: var(--sakura); fill: none; stroke-width: 2; }
-
-    @keyframes float {
-      0%, 100% { transform: translateY(0); }
-      50% { transform: translateY(-8px); }
-    }
-
-    .start-title {
-      font-size: 26px;
-      font-weight: 700;
-      margin-bottom: 10px;
-      background: linear-gradient(135deg, var(--sakura), var(--miku));
-      -webkit-background-clip: text;
-      -webkit-text-fill-color: transparent;
-      background-clip: text;
-    }
-
-    .start-desc {
+    .gb-textbox-log {
+      font-family: 'VT323', monospace;
       font-size: 13px;
-      color: var(--text-dim);
-      max-width: 320px;
-      line-height: 1.7;
-      margin-bottom: 28px;
+      color: var(--gb-screen-dark);
+      line-height: 1.2;
     }
 
-    .start-hint {
-      font-family: 'Share Tech Mono', monospace;
+    .gb-textbox-log .log-entry {
+      padding: 1px 0;
+    }
+
+    /* ─── ARROW INDICATOR ─── */
+    .gb-textbox-arrow {
+      position: absolute;
+      bottom: 4px;
+      right: 6px;
+      width: 0; height: 0;
+      border-left: 4px solid transparent;
+      border-right: 4px solid transparent;
+      border-top: 5px solid var(--gb-screen-dark);
+      animation: blink-arrow 0.8s steps(1) infinite;
+    }
+
+    @keyframes blink-arrow {
+      0%, 50% { opacity: 1; }
+      51%, 100% { opacity: 0; }
+    }
+
+    /* ─── SCREEN LABELS ─── */
+    .gb-screen-label {
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      font-family: 'Press Start 2P', monospace;
       font-size: 10px;
-      color: var(--text-muted);
-      margin-top: 16px;
-      opacity: 0.5;
+      color: var(--gb-screen-dark);
+      text-align: center;
+      z-index: 10;
+      pointer-events: none;
     }
 
-    /* ─── GAME OVER ─── */
-    .game-over { text-align: center; padding: 40px 20px; }
-
-    .go-icon {
-      width: 64px; height: 64px;
-      margin: 0 auto 16px;
-      background: rgba(239,68,68,0.12);
-      border-radius: 16px;
-      display: flex; align-items: center; justify-content: center;
-      border: 1px solid rgba(239,68,68,0.15);
+    .gb-screen-label h1 {
+      font-size: 12px;
+      margin-bottom: 8px;
+      text-shadow: 2px 2px 0 var(--gb-screen-mid);
+      animation: title-bounce 2s ease-in-out infinite;
     }
 
-    .go-icon svg { width: 32px; height: 32px; stroke: var(--red); fill: none; stroke-width: 2; }
-
-    .game-over h2 { font-size: 22px; font-weight: 700; color: var(--red); margin-bottom: 12px; }
-
-    .game-over-stats {
-      font-family: 'Share Tech Mono', monospace;
-      font-size: 11px;
-      color: var(--text-dim);
-      margin-bottom: 24px;
-      line-height: 2;
+    @keyframes title-bounce {
+      0%, 100% { transform: translateY(0); }
+      50% { transform: translateY(-3px); }
     }
 
-    /* ─── CONTROLS HINT ─── */
-    .controls-hint {
-      position: fixed;
-      bottom: 16px;
+    .gb-screen-label p {
+      font-size: 7px;
+      margin-bottom: 12px;
+      color: var(--gb-screen-mid);
+    }
+
+    .gb-screen-label .blink {
+      animation: blink-text 1s steps(1) infinite;
+    }
+
+    @keyframes blink-text {
+      0%, 50% { opacity: 1; }
+      51%, 100% { opacity: 0; }
+    }
+
+    /* ─── DEPTH PIPS ─── */
+    .gb-depth-bar {
+      display: flex;
+      gap: 2px;
+      align-items: center;
+    }
+
+    .gb-depth-pip {
+      width: 6px; height: 6px;
+      border: 1px solid var(--gb-screen-dark);
+      background: transparent;
+    }
+
+    .gb-depth-pip.active {
+      background: var(--gb-screen-dark);
+    }
+
+    .gb-depth-pip.visited {
+      background: var(--gb-screen-mid);
+    }
+
+    /* ─── NINTENDO SEAL ─── */
+    .gb-seal {
+      position: absolute;
+      bottom: 52px;
       left: 50%;
       transform: translateX(-50%);
-      z-index: 100;
-      padding: 8px 16px;
-      font-family: 'Share Tech Mono', monospace;
-      font-size: 10px;
-      color: var(--text-muted);
+      font-family: 'Press Start 2P', monospace;
+      font-size: 4px;
+      color: var(--gb-body-shadow);
+      text-align: center;
+      letter-spacing: 1px;
+      line-height: 1.6;
+    }
+
+    .gb-seal-circle {
+      width: 24px; height: 24px;
+      border: 1.5px solid var(--gb-body-shadow);
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      margin: 0 auto 2px;
+      font-size: 6px;
+      font-weight: bold;
+    }
+
+    /* ═══════════════════════════════════════════════════════
+       BUTTONS
+       ═══════════════════════════════════════════════════════ */
+
+    /* ─── D-PAD ─── */
+    .gb-dpad-area {
+      position: absolute;
+      bottom: 24px;
+      left: 20px;
+    }
+
+    .gb-dpad {
+      position: relative;
+      width: 66px;
+      height: 66px;
+    }
+
+    .gb-dpad-btn {
+      position: absolute;
+      background: linear-gradient(180deg, #3A3A3A, #2A2A2A);
+      border: none;
+      cursor: pointer;
+      box-shadow:
+        inset 1px 1px 0 rgba(255,255,255,0.1),
+        inset -1px -1px 0 rgba(0,0,0,0.3),
+        0 2px 0 #1A1A1A;
+      transition: all 0.05s;
+    }
+
+    .gb-dpad-btn:active {
+      box-shadow:
+        inset 1px 1px 0 rgba(0,0,0,0.3),
+        inset -1px -1px 0 rgba(255,255,255,0.1),
+        0 1px 0 #1A1A1A;
+      transform: translateY(1px);
+    }
+
+    .gb-dpad-up {
+      top: 0; left: 22px;
+      width: 22px; height: 22px;
+      border-radius: 4px 4px 0 0;
+    }
+
+    .gb-dpad-down {
+      bottom: 0; left: 22px;
+      width: 22px; height: 22px;
+      border-radius: 0 0 4px 4px;
+    }
+
+    .gb-dpad-left {
+      top: 22px; left: 0;
+      width: 22px; height: 22px;
+      border-radius: 4px 0 0 4px;
+    }
+
+    .gb-dpad-right {
+      top: 22px; right: 0;
+      width: 22px; height: 22px;
+      border-radius: 0 4px 4px 0;
+    }
+
+    .gb-dpad-center {
+      position: absolute;
+      top: 22px; left: 22px;
+      width: 22px; height: 22px;
+      background: #2A2A2A;
+    }
+
+    /* D-pad arrows */
+    .gb-dpad-btn::after {
+      content: '';
+      position: absolute;
+      width: 0; height: 0;
+    }
+
+    .gb-dpad-up::after {
+      top: 6px; left: 50%;
+      transform: translateX(-50%);
+      border-left: 4px solid transparent;
+      border-right: 4px solid transparent;
+      border-bottom: 5px solid #666;
+    }
+
+    .gb-dpad-down::after {
+      bottom: 6px; left: 50%;
+      transform: translateX(-50%);
+      border-left: 4px solid transparent;
+      border-right: 4px solid transparent;
+      border-top: 5px solid #666;
+    }
+
+    .gb-dpad-left::after {
+      left: 6px; top: 50%;
+      transform: translateY(-50%);
+      border-top: 4px solid transparent;
+      border-bottom: 4px solid transparent;
+      border-right: 5px solid #666;
+    }
+
+    .gb-dpad-right::after {
+      right: 6px; top: 50%;
+      transform: translateY(-50%);
+      border-top: 4px solid transparent;
+      border-bottom: 4px solid transparent;
+      border-left: 5px solid #666;
+    }
+
+    /* ─── A/B BUTTONS ─── */
+    .gb-ab-area {
+      position: absolute;
+      bottom: 28px;
+      right: 18px;
+      display: flex;
+      gap: 8px;
+      transform: rotate(-25deg);
+    }
+
+    .gb-ab-btn {
+      width: 30px; height: 30px;
+      border-radius: 50%;
+      border: none;
+      cursor: pointer;
+      font-family: 'Press Start 2P', monospace;
+      font-size: 6px;
+      color: rgba(255,255,255,0.5);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      box-shadow:
+        inset 2px 2px 0 rgba(255,255,255,0.15),
+        inset -2px -2px 0 rgba(0,0,0,0.2),
+        0 3px 0 #6A2040,
+        0 4px 6px rgba(0,0,0,0.3);
+      transition: all 0.05s;
+    }
+
+    .gb-ab-btn:active {
+      box-shadow:
+        inset 2px 2px 0 rgba(0,0,0,0.2),
+        inset -2px -2px 0 rgba(255,255,255,0.1),
+        0 1px 0 #6A2040;
+      transform: translateY(2px);
+    }
+
+    .gb-btn-a {
+      background: linear-gradient(180deg, #A0325A, #8A2048);
+      margin-top: 10px;
+    }
+
+    .gb-btn-b {
+      background: linear-gradient(180deg, #A0325A, #8A2048);
+    }
+
+    /* ─── START/SELECT ─── */
+    .gb-start-select-area {
+      position: absolute;
+      bottom: 14px;
+      left: 50%;
+      transform: translateX(-50%) rotate(-25deg);
       display: flex;
       gap: 12px;
     }
 
-    .controls-hint span { color: var(--sakura); font-weight: 500; }
-
-    /* ─── INVENTORY ─── */
-    .inv-item {
-      display: flex;
-      align-items: center;
-      gap: 6px;
-      padding: 5px 10px;
-      background: rgba(255,255,255,0.03);
-      border: 1px solid rgba(255,255,255,0.06);
-      border-radius: 8px;
+    .gb-ss-btn {
+      width: 20px; height: 8px;
+      border-radius: 4px;
+      background: linear-gradient(180deg, #8A8A7A, #6A6A5A);
+      border: none;
       cursor: pointer;
-      transition: all 0.2s;
-      font-size: 11px;
+      box-shadow:
+        inset 1px 1px 0 rgba(255,255,255,0.1),
+        0 2px 0 #4A4A3A;
+      transition: all 0.05s;
     }
 
-    .inv-item:hover {
-      background: rgba(232,130,155,0.08);
-      border-color: rgba(232,130,155,0.2);
+    .gb-ss-btn:active {
+      box-shadow: 0 1px 0 #4A4A3A;
+      transform: translateY(1px);
     }
 
-    .inv-item.equipped {
-      background: rgba(147,197,253,0.1);
-      border-color: rgba(147,197,253,0.3);
+    .gb-ss-label {
+      font-family: 'Press Start 2P', monospace;
+      font-size: 4px;
+      color: var(--gb-body-shadow);
+      text-align: center;
+      margin-top: 3px;
+      letter-spacing: 1px;
     }
 
-    .inv-icon {
+    /* ─── SPEAKER GRILLE ─── */
+    .gb-speaker {
+      position: absolute;
+      bottom: 20px;
+      right: -4px;
+      width: 30px;
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+      transform: rotate(-30deg);
+    }
+
+    .gb-speaker-line {
+      height: 2px;
+      background: var(--gb-body-shadow);
+      border-radius: 1px;
+      opacity: 0.5;
+    }
+
+    /* ─── CARTRIDGE SLOT ─── */
+    .gb-cart-slot {
+      position: absolute;
+      top: -4px;
+      left: 50%;
+      transform: translateX(-50%);
+      width: 80px;
+      height: 8px;
+      background: #2A2A2A;
+      border-radius: 0 0 4px 4px;
+      box-shadow: inset 0 2px 4px rgba(0,0,0,0.5);
+    }
+
+    /* ═══════════════════════════════════════════════════════
+       GAME OVER / VICTORY OVERLAY
+       ═══════════════════════════════════════════════════════ */
+    .gb-overlay {
+      position: absolute;
+      inset: 0;
+      background: var(--gb-screen-bg);
+      display: none;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      z-index: 40;
+    }
+
+    .gb-overlay.show { display: flex; }
+
+    .gb-overlay h2 {
+      font-family: 'Press Start 2P', monospace;
+      font-size: 12px;
+      color: var(--gb-screen-dark);
+      margin-bottom: 12px;
+      text-shadow: 2px 2px 0 var(--gb-screen-mid);
+    }
+
+    .gb-overlay-stats {
+      font-family: 'VT323', monospace;
       font-size: 14px;
-      width: 20px;
+      color: var(--gb-screen-dark);
+      margin-bottom: 16px;
+      line-height: 1.6;
       text-align: center;
     }
 
-    .inv-name {
-      font-family: 'Share Tech Mono', monospace;
-      font-size: 10px;
-      color: var(--text-dim);
+    .gb-overlay-btn {
+      font-family: 'Press Start 2P', monospace;
+      font-size: 8px;
+      background: var(--gb-screen-dark);
+      color: var(--gb-screen-bg);
+      border: none;
+      padding: 8px 16px;
+      cursor: pointer;
+      box-shadow: 2px 2px 0 var(--gb-screen-mid);
+      animation: blink-text 1.2s steps(1) infinite;
     }
 
-    .inv-equipped {
-      font-family: 'Share Tech Mono', monospace;
-      font-size: 9px;
-      color: var(--sky);
-      background: rgba(147,197,253,0.15);
-      padding: 1px 4px;
-      border-radius: 4px;
+    .gb-overlay-btn:active {
+      transform: translate(1px, 1px);
+      box-shadow: 1px 1px 0 var(--gb-screen-mid);
+    }
+
+    /* ═══════════════════════════════════════════════════════
+       INVENTORY OVERLAY
+       ═══════════════════════════════════════════════════════ */
+    .gb-inventory {
+      position: absolute;
+      inset: 0;
+      background: var(--gb-screen-bg);
+      display: none;
+      flex-direction: column;
+      z-index: 30;
+      padding: 6px;
+    }
+
+    .gb-inventory.show { display: flex; }
+
+    .gb-inv-title {
+      font-family: 'Press Start 2P', monospace;
+      font-size: 8px;
+      color: var(--gb-screen-dark);
+      padding: 4px 0;
+      border-bottom: 2px solid var(--gb-screen-dark);
+      margin-bottom: 4px;
+    }
+
+    .gb-inv-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 3px;
+      flex: 1;
+      overflow-y: auto;
+    }
+
+    .gb-inv-item {
+      display: flex;
+      align-items: center;
+      gap: 4px;
+      padding: 3px 5px;
+      background: var(--gb-screen-light);
+      border: 2px solid var(--gb-screen-mid);
+      cursor: pointer;
+      font-family: 'VT323', monospace;
+      font-size: 12px;
+      color: var(--gb-screen-dark);
+    }
+
+    .gb-inv-item:hover {
+      background: var(--gb-screen-mid);
+      color: var(--gb-screen-bg);
+    }
+
+    .gb-inv-item.equipped {
+      border-color: var(--gb-screen-dark);
+      background: var(--gb-screen-mid);
+      color: var(--gb-screen-bg);
+    }
+
+    .gb-inv-icon {
+      font-size: 14px;
+      width: 16px;
+      text-align: center;
+    }
+
+    .gb-inv-empty {
+      font-family: 'Press Start 2P', monospace;
+      font-size: 7px;
+      color: var(--gb-screen-mid);
+      text-align: center;
+      padding: 20px;
     }
 
     /* ─── STATUS EFFECTS ─── */
-    .status-badge {
-      display: inline-flex;
-      align-items: center;
-      gap: 4px;
-      padding: 3px 8px;
-      border-radius: 100px;
-      font-family: 'Share Tech Mono', monospace;
-      font-size: 9px;
-      font-weight: 500;
+    .gb-status-bar {
+      display: flex;
+      gap: 3px;
+      padding: 2px 0;
     }
 
-    /* ─── SCROLLBAR ─── */
-    ::-webkit-scrollbar { width: 4px; }
-    ::-webkit-scrollbar-track { background: transparent; }
-    ::-webkit-scrollbar-thumb { background: rgba(232,130,155,0.15); border-radius: 2px; }
-
-    /* ─── ANIMATIONS ─── */
-    @keyframes fadeIn {
-      from { opacity: 0; transform: translateY(8px); }
-      to { opacity: 1; transform: translateY(0); }
+    .gb-status-badge {
+      font-family: 'Press Start 2P', monospace;
+      font-size: 5px;
+      padding: 1px 3px;
+      border: 1px solid var(--gb-screen-dark);
+      color: var(--gb-screen-dark);
     }
-    .fade-in { animation: fadeIn 0.3s ease forwards; }
+
+    /* ─── CONTROLS HINT (tiny, at very bottom) ─── */
+    .gb-controls-hint {
+      position: fixed;
+      bottom: 4px;
+      left: 50%;
+      transform: translateX(-50%);
+      font-family: 'Press Start 2P', monospace;
+      font-size: 5px;
+      color: rgba(255,255,255,0.2);
+      display: none;
+      gap: 8px;
+      z-index: 200;
+    }
+
+    .gb-controls-hint.show { display: flex; }
+
+    /* ─── SCREEN TRANSITION ─── */
+    .gb-transition {
+      position: absolute;
+      inset: 0;
+      background: var(--gb-screen-dark);
+      z-index: 60;
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity 0.3s;
+    }
+
+    .gb-transition.active { opacity: 1; }
   </style>
 </head>
 <body>
-  <div class="bg-layer"></div>
-  <div class="bg-overlay"></div>
-  <div class="bg-noise"></div>
 
-  <div class="app" id="app">
-    <!-- Header -->
-    <div class="header glass glass-pill">
-      <div class="logo">
-        <div class="logo-icon">
-          <svg viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2" stroke-linecap="round" width="16" height="16"><path d="M3 21V8l9-5 9 5v13"/><path d="M9 21V13h6v8"/><path d="M12 3v5"/></svg>
+  <div class="gameboy">
+    <div class="gb-body">
+      <!-- Cartridge slot -->
+      <div class="gb-cart-slot"></div>
+
+      <!-- Dot Matrix label -->
+      <div class="gb-dot-matrix-label">DOT MATRIX WITH STEREO SOUND</div>
+
+      <!-- Screen bezel -->
+      <div class="gb-screen-bezel">
+        <!-- Brand -->
+        <div class="gb-brand">
+          <span class="gb-brand-text">Nintendo</span>
+          <span class="gb-brand-model">DMG-01</span>
         </div>
-        THREAD CRAWLER
-      </div>
-      <div class="stats-bar">
-        <div class="stat stat-hp"><div class="stat-dot"></div>HP <div class="hp-bar"><div class="hp-fill" id="hp-fill" style="width:100%"></div></div><span id="hp-text">100/100</span></div>
-        <div class="stat stat-gold"><div class="stat-dot"></div><span id="gold-text">0</span></div>
-        <div class="stat stat-xp"><div class="stat-dot"></div><span id="level-text">Lv.1</span></div>
-      </div>
-    </div>
 
-    <!-- Title Screen -->
-    <div class="glass thread-card" id="title-screen" style="flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;position:relative;overflow:hidden;">
-      <div style="position:absolute;inset:0;background-image:url('start-bg.jpg');background-size:cover;background-position:center;filter:blur(20px) brightness(0.3) saturate(1.3);transform:scale(1.1);"></div>
-      <div style="position:absolute;inset:0;background:radial-gradient(ellipse at 50% 30%, rgba(232,130,155,0.08) 0%, transparent 60%), linear-gradient(180deg, rgba(1,1,3,0.5) 0%, rgba(1,1,3,0.7) 100%);"></div>
-      <div style="position:relative;z-index:2;display:flex;flex-direction:column;align-items:center;">
-        <div class="start-icon">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" width="36" height="36" style="stroke:var(--sakura)"><path d="M3 21V8l9-5 9 5v13"/><path d="M9 21V13h6v8"/><path d="M12 3v5"/></svg>
+        <!-- Power LED -->
+        <div class="gb-power-indicator">
+          <div class="gb-power-led" id="power-led"></div>
+          <span class="gb-power-text">POWER</span>
         </div>
-        <h1 class="start-title">Dive Into Threads</h1>
-        <p class="start-desc">Every comment is a room. Every reply is a path deeper. Traps lurk in downvoted comments. Heals hide in upvoted ones. Monsters guard the deepest threads.</p>
-        <button class="btn btn-start" onclick="startGame()">
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
-          Enter the Dungeon
-        </button>
-        <p class="start-hint">Based on real Reddit thread structure</p>
-      </div>
-    </div>
 
-    <!-- Game Screen -->
-    <div class="glass thread-card" id="game-screen" style="flex:1;display:none;flex-direction:column;overflow:hidden;">
-      <div id="game-container" style="flex:1;border-radius:12px;overflow:hidden;"></div>
-      <div style="display:flex;gap:8px;margin-top:8px;">
-        <div class="depth-bar" style="flex:1;">
-          <div class="depth-pip active"></div><div class="depth-pip"></div><div class="depth-pip"></div>
-          <div class="depth-pip"></div><div class="depth-pip"></div><div class="depth-pip"></div><div class="depth-pip"></div>
-          <span style="margin-left:auto;font-family:'Share Tech Mono',monospace;font-size:10px;color:var(--text-muted);" id="depth-text">Floor 1/7</span>
+        <!-- SCREEN -->
+        <div class="gb-screen" id="gb-screen">
+          <div class="gb-screen-content">
+            <!-- HUD -->
+            <div class="gb-hud" id="gb-hud">
+              <div class="gb-hud-left">
+                <span class="gb-hud-floor" id="hud-floor">F1</span>
+                <div class="gb-depth-bar" id="depth-bar">
+                  <div class="gb-depth-pip active"></div><div class="gb-depth-pip"></div><div class="gb-depth-pip"></div>
+                  <div class="gb-depth-pip"></div><div class="gb-depth-pip"></div><div class="gb-depth-pip"></div><div class="gb-depth-pip"></div>
+                </div>
+              </div>
+              <div class="gb-hud-right">
+                <div class="gb-hud-stat">
+                  HP
+                  <div class="gb-hp-bar"><div class="gb-hp-fill" id="hp-fill" style="width:100%"></div></div>
+                </div>
+                <div class="gb-hud-stat">
+                  XP
+                  <div class="gb-hp-bar" style="width:30px;"><div class="gb-hp-fill" id="xp-fill" style="width:0%;background:var(--gb-screen-mid);"></div></div>
+                </div>
+                <span class="gb-hud-stat" id="hud-gold">G:0</span>
+                <span class="gb-hud-stat" id="hud-level">Lv1</span>
+              </div>
+            </div>
+
+            <!-- Status effects -->
+            <div class="gb-status-bar" id="status-effects"></div>
+
+            <!-- Game area -->
+            <div class="gb-game-area" id="game-area">
+              <div id="game-container"></div>
+
+              <!-- Title overlay -->
+              <div class="gb-overlay show" id="title-screen">
+                <h1 style="font-family:'Press Start 2P';font-size:11px;color:var(--gb-screen-dark);margin-bottom:6px;text-shadow:2px 2px 0 var(--gb-screen-mid);">THREAD<br>CRAWLER</h1>
+                <p style="font-family:'Press Start 2P';font-size:6px;color:var(--gb-screen-mid);margin-bottom:16px;">DUNGEON ADVENTURE</p>
+                <!-- Pixel art dungeon entrance -->
+                <div style="width:48px;height:48px;margin-bottom:16px;position:relative;">
+                  <div style="position:absolute;inset:0;background:var(--gb-screen-mid);border:2px solid var(--gb-screen-dark);"></div>
+                  <div style="position:absolute;top:8px;left:8px;right:8px;bottom:8px;background:var(--gb-screen-dark);"></div>
+                  <div style="position:absolute;top:14px;left:14px;width:20px;height:20px;background:var(--gb-screen-mid);border:2px solid var(--gb-screen-dark);"></div>
+                </div>
+                <button class="gb-overlay-btn" id="btn-start" onclick="startGame()">▶ START</button>
+                <p style="font-family:'Press Start 2P';font-size:5px;color:var(--gb-screen-mid);margin-top:12px;">PRESS START</p>
+              </div>
+
+              <!-- Game Over overlay -->
+              <div class="gb-overlay" id="gameover-screen">
+                <h2 id="go-title">GAME OVER</h2>
+                <div class="gb-overlay-stats" id="go-stats"></div>
+                <button class="gb-overlay-btn" onclick="restartGame()">▶ RETRY</button>
+              </div>
+
+              <!-- Inventory overlay -->
+              <div class="gb-inventory" id="inventory-panel">
+                <div class="gb-inv-title">BAG <span id="inv-count">0</span>/12</div>
+                <div class="gb-inv-grid" id="inventory-items"></div>
+              </div>
+            </div>
+
+            <!-- Text box -->
+            <div class="gb-textbox" id="gb-textbox">
+              <div class="gb-textbox-title" id="textbox-title">▸ LOG</div>
+              <div class="gb-textbox-log" id="game-log">
+                <div class="log-entry" style="color:var(--gb-screen-mid);">Press START to begin...</div>
+              </div>
+              <div class="gb-textbox-arrow" id="textbox-arrow"></div>
+            </div>
+          </div>
+
+          <!-- Screen transition -->
+          <div class="gb-transition" id="gb-transition"></div>
         </div>
-        <div id="status-effects" style="display:flex;gap:4px;align-items:center;flex-wrap:wrap;"></div>
       </div>
-      <div class="log-card" style="margin-top:8px;">
-        <div class="log-title">Activity Log</div>
-        <div id="game-log"></div>
-      </div>
-      <!-- Inventory Panel -->
-      <div id="inventory-panel" class="glass" style="margin-top:8px;padding:10px 14px;display:none;">
-        <div class="log-title">Inventory (<span id="inv-count">0</span>/12)</div>
-        <div id="inventory-items" style="display:flex;flex-wrap:wrap;gap:6px;"></div>
-      </div>
-    </div>
 
-    <!-- Game Over Screen -->
-    <div class="glass thread-card" id="gameover-screen" style="flex:1;display:none;flex-direction:column;align-items:center;justify-content:center;position:absolute;inset:12px;z-index:50;">
-      <div class="go-icon">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" width="32" height="32" style="stroke:var(--red)"><circle cx="12" cy="10" r="8"/><circle cx="9" cy="9" r="1.5" fill="currentColor"/><circle cx="15" cy="9" r="1.5" fill="currentColor"/><path d="M9 17v3M12 17v3M15 17v3"/></svg>
+      <!-- Nintendo Seal -->
+      <div class="gb-seal">
+        <div class="gb-seal-circle">★</div>
+        Nintendo
       </div>
-      <h2 style="font-size:22px;font-weight:700;color:var(--red);margin-bottom:12px;">YOU DIED</h2>
-      <div class="game-over-stats" id="go-stats"></div>
-      <button class="btn btn-start" onclick="restartGame()">Try Again</button>
+
+      <!-- D-Pad -->
+      <div class="gb-dpad-area">
+        <div class="gb-dpad">
+          <button class="gb-dpad-btn gb-dpad-up" data-key="up"></button>
+          <button class="gb-dpad-btn gb-dpad-down" data-key="down"></button>
+          <button class="gb-dpad-btn gb-dpad-left" data-key="left"></button>
+          <button class="gb-dpad-btn gb-dpad-right" data-key="right"></button>
+          <div class="gb-dpad-center"></div>
+        </div>
+      </div>
+
+      <!-- A/B Buttons -->
+      <div class="gb-ab-area">
+        <div style="text-align:center;">
+          <button class="gb-ab-btn gb-btn-b" data-key="b">B</button>
+          <div class="gb-ss-label">B</div>
+        </div>
+        <div style="text-align:center;">
+          <button class="gb-ab-btn gb-btn-a" data-key="a">A</button>
+          <div class="gb-ss-label">A</div>
+        </div>
+      </div>
+
+      <!-- Start/Select -->
+      <div class="gb-start-select-area">
+        <div style="text-align:center;">
+          <button class="gb-ss-btn" data-key="select"></button>
+          <div class="gb-ss-label">SELECT</div>
+        </div>
+        <div style="text-align:center;">
+          <button class="gb-ss-btn" data-key="start"></button>
+          <div class="gb-ss-label">START</div>
+        </div>
+      </div>
+
+      <!-- Speaker -->
+      <div class="gb-speaker">
+        <div class="gb-speaker-line"></div>
+        <div class="gb-speaker-line"></div>
+        <div class="gb-speaker-line"></div>
+        <div class="gb-speaker-line"></div>
+        <div class="gb-speaker-line"></div>
+        <div class="gb-speaker-line"></div>
+        <div class="gb-speaker-line"></div>
+      </div>
     </div>
   </div>
 
-  <div class="controls-hint glass glass-pill" id="controls-hint" style="display:none;">
-    <span>WASD</span> Move · <span>SPACE</span> Shoot · <span>E</span> Interact · <span>I</span> Inventory
+  <!-- Controls hint -->
+  <div class="gb-controls-hint" id="controls-hint">
+    <span>WASD</span> Move
+    <span>SPACE</span> Attack
+    <span>E</span> Exit
+    <span>I</span> Bag
   </div>
 
   <script src="https://cdn.jsdelivr.net/npm/phaser@3.60.0/dist/phaser.min.js"></script>
   <script>
     window.onerror = function(msg, url, line) {
-      document.getElementById('app').innerHTML = '<div style="padding:40px;text-align:center;color:#E8829B;font-family:monospace;"><h2>Error</h2><p>' + msg + '</p><p style="font-size:12px;color:#9B889E;">Line ' + line + '</p></div>';
+      document.getElementById('game-area').innerHTML = '<div style="padding:20px;text-align:center;font-family:monospace;"><p style="font-size:10px;color:var(--gb-screen-dark);">ERROR</p><p style="font-size:8px;color:var(--gb-screen-mid);">' + msg + '</p></div>';
     };
   </script>
   <script src="game.js"></script>
+
+  <script>
+    // ─── TOUCH D-PAD SUPPORT ───────────────────────────────────
+    document.querySelectorAll('.gb-dpad-btn, .gb-ab-btn, .gb-ss-btn').forEach(btn => {
+      const key = btn.dataset.key;
+      if (!key) return;
+
+      const keyMap = {
+        'up': 'ArrowUp', 'down': 'ArrowDown', 'left': 'ArrowLeft', 'right': 'ArrowRight',
+        'a': ' ', 'b': 'e', 'start': 'Enter', 'select': 'Tab'
+      };
+
+      const dispatchKey = (type) => {
+        const mapped = keyMap[key];
+        if (!mapped) return;
+        window.dispatchEvent(new KeyboardEvent(type, { key: mapped, code: mapped === ' ' ? 'Space' : mapped, bubbles: true }));
+      };
+
+      btn.addEventListener('touchstart', (e) => { e.preventDefault(); dispatchKey('keydown'); btn.style.opacity = '0.7'; });
+      btn.addEventListener('touchend', (e) => { e.preventDefault(); dispatchKey('keyup'); btn.style.opacity = '1'; });
+      btn.addEventListener('mousedown', (e) => { dispatchKey('keydown'); });
+      btn.addEventListener('mouseup', (e) => { dispatchKey('keyup'); });
+      btn.addEventListener('mouseleave', (e) => { dispatchKey('keyup'); });
+    });
+
+    // Power LED
+    setTimeout(() => {
+      document.getElementById('power-led').classList.add('on');
+    }, 500);
+  </script>
 </body>
 </html>
