@@ -1657,35 +1657,36 @@ class GameScene extends Phaser.Scene {
   updateUI() {
     const p = state.player;
     const hpBar = document.getElementById('hp-fill');
-    const hpText = document.getElementById('hp-text');
     const goldText = document.getElementById('hud-gold');
     const levelText = document.getElementById('hud-level');
+    const floorText = document.getElementById('hud-floor');
     const depthText = document.getElementById('depth-text');
     const logEl = document.getElementById('game-log');
 
     if (hpBar) hpBar.style.width = `${(p.hp / p.maxHp) * 100}%`;
-    if (hpText) hpText.textContent = `${p.hp}/${p.maxHp}`;
     const xpBar = document.getElementById('xp-fill');
     if (xpBar) xpBar.style.width = `${(p.xp / p.xpNext) * 100}%`;
-    if (goldText) goldText.textContent = p.gold;
-    if (levelText) levelText.textContent = `Lv.${p.level}`;
+    if (goldText) goldText.textContent = `G:${p.gold}`;
+    if (levelText) levelText.textContent = `Lv${p.level}`;
+    if (floorText) floorText.textContent = `F${state.depth + 1}`;
     if (depthText) depthText.textContent = `F${state.depth + 1} / ${state.totalFloors}`;
 
     // Update depth pips
-    const pips = document.querySelectorAll('.depth-pip');
+    const pips = document.querySelectorAll('.gb-depth-pip');
     pips.forEach((pip, i) => {
-      pip.className = 'depth-pip';
+      pip.className = 'gb-depth-pip';
       if (i < state.depth) pip.classList.add('visited');
       if (i === state.depth) pip.classList.add('active');
     });
 
     if (logEl) {
-      logEl.innerHTML = state.log.slice(-8).map(l => `<div class="log-entry">${l}</div>`).join('');
+      logEl.innerHTML = state.log.slice(-4).map(l => `<div class="log-entry">${l}</div>`).join('');
       logEl.scrollTop = logEl.scrollHeight;
     }
 
-    // Sync sidebar inventory
+    // Sync sidebar
     if (typeof syncSidebarInventory === 'function') syncSidebarInventory();
+    if (typeof syncSidebarLog === 'function') syncSidebarLog();
   }
 }
 
@@ -1819,7 +1820,6 @@ function startTransition(callback) {
 
 // ─── INVENTORY UI ────────────────────────────────────────────
 function updateInventoryUI() {
-  // Update overlay inventory
   const invEl = document.getElementById('inventory-items');
   if (invEl) {
     const p = state.player;
@@ -1830,12 +1830,11 @@ function updateInventoryUI() {
         <div class="inv-item ${p.equipped === item.id ? 'equipped' : ''}" onclick="useItem(${i})" title="${item.desc}">
           <span class="inv-icon">${item.icon}</span>
           <span>${item.name}</span>
-          ${p.equipped === item.id ? '<span class="inv-equipped">EQUIPPED</span>' : ''}
+          ${p.equipped === item.id ? '<span class="inv-equipped-tag">EQUIPPED</span>' : ''}
         </div>
       `).join('');
     }
   }
-  // Sync sidebar too
   if (typeof syncSidebarInventory === 'function') syncSidebarInventory();
 }
 
@@ -1844,7 +1843,7 @@ function updateStatusUI() {
   if (!statusEl) return;
   statusEl.innerHTML = state.player.statusEffects.map(e => {
     const effect = STATUS[e.key];
-    return `<span class="status-badge" style="background:${'#' + effect.color.toString(16).padStart(6,'0')}22;color:${'#' + effect.color.toString(16).padStart(6,'0')};border:1px solid ${'#' + effect.color.toString(16).padStart(6,'0')}33;">
+    return `<span class="gb-status-badge" style="background:${'#' + effect.color.toString(16).padStart(6,'0')}22;color:${'#' + effect.color.toString(16).padStart(6,'0')};border:1px solid ${'#' + effect.color.toString(16).padStart(6,'0')}33;">
       ${effect.name} ${e.remaining > 0 ? e.remaining + 's' : ''}
     </span>`;
   }).join('');
