@@ -1047,6 +1047,9 @@ class GameScene extends Phaser.Scene {
     const fogColor = theme.fogColor || 0x000000;
     this.cameras.main.setBackgroundColor(fogColor);
 
+    // Force camera to center on player immediately
+    this.cameras.main.centerOn(this.player.x, this.player.y);
+
     // ─── CONTROLS ───
     this.cursors = this.input.keyboard.createCursorKeys();
     this.wasd = this.input.keyboard.addKeys('W,A,S,D');
@@ -2502,11 +2505,16 @@ const config = {
   type: Phaser.AUTO,
   parent: 'game-container',
   width: 480,
-  height: 340,
+  height: 320,
   backgroundColor: '#000000',
   physics: { default: 'arcade', arcade: { gravity: { y: 0 }, debug: false } },
   scene: [BootScene, GameScene],
-  scale: { mode: Phaser.Scale.FIT, autoCenter: Phaser.Scale.CENTER_BOTH },
+  scale: {
+    mode: Phaser.Scale.ENVELOP,
+    autoCenter: Phaser.Scale.CENTER_BOTH,
+    width: 480,
+    height: 320,
+  },
   pixelArt: true,
   antialias: false,
 };
