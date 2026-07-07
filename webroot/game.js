@@ -960,7 +960,7 @@ class GameScene extends Phaser.Scene {
     // ─── PLAYER (Pokemon-style top-down sprite) ───
     this.player = this.add.container(dungeon.spawn.x * TILE + TILE/2, dungeon.spawn.y * TILE + TILE/2);
     this.playerBody = this.add.graphics();
-    this.drawPokemonPlayer(this.playerBody, 0);
+    this.drawCatPlayer(this.playerBody, 0, { x: 0, y: 1 });
     this.player.add(this.playerBody);
     this.player.setSize(12, 12);
     this.player.setDepth(10);
@@ -1017,55 +1017,154 @@ class GameScene extends Phaser.Scene {
     document.getElementById('controls-hint').classList.add('show');
   }
 
-  // ─── POKEMON-STYLE PLAYER SPRITE ───
-  drawPokemonPlayer(g, frame) {
+  // ─── CAT CHARACTER SPRITE ───
+  drawCatPlayer(g, frame, facing) {
     g.clear();
-    // Simple Pokemon-style top-down character (16x16)
-    // Colors: skin, hair, shirt, pants, shoes
-    const skin = 0xF8C8A0;
-    const hair = 0x483028;
-    const shirt = 0x3888E8;
-    const pants = 0x3858A0;
-    const shoes = 0x483028;
-    const outline = 0x181018;
+    const ps = 1;
 
-    const ps = 1; // pixel size
+    // Cat colors
+    const fur = 0xF8A848;       // orange tabby
+    const furDark = 0xD08030;   // darker orange
+    const furLight = 0xFCc878;  // light orange
+    const belly = 0xFCE8D0;     // cream belly
+    const nose = 0xE86078;      // pink nose
+    const eyes = 0x38C838;      // green eyes
+    const outline = 0x281808;   // dark brown outline
+    const whisker = 0xFCF0D8;   // whisker color
 
-    // Head
-    g.fillStyle(hair, 1);
-    g.fillRect(5 * ps, 0 * ps, 6 * ps, 4 * ps); // hair top
-    g.fillStyle(skin, 1);
-    g.fillRect(5 * ps, 3 * ps, 6 * ps, 4 * ps); // face
-    g.fillStyle(outline, 1);
-    g.fillRect(5 * ps, 0 * ps, 6 * ps, 1 * ps); // hair top edge
-    g.fillRect(4 * ps, 1 * ps, 1 * ps, 6 * ps); // left edge
-    g.fillRect(11 * ps, 1 * ps, 1 * ps, 6 * ps); // right edge
+    // Frame offsets for walk animation (shift legs)
+    const walkCycle = frame % 4;
+    const legOffset = walkCycle < 2 ? 0 : 1;
+    const bobY = walkCycle === 1 || walkCycle === 3 ? -1 : 0;
+
+    // ─── TAIL ───
+    g.fillStyle(furDark, 1);
+    if (facing.x < 0) {
+      // Tail goes right when facing left
+      g.fillRect(12 * ps, (7 + bobY) * ps, 3 * ps, 2 * ps);
+      g.fillRect(14 * ps, (5 + bobY) * ps, 2 * ps, 3 * ps);
+    } else {
+      // Tail goes left when facing right
+      g.fillRect(1 * ps, (7 + bobY) * ps, 3 * ps, 2 * ps);
+      g.fillRect(0 * ps, (5 + bobY) * ps, 2 * ps, 3 * ps);
+    }
+
+    // ─── EARS ───
+    g.fillStyle(fur, 1);
+    // Left ear
+    g.fillRect(4 * ps, 0 * ps, 2 * ps, 3 * ps);
+    g.fillRect(3 * ps, 1 * ps, 1 * ps, 2 * ps);
+    // Right ear
+    g.fillRect(10 * ps, 0 * ps, 2 * ps, 3 * ps);
+    g.fillRect(13 * ps, 1 * ps, 1 * ps, 2 * ps);
+    // Inner ear
+    g.fillStyle(furLight, 1);
+    g.fillRect(5 * ps, 1 * ps, 1 * ps, 2 * ps);
+    g.fillRect(11 * ps, 1 * ps, 1 * ps, 2 * ps);
+
+    // ─── HEAD ───
+    g.fillStyle(fur, 1);
+    g.fillRect(4 * ps, 2 * ps, 8 * ps, 5 * ps);
+    g.fillRect(3 * ps, 3 * ps, 10 * ps, 3 * ps);
+    // Head highlight
+    g.fillStyle(furLight, 0.5);
+    g.fillRect(5 * ps, 2 * ps, 4 * ps, 2 * ps);
+
+    // ─── FACE ───
     // Eyes
-    g.fillStyle(0x181018, 1);
-    g.fillRect(6 * ps, 4 * ps, 1 * ps, 1 * ps);
-    g.fillRect(9 * ps, 4 * ps, 1 * ps, 1 * ps);
-
-    // Body
-    g.fillStyle(shirt, 1);
-    g.fillRect(5 * ps, 7 * ps, 6 * ps, 4 * ps);
+    g.fillStyle(0xFFFFFF, 1);
+    g.fillRect(5 * ps, 4 * ps, 3 * ps, 2 * ps);
+    g.fillRect(9 * ps, 4 * ps, 3 * ps, 2 * ps);
+    g.fillStyle(eyes, 1);
+    g.fillRect(6 * ps, 4 * ps, 2 * ps, 2 * ps);
+    g.fillRect(10 * ps, 4 * ps, 2 * ps, 2 * ps);
+    // Pupils
     g.fillStyle(outline, 1);
-    g.fillRect(4 * ps, 7 * ps, 1 * ps, 4 * ps);
-    g.fillRect(11 * ps, 7 * ps, 1 * ps, 4 * ps);
-    // Shirt detail
-    g.fillStyle(0x2878D8, 0.5);
-    g.fillRect(7 * ps, 8 * ps, 2 * ps, 2 * ps);
+    g.fillRect(7 * ps, 4 * ps, 1 * ps, 2 * ps);
+    g.fillRect(11 * ps, 4 * ps, 1 * ps, 2 * ps);
+    // Nose
+    g.fillStyle(nose, 1);
+    g.fillRect(7 * ps, 6 * ps, 2 * ps, 1 * ps);
+    // Mouth
+    g.fillStyle(outline, 0.6);
+    g.fillRect(6 * ps, 7 * ps, 1 * ps, 1 * ps);
+    g.fillRect(9 * ps, 7 * ps, 1 * ps, 1 * ps);
+    g.fillRect(7 * ps, 7 * ps, 2 * ps, 1 * ps);
+    // Whiskers
+    g.fillStyle(whisker, 0.7);
+    g.fillRect(1 * ps, 5 * ps, 3 * ps, 1 * ps);
+    g.fillRect(1 * ps, 6 * ps, 2 * ps, 1 * ps);
+    g.fillRect(12 * ps, 5 * ps, 3 * ps, 1 * ps);
+    g.fillRect(13 * ps, 6 * ps, 2 * ps, 1 * ps);
+    // Outline
+    g.fillStyle(outline, 1);
+    g.fillRect(3 * ps, 2 * ps, 1 * ps, 5 * ps);
+    g.fillRect(12 * ps, 2 * ps, 1 * ps, 5 * ps);
+    g.fillRect(4 * ps, 1 * ps, 2 * ps, 1 * ps);
+    g.fillRect(10 * ps, 1 * ps, 2 * ps, 1 * ps);
 
-    // Pants
-    g.fillStyle(pants, 1);
-    g.fillRect(5 * ps, 11 * ps, 6 * ps, 3 * ps);
-    // Leg divider
-    g.fillStyle(outline, 0.5);
-    g.fillRect(7 * ps, 11 * ps, 2 * ps, 3 * ps);
+    // ─── BODY ───
+    g.fillStyle(fur, 1);
+    g.fillRect(4 * ps, 8 * ps, 8 * ps, 4 * ps);
+    g.fillRect(3 * ps, 9 * ps, 10 * ps, 2 * ps);
+    // Belly
+    g.fillStyle(belly, 1);
+    g.fillRect(6 * ps, 8 * ps, 4 * ps, 4 * ps);
+    // Collar / bandana
+    g.fillStyle(0xE83838, 1);
+    g.fillRect(5 * ps, 8 * ps, 6 * ps, 1 * ps);
+    g.fillStyle(0xF8D838, 1);
+    g.fillRect(7 * ps, 8 * ps, 2 * ps, 1 * ps); // bell
 
-    // Shoes
-    g.fillStyle(shoes, 1);
-    g.fillRect(5 * ps, 14 * ps, 3 * ps, 2 * ps);
-    g.fillRect(9 * ps, 14 * ps, 3 * ps, 2 * ps);
+    // ─── ARMS (animate with walk) ───
+    g.fillStyle(furDark, 1);
+    if (legOffset === 0) {
+      g.fillRect(2 * ps, 9 * ps, 2 * ps, 3 * ps);
+      g.fillRect(12 * ps, 10 * ps, 2 * ps, 2 * ps);
+    } else {
+      g.fillRect(2 * ps, 10 * ps, 2 * ps, 2 * ps);
+      g.fillRect(12 * ps, 9 * ps, 2 * ps, 3 * ps);
+    }
+    // Paws
+    g.fillStyle(furLight, 1);
+    g.fillRect(2 * ps, 12 * ps, 2 * ps, 1 * ps);
+    g.fillRect(12 * ps, 12 * ps, 2 * ps, 1 * ps);
+
+    // ─── LEGS (animate with walk) ───
+    g.fillStyle(furDark, 1);
+    if (legOffset === 0) {
+      g.fillRect(5 * ps, 12 * ps, 2 * ps, 3 * ps);
+      g.fillRect(9 * ps, 12 * ps, 2 * ps, 2 * ps);
+    } else {
+      g.fillRect(5 * ps, 12 * ps, 2 * ps, 2 * ps);
+      g.fillRect(9 * ps, 12 * ps, 2 * ps, 3 * ps);
+    }
+    // Feet
+    g.fillStyle(outline, 0.8);
+    g.fillRect(4 * ps, 15 * ps, 3 * ps, 1 * ps);
+    g.fillRect(9 * ps, 15 * ps, 3 * ps, 1 * ps);
+
+    // ─── ATTACK FRAME (sword slash) ───
+    if (frame >= 10) {
+      g.fillStyle(0xBBBBBB, 1);
+      if (facing.x > 0) {
+        g.fillRect(14 * ps, 6 * ps, 2 * ps, 6 * ps);
+        g.fillStyle(0xDDDDDD, 1);
+        g.fillRect(14 * ps, 4 * ps, 2 * ps, 3 * ps);
+      } else if (facing.x < 0) {
+        g.fillRect(0 * ps, 6 * ps, 2 * ps, 6 * ps);
+        g.fillStyle(0xDDDDDD, 1);
+        g.fillRect(0 * ps, 4 * ps, 2 * ps, 3 * ps);
+      } else if (facing.y < 0) {
+        g.fillRect(7 * ps, 0 * ps, 2 * ps, 6 * ps);
+        g.fillStyle(0xDDDDDD, 1);
+        g.fillRect(7 * ps, 0 * ps, 2 * ps, 3 * ps);
+      } else {
+        g.fillRect(7 * ps, 14 * ps, 2 * ps, 6 * ps);
+        g.fillStyle(0xDDDDDD, 1);
+        g.fillRect(7 * ps, 18 * ps, 2 * ps, 3 * ps);
+      }
+    }
 
     // Center the sprite
     g.setPosition(-8, -8);
@@ -1141,6 +1240,7 @@ class GameScene extends Phaser.Scene {
       this.playerFacing = { x: vx, y: vy };
       this.animTimer += dt * 8;
       this.playerFrame = Math.floor(this.animTimer) % 4;
+      this.drawCatPlayer(this.playerBody, this.playerFrame, this.playerFacing);
       // Bob animation
       const bobY = Math.sin(this.animTimer * 2) * 0.8;
       this.playerBody.y = bobY;
@@ -1152,6 +1252,8 @@ class GameScene extends Phaser.Scene {
     } else {
       this.animTimer = 0;
       this.playerBody.y = 0;
+      // Idle animation — redraw facing direction
+      this.drawCatPlayer(this.playerBody, 0, this.playerFacing);
     }
 
     this.player.body.setVelocity(vx * PLAYER_SPEED * speedMult, vy * PLAYER_SPEED * speedMult);
@@ -1412,6 +1514,14 @@ class GameScene extends Phaser.Scene {
     const len = Math.sqrt(dirX * dirX + dirY * dirY);
     const nx = len > 0 ? dirX / len : 0;
     const ny = len > 0 ? dirY / len : 1;
+
+    // Attack animation (frame 10+ = sword slash)
+    this.drawCatPlayer(this.playerBody, 10, this.playerFacing);
+    this.time.delayedCall(200, () => {
+      if (this.playerBody && this.playerBody.active) {
+        this.drawCatPlayer(this.playerBody, 0, this.playerFacing);
+      }
+    });
 
     const bullet = this.add.circle(
       this.player.x + nx * 10, this.player.y + ny * 10,
