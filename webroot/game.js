@@ -1951,35 +1951,162 @@ class GameScene extends Phaser.Scene {
 
     const monster = this.add.container(x * TILE + TILE/2, y * TILE + TILE/2);
 
-    // Pokemon-style monster sprite
+    // Horror monster sprite (unique per type)
     const body = this.add.graphics();
     const ps = 1;
-    const mc = type.color;
-    // Derive dark/light variants
-    const r = (mc >> 16) & 0xff, g = (mc >> 8) & 0xff, b = mc & 0xff;
-    const dark = Phaser.Display.Color.GetColor(Math.max(0, r - 40), Math.max(0, g - 40), Math.max(0, b - 40));
-    const light = Phaser.Display.Color.GetColor(Math.min(255, r + 50), Math.min(255, g + 50), Math.min(255, b + 50));
 
-    // Simple Pokemon-style monster body
-    body.fillStyle(mc, 0.9);
-    body.fillRect(3 * ps, 2 * ps, 10 * ps, 10 * ps);
-    body.fillRect(2 * ps, 4 * ps, 12 * ps, 6 * ps);
-    // Highlight
-    body.fillStyle(light, 0.5);
-    body.fillRect(4 * ps, 2 * ps, 4 * ps, 3 * ps);
-    // Shadow
-    body.fillStyle(dark, 0.4);
-    body.fillRect(3 * ps, 10 * ps, 10 * ps, 3 * ps);
-    // Eyes (angry)
-    body.fillStyle(0xFFFFFF, 0.9);
-    body.fillRect(4 * ps, 5 * ps, 3 * ps, 2 * ps);
-    body.fillRect(9 * ps, 5 * ps, 3 * ps, 2 * ps);
-    body.fillStyle(0xFF0000, 0.8);
-    body.fillRect(5 * ps, 5 * ps, 2 * ps, 2 * ps);
-    body.fillRect(10 * ps, 5 * ps, 2 * ps, 2 * ps);
-    // Mouth
-    body.fillStyle(0x000000, 0.5);
-    body.fillRect(6 * ps, 9 * ps, 4 * ps, 1 * ps);
+    // Draw based on monster type index
+    if (typeIdx === 0) {
+      // Shadow Crawler — dark amorphous blob with glowing eyes
+      body.fillStyle(0x1A0A1A, 0.9);
+      body.fillRect(3 * ps, 4 * ps, 10 * ps, 8 * ps);
+      body.fillRect(2 * ps, 6 * ps, 12 * ps, 4 * ps);
+      body.fillRect(4 * ps, 3 * ps, 8 * ps, 2 * ps);
+      // Tendrils
+      body.fillRect(1 * ps, 8 * ps, 2 * ps, 3 * ps);
+      body.fillRect(13 * ps, 7 * ps, 2 * ps, 4 * ps);
+      body.fillRect(0 * ps, 10 * ps, 2 * ps, 2 * ps);
+      body.fillRect(14 * ps, 9 * ps, 2 * ps, 3 * ps);
+      // Glowing red eyes
+      body.fillStyle(0xFF0000, 0.9);
+      body.fillRect(5 * ps, 6 * ps, 2 * ps, 2 * ps);
+      body.fillRect(9 * ps, 6 * ps, 2 * ps, 2 * ps);
+      body.fillStyle(0xFF4444, 0.4);
+      body.fillRect(5 * ps, 5 * ps, 2 * ps, 1 * ps);
+      body.fillRect(9 * ps, 5 * ps, 2 * ps, 1 * ps);
+      // Mouth
+      body.fillStyle(0xFF0000, 0.3);
+      body.fillRect(6 * ps, 9 * ps, 4 * ps, 2 * ps);
+      body.fillStyle(0x000000, 0.6);
+      body.fillRect(7 * ps, 10 * ps, 2 * ps, 1 * ps);
+
+    } else if (typeIdx === 1) {
+      // Lost Soul — ghostly floating figure
+      body.fillStyle(0x8888AA, 0.5);
+      body.fillRect(5 * ps, 1 * ps, 6 * ps, 4 * ps); // head
+      body.fillRect(4 * ps, 3 * ps, 8 * ps, 6 * ps); // body
+      body.fillRect(3 * ps, 5 * ps, 10 * ps, 4 * ps); // wider
+      // Wispy bottom
+      body.fillRect(3 * ps, 9 * ps, 3 * ps, 4 * ps);
+      body.fillRect(7 * ps, 10 * ps, 2 * ps, 3 * ps);
+      body.fillRect(10 * ps, 9 * ps, 3 * ps, 4 * ps);
+      // Hollow eyes (black void)
+      body.fillStyle(0x000000, 0.9);
+      body.fillRect(5 * ps, 3 * ps, 3 * ps, 3 * ps);
+      body.fillRect(9 * ps, 3 * ps, 3 * ps, 3 * ps);
+      // Eye glow
+      body.fillStyle(0x4444FF, 0.3);
+      body.fillRect(6 * ps, 4 * ps, 1 * ps, 1 * ps);
+      body.fillRect(10 * ps, 4 * ps, 1 * ps, 1 * ps);
+      // Mouth (open scream)
+      body.fillStyle(0x000000, 0.8);
+      body.fillRect(7 * ps, 7 * ps, 3 * ps, 2 * ps);
+      // Translucent highlight
+      body.fillStyle(0xAAAACC, 0.2);
+      body.fillRect(5 * ps, 2 * ps, 2 * ps, 2 * ps);
+
+    } else if (typeIdx === 2) {
+      // Flesh Golem — hulking mass with exposed bone
+      body.fillStyle(0x8B4040, 0.9);
+      body.fillRect(3 * ps, 3 * ps, 10 * ps, 10 * ps);
+      body.fillRect(2 * ps, 5 * ps, 12 * ps, 6 * ps);
+      body.fillRect(1 * ps, 7 * ps, 14 * ps, 4 * ps);
+      // Flesh texture
+      body.fillStyle(0xAA5050, 0.6);
+      body.fillRect(4 * ps, 4 * ps, 3 * ps, 3 * ps);
+      body.fillRect(9 * ps, 6 * ps, 3 * ps, 2 * ps);
+      body.fillRect(5 * ps, 9 * ps, 4 * ps, 2 * ps);
+      // Exposed bone
+      body.fillStyle(0xD4C5B0, 0.7);
+      body.fillRect(7 * ps, 5 * ps, 2 * ps, 4 * ps);
+      body.fillRect(11 * ps, 7 * ps, 2 * ps, 3 * ps);
+      // Stitches
+      body.fillStyle(0x281808, 0.6);
+      body.fillRect(6 * ps, 7 * ps, 4 * ps, 1 * ps);
+      body.fillRect(6 * ps, 9 * ps, 4 * ps, 1 * ps);
+      body.fillRect(7 * ps, 7 * ps, 1 * ps, 3 * ps);
+      body.fillRect(9 * ps, 7 * ps, 1 * ps, 3 * ps);
+      // Eyes (uneven, creepy)
+      body.fillStyle(0xFFFF00, 0.8);
+      body.fillRect(4 * ps, 4 * ps, 3 * ps, 2 * ps);
+      body.fillRect(10 * ps, 5 * ps, 2 * ps, 2 * ps);
+      body.fillStyle(0x000000, 0.9);
+      body.fillRect(5 * ps, 4 * ps, 1 * ps, 2 * ps);
+      body.fillRect(10 * ps, 5 * ps, 1 * ps, 2 * ps);
+
+    } else if (typeIdx === 3) {
+      // Void Stalker — tall dark figure with purple glow
+      body.fillStyle(0x1A0A2A, 0.95);
+      body.fillRect(6 * ps, 0 * ps, 4 * ps, 3 * ps); // head
+      body.fillRect(5 * ps, 3 * ps, 6 * ps, 8 * ps); // body
+      body.fillRect(4 * ps, 5 * ps, 8 * ps, 4 * ps); // wider
+      // Cloak/robe
+      body.fillRect(3 * ps, 7 * ps, 10 * ps, 5 * ps);
+      body.fillRect(2 * ps, 10 * ps, 12 * ps, 3 * ps);
+      // Void texture (dark purple)
+      body.fillStyle(0x2A1A3A, 0.5);
+      body.fillRect(6 * ps, 4 * ps, 4 * ps, 6 * ps);
+      // Glowing purple eyes
+      body.fillStyle(0xAA00FF, 0.9);
+      body.fillRect(6 * ps, 1 * ps, 2 * ps, 2 * ps);
+      body.fillRect(9 * ps, 1 * ps, 2 * ps, 2 * ps);
+      body.fillStyle(0xDD44FF, 0.4);
+      body.fillRect(6 * ps, 0 * ps, 2 * ps, 1 * ps);
+      body.fillRect(9 * ps, 0 * ps, 2 * ps, 1 * ps);
+      // Purple energy wisps
+      body.fillStyle(0x8800CC, 0.3);
+      body.fillRect(2 * ps, 11 * ps, 2 * ps, 2 * ps);
+      body.fillRect(12 * ps, 12 * ps, 2 * ps, 1 * ps);
+
+    } else {
+      // Bone Horror — skeletal with exposed ribcage
+      body.fillStyle(0xD4C5B0, 0.9); // bone color
+      // Skull
+      body.fillRect(5 * ps, 0 * ps, 6 * ps, 4 * ps);
+      body.fillRect(4 * ps, 1 * ps, 8 * ps, 3 * ps);
+      // Eye sockets
+      body.fillStyle(0x000000, 0.9);
+      body.fillRect(5 * ps, 1 * ps, 2 * ps, 2 * ps);
+      body.fillRect(9 * ps, 1 * ps, 2 * ps, 2 * ps);
+      // Glowing red in sockets
+      body.fillStyle(0xFF0000, 0.4);
+      body.fillRect(6 * ps, 2 * ps, 1 * ps, 1 * ps);
+      body.fillRect(10 * ps, 2 * ps, 1 * ps, 1 * ps);
+      // Jaw
+      body.fillStyle(0xB8A890, 0.8);
+      body.fillRect(5 * ps, 3 * ps, 6 * ps, 1 * ps);
+      // Teeth
+      body.fillStyle(0xFFFFFF, 0.7);
+      body.fillRect(6 * ps, 3 * ps, 1 * ps, 1 * ps);
+      body.fillRect(8 * ps, 3 * ps, 1 * ps, 1 * ps);
+      body.fillRect(10 * ps, 3 * ps, 1 * ps, 1 * ps);
+      // Ribcage
+      body.fillStyle(0xD4C5B0, 0.8);
+      body.fillRect(5 * ps, 4 * ps, 6 * ps, 1 * ps);
+      body.fillRect(4 * ps, 5 * ps, 8 * ps, 1 * ps);
+      body.fillRect(5 * ps, 6 * ps, 6 * ps, 1 * ps);
+      body.fillRect(4 * ps, 7 * ps, 8 * ps, 1 * ps);
+      body.fillRect(5 * ps, 8 * ps, 6 * ps, 1 * ps);
+      // Spine
+      body.fillRect(7 * ps, 4 * ps, 2 * ps, 6 * ps);
+      // Arms (bone)
+      body.fillRect(3 * ps, 5 * ps, 2 * ps, 1 * ps);
+      body.fillRect(11 * ps, 5 * ps, 2 * ps, 1 * ps);
+      body.fillRect(2 * ps, 6 * ps, 2 * ps, 1 * ps);
+      body.fillRect(12 * ps, 6 * ps, 2 * ps, 1 * ps);
+      body.fillRect(1 * ps, 7 * ps, 2 * ps, 1 * ps);
+      body.fillRect(13 * ps, 7 * ps, 2 * ps, 1 * ps);
+      // Legs (bone)
+      body.fillRect(5 * ps, 9 * ps, 2 * ps, 4 * ps);
+      body.fillRect(9 * ps, 9 * ps, 2 * ps, 4 * ps);
+      // Feet
+      body.fillRect(4 * ps, 13 * ps, 3 * ps, 1 * ps);
+      body.fillRect(9 * ps, 13 * ps, 3 * ps, 1 * ps);
+      // Shadow/outline
+      body.fillStyle(0x8A7A6A, 0.4);
+      body.fillRect(4 * ps, 0 * ps, 1 * ps, 4 * ps);
+      body.fillRect(11 * ps, 0 * ps, 1 * ps, 4 * ps);
+    }
 
     body.setPosition(-8, -8);
     monster.add(body);
@@ -2023,26 +2150,131 @@ class GameScene extends Phaser.Scene {
 
     const monster = this.add.container(tileX * TILE + TILE/2, tileY * TILE + TILE/2);
     const body = this.add.graphics();
-    const mc = type.color;
-    const r = (mc >> 16) & 0xff, g = (mc >> 8) & 0xff, b = mc & 0xff;
-    const dark = Phaser.Display.Color.GetColor(Math.max(0, r - 40), Math.max(0, g - 40), Math.max(0, b - 40));
-    const light = Phaser.Display.Color.GetColor(Math.min(255, r + 50), Math.min(255, g + 50), Math.min(255, b + 50));
+    const ps = 1;
 
-    body.fillStyle(mc, 0.9);
-    body.fillRect(-5, -6, 10, 10);
-    body.fillRect(-6, -4, 12, 6);
-    body.fillStyle(light, 0.5);
-    body.fillRect(-4, -6, 4, 3);
-    body.fillStyle(dark, 0.4);
-    body.fillRect(-5, 2, 10, 3);
-    body.fillStyle(0xFFFFFF, 0.9);
-    body.fillRect(-4, -3, 3, 2);
-    body.fillRect(1, -3, 3, 2);
-    body.fillStyle(0xFF0000, 0.8);
-    body.fillRect(-3, -3, 2, 2);
-    body.fillRect(2, -3, 2, 2);
-    body.fillStyle(0x000000, 0.5);
-    body.fillRect(-2, 1, 4, 1);
+    // Use same horror sprites as spawnMonster
+    if (typeIdx === 0) {
+      // Shadow Crawler
+      body.fillStyle(0x1A0A1A, 0.9);
+      body.fillRect(3 * ps, 4 * ps, 10 * ps, 8 * ps);
+      body.fillRect(2 * ps, 6 * ps, 12 * ps, 4 * ps);
+      body.fillRect(4 * ps, 3 * ps, 8 * ps, 2 * ps);
+      body.fillRect(1 * ps, 8 * ps, 2 * ps, 3 * ps);
+      body.fillRect(13 * ps, 7 * ps, 2 * ps, 4 * ps);
+      body.fillRect(0 * ps, 10 * ps, 2 * ps, 2 * ps);
+      body.fillRect(14 * ps, 9 * ps, 2 * ps, 3 * ps);
+      body.fillStyle(0xFF0000, 0.9);
+      body.fillRect(5 * ps, 6 * ps, 2 * ps, 2 * ps);
+      body.fillRect(9 * ps, 6 * ps, 2 * ps, 2 * ps);
+      body.fillStyle(0xFF4444, 0.4);
+      body.fillRect(5 * ps, 5 * ps, 2 * ps, 1 * ps);
+      body.fillRect(9 * ps, 5 * ps, 2 * ps, 1 * ps);
+      body.fillStyle(0xFF0000, 0.3);
+      body.fillRect(6 * ps, 9 * ps, 4 * ps, 2 * ps);
+      body.fillStyle(0x000000, 0.6);
+      body.fillRect(7 * ps, 10 * ps, 2 * ps, 1 * ps);
+    } else if (typeIdx === 1) {
+      // Lost Soul
+      body.fillStyle(0x8888AA, 0.5);
+      body.fillRect(5 * ps, 1 * ps, 6 * ps, 4 * ps);
+      body.fillRect(4 * ps, 3 * ps, 8 * ps, 6 * ps);
+      body.fillRect(3 * ps, 5 * ps, 10 * ps, 4 * ps);
+      body.fillRect(3 * ps, 9 * ps, 3 * ps, 4 * ps);
+      body.fillRect(7 * ps, 10 * ps, 2 * ps, 3 * ps);
+      body.fillRect(10 * ps, 9 * ps, 3 * ps, 4 * ps);
+      body.fillStyle(0x000000, 0.9);
+      body.fillRect(5 * ps, 3 * ps, 3 * ps, 3 * ps);
+      body.fillRect(9 * ps, 3 * ps, 3 * ps, 3 * ps);
+      body.fillStyle(0x4444FF, 0.3);
+      body.fillRect(6 * ps, 4 * ps, 1 * ps, 1 * ps);
+      body.fillRect(10 * ps, 4 * ps, 1 * ps, 1 * ps);
+      body.fillStyle(0x000000, 0.8);
+      body.fillRect(7 * ps, 7 * ps, 3 * ps, 2 * ps);
+      body.fillStyle(0xAAAACC, 0.2);
+      body.fillRect(5 * ps, 2 * ps, 2 * ps, 2 * ps);
+    } else if (typeIdx === 2) {
+      // Flesh Golem
+      body.fillStyle(0x8B4040, 0.9);
+      body.fillRect(3 * ps, 3 * ps, 10 * ps, 10 * ps);
+      body.fillRect(2 * ps, 5 * ps, 12 * ps, 6 * ps);
+      body.fillRect(1 * ps, 7 * ps, 14 * ps, 4 * ps);
+      body.fillStyle(0xAA5050, 0.6);
+      body.fillRect(4 * ps, 4 * ps, 3 * ps, 3 * ps);
+      body.fillRect(9 * ps, 6 * ps, 3 * ps, 2 * ps);
+      body.fillRect(5 * ps, 9 * ps, 4 * ps, 2 * ps);
+      body.fillStyle(0xD4C5B0, 0.7);
+      body.fillRect(7 * ps, 5 * ps, 2 * ps, 4 * ps);
+      body.fillRect(11 * ps, 7 * ps, 2 * ps, 3 * ps);
+      body.fillStyle(0x281808, 0.6);
+      body.fillRect(6 * ps, 7 * ps, 4 * ps, 1 * ps);
+      body.fillRect(6 * ps, 9 * ps, 4 * ps, 1 * ps);
+      body.fillRect(7 * ps, 7 * ps, 1 * ps, 3 * ps);
+      body.fillRect(9 * ps, 7 * ps, 1 * ps, 3 * ps);
+      body.fillStyle(0xFFFF00, 0.8);
+      body.fillRect(4 * ps, 4 * ps, 3 * ps, 2 * ps);
+      body.fillRect(10 * ps, 5 * ps, 2 * ps, 2 * ps);
+      body.fillStyle(0x000000, 0.9);
+      body.fillRect(5 * ps, 4 * ps, 1 * ps, 2 * ps);
+      body.fillRect(10 * ps, 5 * ps, 1 * ps, 2 * ps);
+    } else if (typeIdx === 3) {
+      // Void Stalker
+      body.fillStyle(0x1A0A2A, 0.95);
+      body.fillRect(6 * ps, 0 * ps, 4 * ps, 3 * ps);
+      body.fillRect(5 * ps, 3 * ps, 6 * ps, 8 * ps);
+      body.fillRect(4 * ps, 5 * ps, 8 * ps, 4 * ps);
+      body.fillRect(3 * ps, 7 * ps, 10 * ps, 5 * ps);
+      body.fillRect(2 * ps, 10 * ps, 12 * ps, 3 * ps);
+      body.fillStyle(0x2A1A3A, 0.5);
+      body.fillRect(6 * ps, 4 * ps, 4 * ps, 6 * ps);
+      body.fillStyle(0xAA00FF, 0.9);
+      body.fillRect(6 * ps, 1 * ps, 2 * ps, 2 * ps);
+      body.fillRect(9 * ps, 1 * ps, 2 * ps, 2 * ps);
+      body.fillStyle(0xDD44FF, 0.4);
+      body.fillRect(6 * ps, 0 * ps, 2 * ps, 1 * ps);
+      body.fillRect(9 * ps, 0 * ps, 2 * ps, 1 * ps);
+      body.fillStyle(0x8800CC, 0.3);
+      body.fillRect(2 * ps, 11 * ps, 2 * ps, 2 * ps);
+      body.fillRect(12 * ps, 12 * ps, 2 * ps, 1 * ps);
+    } else {
+      // Bone Horror
+      body.fillStyle(0xD4C5B0, 0.9);
+      body.fillRect(5 * ps, 0 * ps, 6 * ps, 4 * ps);
+      body.fillRect(4 * ps, 1 * ps, 8 * ps, 3 * ps);
+      body.fillStyle(0x000000, 0.9);
+      body.fillRect(5 * ps, 1 * ps, 2 * ps, 2 * ps);
+      body.fillRect(9 * ps, 1 * ps, 2 * ps, 2 * ps);
+      body.fillStyle(0xFF0000, 0.4);
+      body.fillRect(6 * ps, 2 * ps, 1 * ps, 1 * ps);
+      body.fillRect(10 * ps, 2 * ps, 1 * ps, 1 * ps);
+      body.fillStyle(0xB8A890, 0.8);
+      body.fillRect(5 * ps, 3 * ps, 6 * ps, 1 * ps);
+      body.fillStyle(0xFFFFFF, 0.7);
+      body.fillRect(6 * ps, 3 * ps, 1 * ps, 1 * ps);
+      body.fillRect(8 * ps, 3 * ps, 1 * ps, 1 * ps);
+      body.fillRect(10 * ps, 3 * ps, 1 * ps, 1 * ps);
+      body.fillStyle(0xD4C5B0, 0.8);
+      body.fillRect(5 * ps, 4 * ps, 6 * ps, 1 * ps);
+      body.fillRect(4 * ps, 5 * ps, 8 * ps, 1 * ps);
+      body.fillRect(5 * ps, 6 * ps, 6 * ps, 1 * ps);
+      body.fillRect(4 * ps, 7 * ps, 8 * ps, 1 * ps);
+      body.fillRect(5 * ps, 8 * ps, 6 * ps, 1 * ps);
+      body.fillRect(7 * ps, 4 * ps, 2 * ps, 6 * ps);
+      body.fillRect(3 * ps, 5 * ps, 2 * ps, 1 * ps);
+      body.fillRect(11 * ps, 5 * ps, 2 * ps, 1 * ps);
+      body.fillRect(2 * ps, 6 * ps, 2 * ps, 1 * ps);
+      body.fillRect(12 * ps, 6 * ps, 2 * ps, 1 * ps);
+      body.fillRect(1 * ps, 7 * ps, 2 * ps, 1 * ps);
+      body.fillRect(13 * ps, 7 * ps, 2 * ps, 1 * ps);
+      body.fillRect(5 * ps, 9 * ps, 2 * ps, 4 * ps);
+      body.fillRect(9 * ps, 9 * ps, 2 * ps, 4 * ps);
+      body.fillRect(4 * ps, 13 * ps, 3 * ps, 1 * ps);
+      body.fillRect(9 * ps, 13 * ps, 3 * ps, 1 * ps);
+      body.fillStyle(0x8A7A6A, 0.4);
+      body.fillRect(4 * ps, 0 * ps, 1 * ps, 4 * ps);
+      body.fillRect(11 * ps, 0 * ps, 1 * ps, 4 * ps);
+    }
+
+    body.setPosition(-8, -8);
     monster.add(body);
 
     const hpBg = this.add.rectangle(0, -12, 14, 2, 0x000000, 0.5);
