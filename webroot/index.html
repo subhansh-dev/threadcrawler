@@ -11,14 +11,14 @@
     *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
 
     :root {
-      --bg: #1A1028;
-      --bg-card: #221438;
-      --bg-card2: #2A1A44;
-      --border: #3A2A5A;
-      --border-light: #4A3A6A;
-      --text: #E8D8F8;
-      --text-dim: #A090C0;
-      --text-muted: #6A5A88;
+      --bg: #0A0A0A;
+      --bg-card: #141414;
+      --bg-card2: #1C1C1C;
+      --border: #2A2A2A;
+      --border-light: #3A3A3A;
+      --text: #C8C8A8;
+      --text-dim: #888868;
+      --text-muted: #585840;
       --pink: #E87898;
       --purple: #A882F7;
       --blue: #3890F8;
@@ -26,6 +26,11 @@
       --red: #E83838;
       --yellow: #F8D838;
       --gold: #F8B800;
+      /* DMG-01 green palette */
+      --gb-light: #9BBC0F;
+      --gb-mid: #8BAC0F;
+      --gb-dark: #306230;
+      --gb-darkest: #0F380F;
       --gb-body: #C4CFA1;
       --gb-body-light: #D4DFAE;
       --gb-body-dark: #A4AF84;
@@ -35,20 +40,140 @@
       --gb-bezel-dark: #4A4A42;
     }
 
-    html, body { height: 100%; }
+    html { height: 100%; }
 
     body {
       font-family: 'VT323', monospace;
-      background: var(--bg);
-      background-image:
-        radial-gradient(ellipse at 30% 20%, rgba(168,130,247,0.08) 0%, transparent 50%),
-        radial-gradient(ellipse at 70% 80%, rgba(232,120,152,0.05) 0%, transparent 50%);
+      background: #0A0A0A;
       color: var(--text);
       min-height: 100vh;
       display: flex;
       flex-direction: column;
       align-items: center;
       image-rendering: pixelated;
+      position: relative;
+      overflow-x: hidden;
+    }
+
+    /* ═══ RETRO GRID BACKGROUND ═══ */
+    body::before {
+      content: '';
+      position: fixed;
+      inset: 0;
+      z-index: 0;
+      background:
+        /* Pixel grid */
+        repeating-linear-gradient(
+          0deg,
+          transparent,
+          transparent 3px,
+          rgba(255,255,255,0.008) 3px,
+          rgba(255,255,255,0.008) 4px
+        ),
+        repeating-linear-gradient(
+          90deg,
+          transparent,
+          transparent 3px,
+          rgba(255,255,255,0.008) 3px,
+          rgba(255,255,255,0.008) 4px
+        ),
+        /* DMG green glow spots */
+        radial-gradient(ellipse at 50% 40%, rgba(155,188,15,0.04) 0%, transparent 60%),
+        radial-gradient(ellipse at 20% 70%, rgba(48,98,48,0.03) 0%, transparent 40%),
+        radial-gradient(ellipse at 80% 20%, rgba(155,188,15,0.02) 0%, transparent 40%);
+      pointer-events: none;
+    }
+
+    /* ═══ SCANLINE OVERLAY ═══ */
+    body::after {
+      content: '';
+      position: fixed;
+      inset: 0;
+      z-index: 999;
+      background: repeating-linear-gradient(
+        0deg,
+        transparent,
+        transparent 2px,
+        rgba(0,0,0,0.03) 2px,
+        rgba(0,0,0,0.03) 4px
+      );
+      pointer-events: none;
+    }
+
+    /* ═══ PIXEL DECORATIONS ═══ */
+    .pixel-deco {
+      position: fixed;
+      z-index: 0;
+      width: 4px;
+      height: 4px;
+      opacity: 0.15;
+      pointer-events: none;
+    }
+
+    .pixel-deco-tl {
+      top: 20px;
+      left: 20px;
+      box-shadow:
+        0px 0px 0 2px var(--gb-light),
+        6px 0px 0 2px var(--gb-light),
+        12px 0px 0 2px var(--gb-light),
+        0px 6px 0 2px var(--gb-light),
+        6px 6px 0 2px var(--gb-dark),
+        12px 6px 0 2px var(--gb-light),
+        0px 12px 0 2px var(--gb-light),
+        6px 12px 0 2px var(--gb-light),
+        12px 12px 0 2px var(--gb-light);
+    }
+
+    .pixel-deco-tr {
+      top: 20px;
+      right: 20px;
+      box-shadow:
+        0px 0px 0 2px var(--gb-light),
+        6px 0px 0 2px var(--gb-light),
+        12px 0px 0 2px var(--gb-light),
+        0px 6px 0 2px var(--gb-light),
+        6px 6px 0 2px var(--gb-darkest),
+        12px 6px 0 2px var(--gb-light),
+        0px 12px 0 2px var(--gb-light),
+        6px 12px 0 2px var(--gb-light),
+        12px 12px 0 2px var(--gb-light);
+    }
+
+    .pixel-deco-bl {
+      bottom: 20px;
+      left: 20px;
+      box-shadow:
+        0px 0px 0 2px var(--gb-light),
+        6px 0px 0 2px var(--gb-light),
+        12px 0px 0 2px var(--gb-light),
+        0px 6px 0 2px var(--gb-light),
+        6px 6px 0 2px var(--gb-darkest),
+        12px 6px 0 2px var(--gb-light),
+        0px 12px 0 2px var(--gb-light),
+        6px 12px 0 2px var(--gb-light),
+        12px 12px 0 2px var(--gb-light);
+    }
+
+    .pixel-deco-br {
+      bottom: 20px;
+      right: 20px;
+      box-shadow:
+        0px 0px 0 2px var(--gb-light),
+        6px 0px 0 2px var(--gb-light),
+        12px 0px 0 2px var(--gb-light),
+        0px 6px 0 2px var(--gb-light),
+        6px 6px 0 2px var(--gb-light),
+        12px 6px 0 2px var(--gb-light),
+        0px 12px 0 2px var(--gb-light),
+        6px 12px 0 2px var(--gb-light),
+        12px 12px 0 2px var(--gb-light);
+    }
+
+    /* ═══ MAIN CONTENT ═══ */
+    .app {
+      position: relative;
+      z-index: 1;
     }
 
     /* ═══ PIXEL BORDER UTILITY ═══ */
@@ -497,18 +622,25 @@
       gap: 6px;
       margin-top: 8px;
       flex-shrink: 0;
+      padding: 8px 10px;
+      background: #111111;
+      border: 2px solid #222;
+      border-radius: 8px;
+      box-shadow: 3px 3px 0 rgba(0,0,0,0.4);
     }
 
     .web-btn {
       font-family: 'Press Start 2P', monospace;
       font-size: 7px;
       padding: 7px 14px;
-      background: var(--bg-card2);
+      background: #181818;
       color: var(--text-dim);
-      border: 2px solid var(--border);
+      border: 2px solid #2A2A2A;
       border-radius: 6px;
       cursor: pointer;
-      box-shadow: inset 1px 1px 0 rgba(255,255,255,0.04), 3px 3px 0 rgba(0,0,0,0.2);
+      box-shadow:
+        inset 1px 1px 0 rgba(255,255,255,0.03),
+        3px 3px 0 rgba(0,0,0,0.4);
       transition: all 0.1s;
     }
 
@@ -527,11 +659,14 @@
 
     .panel {
       flex: 1;
-      background: var(--bg-card);
-      border: 2px solid var(--border);
+      background: #111111;
+      border: 2px solid #222;
       border-radius: 8px;
       padding: 8px 10px;
-      box-shadow: inset 1px 1px 0 rgba(255,255,255,0.03), 3px 3px 0 rgba(0,0,0,0.2);
+      box-shadow:
+        inset 1px 1px 0 rgba(255,255,255,0.02),
+        3px 3px 0 rgba(0,0,0,0.4),
+        0 0 20px rgba(155,188,15,0.02);
     }
 
     .panel-title {
@@ -595,6 +730,14 @@
   </style>
 </head>
 <body>
+
+  <div class="app">
+
+  <!-- ═══ DECORATIVE PIXEL CORNERS ═══ -->
+  <div class="pixel-deco pixel-deco-tl"></div>
+  <div class="pixel-deco pixel-deco-tr"></div>
+  <div class="pixel-deco pixel-deco-bl"></div>
+  <div class="pixel-deco pixel-deco-br"></div>
 
   <!-- ═══ GAMEBOY SHELL ═══ -->
   <div class="gameboy">
@@ -812,5 +955,6 @@
       el.scrollTop = el.scrollHeight;
     }
   </script>
+  </div><!-- /.app -->
 </body>
 </html>
