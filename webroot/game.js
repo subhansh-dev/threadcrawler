@@ -2050,18 +2050,13 @@ class GameScene extends Phaser.Scene {
 }
 
 // ─── PHASER CONFIG ───────────────────────────────────────────
-const GAME_W = 480;
-const GAME_H = 340;
-
 const config = {
   type: Phaser.AUTO,
   parent: 'game-container',
-  width: GAME_W,
-  height: GAME_H,
   backgroundColor: '#000000',
   physics: { default: 'arcade', arcade: { gravity: { y: 0 }, debug: false } },
   scene: [BootScene, GameScene],
-  scale: { mode: Phaser.Scale.FIT, autoCenter: Phaser.Scale.CENTER_BOTH },
+  scale: { mode: Phaser.Scale.RESIZE, width: '100%', height: '100%' },
   pixelArt: true,
   antialias: false,
 };
