@@ -337,6 +337,15 @@ function addCombo() {
   if (COMBO_THRESHOLDS.includes(combo.count)) {
     SFX.levelup();
     state.log.push(`⚡ ${combo.count}x COMBO!`);
+    // Visual flash at milestones
+    if (combo.count >= 8) {
+      const screenFlash = document.getElementById('screen-flash');
+      if (screenFlash) {
+        screenFlash.style.background = combo.count >= 12 ? '#F8D838' : '#A882F7';
+        screenFlash.style.opacity = '0.3';
+        setTimeout(() => { screenFlash.style.opacity = '0'; }, 150);
+      }
+    }
   }
 }
 
@@ -438,6 +447,19 @@ function loadPersistentData() {
     persistentGold = d.gold || 0;
     upgradeLevels = d.upgrades || {};
     unlockedAchievements = new Set(d.achievements || []);
+    // Restore weapon from save
+    if (d.weapon) {
+      state.player.weapon = d.weapon;
+    }
+    // Restore best floor
+    if (d.bestFloor) {
+      localStorage.setItem('threadcrawler_best_floor', d.bestFloor);
+    }
+    // Boss rush unlock
+    if (d.bossRushUnlocked) {
+      state.bossRushUnlocked = true;
+    }
+    updateBossRushButton();
   } catch(e) {}
 }
 
@@ -448,8 +470,18 @@ function savePersistentData() {
       upgrades: upgradeLevels,
       achievements: [...unlockedAchievements],
       hasCompass: state.player.hasCompass || false,
+      weapon: state.player.weapon || null,
+      bestFloor: Math.max(state.depth + 1, parseInt(localStorage.getItem('threadcrawler_best_floor') || '1')),
+      bossRushUnlocked: state.bossRushUnlocked,
     }));
   } catch(e) {}
+}
+
+function updateBossRushButton() {
+  const btn = document.getElementById('boss-rush-btn');
+  if (btn) {
+    btn.style.display = state.bossRushUnlocked ? 'block' : 'none';
+  }
 }
 
 function buyUpgrade(id) {
@@ -474,8 +506,273 @@ function applyPersistentUpgrades() {
   });
 }
 
-// ─── DEVVIT CONNECTION ────────────────────────────────────────
-let devvitDungeon = null;
+// ─── THE VAULT (META-PROGRESSION SHOP) ──────────────────────
+const VAULT_ITEMS = [
+  { id: 'max_hp', icon: '♥', color: '#34D399' },
+  { id: 'attack', icon: '⚔', color: '#EF4444' },
+  { id: 'defense', icon: '🛡', color: '#3B82F6' },
+  { id: 'speed', icon: '»', color: '#FBBF24' },
+  { id: 'inv_size', icon: '◇', color: '#A882F7' },
+];
+
+function openVault() {
+  loadPersistentData();
+  renderVault();
+  document.getElementById('title-screen').classList.remove('show');
+  document.getElementById('vault-screen').classList.add('show');
+}
+
+function renderVault() {
+  const goldEl = document.getElementById('vault-gold-amount');
+  const gridEl = document.getElementById('vault-grid');
+  const statsEl = document.getElementById('vault-stats');
+  if (!goldEl || !gridEl) return;
+
+  goldEl.textContent = persistentGold;
+
+  // Stats
+  if (statsEl) {
+    const totalLevels = Object.values(upgradeLevels).reduce((a, b) => a + b, 0);
+    statsEl.innerHTML = `Total upgrades: ${totalLevels} | Best run: Floor ${localStorage.getItem('threadcrawler_best_floor') || 1}`;
+  }
+
+  gridEl.innerHTML = '';
+  VAULT_ITEMS.forEach(vi => {
+    const upg = UPGRADES[vi.id];
+    if (!upg) return;
+    const level = upgradeLevels[vi.id] || 0;
+    const cost = Math.floor(upg.baseCost * Math.pow(upg.costMult, level));
+    const canAfford = persistentGold >= cost;
+
+    const item = document.createElement('div');
+    item.className = `vault-item ${canAfford ? '' : 'cant-afford'}`;
+    item.innerHTML = `
+      <div class="vault-item-name">${upg.name}</div>
+      <div class="vault-item-desc">${upg.desc}</div>
+      <div class="vault-item-level">Lv.${level}</div>
+      <div class="vault-item-cost ${canAfford ? '' : 'too-expensive'}">${cost}G</div>
+    `;
+    if (canAfford) {
+      item.onclick = () => {
+        persistentGold -= cost;
+        upgradeLevels[vi.id] = level + 1;
+        savePersistentData();
+        SFX.power();
+        renderVault();
+      };
+    }
+    gridEl.appendChild(item);
+  });
+}
+
+function vaultStartGame() {
+  document.getElementById('vault-screen').classList.remove('show');
+  startGame();
+}
+
+function openVaultFromGameover() {
+  document.getElementById('gameover-screen').classList.remove('show');
+  openVault();
+}
+
+// ─── MID-RUN SHOP ──────────────────────────────────────────────
+const RUN_SHOP_ITEMS = [
+  { id: 'atk_boost', name: 'ATK Boost', desc: '+5 ATK for 60s', cost: 30, icon: '⚔', color: '#EF4444',
+    buy: () => { addTempBuff('atk', 5, 60, 'ATK Boost'); } },
+  { id: 'def_boost', name: 'DEF Boost', desc: '+3 DEF for 60s', cost: 25, icon: '🛡', color: '#3B82F6',
+    buy: () => { addTempBuff('def', 3, 60, 'DEF Boost'); } },
+  { id: 'speed_boost', name: 'Speed Boost', desc: '+30% speed for 45s', cost: 20, icon: '⚡', color: '#22D3EE',
+    buy: () => { addTempBuff('speed', 0.3, 45, 'Speed Boost'); } },
+  { id: 'crit_boost', name: 'Crit Boost', desc: '+15% crit for 60s', cost: 35, icon: '💥', color: '#F8B800',
+    buy: () => { addTempBuff('crit', 0.15, 60, 'Crit Boost'); } },
+  { id: 'heal_full', name: 'Full Heal', desc: 'Restore all HP', cost: 50, icon: '♥', color: '#34D399',
+    buy: () => { state.player.hp = state.player.maxHp; } },
+  { id: 'max_hp_up', name: 'Max HP +20', desc: 'Permanent +20 Max HP', cost: 80, icon: '♥+', color: '#22C55E',
+    buy: () => { state.player.maxHp += 20; state.player.hp += 20; } },
+  { id: 'bomb', name: 'Bomb', desc: 'AoE damage to all nearby', cost: 40, icon: '●', color: '#EF4444',
+    buy: () => { addToInventory('bomb'); } },
+  { id: 'mega_potion', name: 'Mega Potion', desc: 'Restore 80 HP item', cost: 30, icon: '♥', color: '#22C55E',
+    buy: () => { addToInventory('mega_potion'); } },
+];
+
+function openRunShop() {
+  const goldEl = document.getElementById('run-shop-gold');
+  const gridEl = document.getElementById('run-shop-items');
+  if (!goldEl || !gridEl) return;
+  goldEl.textContent = state.player.gold;
+  gridEl.innerHTML = '';
+  RUN_SHOP_ITEMS.forEach(item => {
+    const canAfford = state.player.gold >= item.cost;
+    const el = document.createElement('div');
+    el.className = `vault-item ${canAfford ? '' : 'cant-afford'}`;
+    el.innerHTML = `
+      <div class="vault-item-name">${item.icon} ${item.name}</div>
+      <div class="vault-item-desc">${item.desc}</div>
+      <div class="vault-item-cost ${canAfford ? '' : 'too-expensive'}">${item.cost}G</div>
+    `;
+    if (canAfford) {
+      el.onclick = () => {
+        state.player.gold -= item.cost;
+        item.buy();
+        SFX.chest();
+        state.log.push(`Bought: ${item.name}`);
+        showToast(`Bought ${item.name}!`, 'success', 1500, item.icon);
+        openRunShop(); // refresh
+      };
+    }
+    gridEl.appendChild(el);
+  });
+  document.getElementById('shop-overlay').classList.add('show');
+}
+
+function closeRunShop() {
+  document.getElementById('shop-overlay').classList.remove('show');
+}
+
+// Spawn merchant on random floors
+function checkMerchantSpawn() {
+  // 15% chance per floor after floor 2
+  if (state.depth >= 2 && Math.random() < 0.15) {
+    state.log.push('🏪 A Wandering Merchant appears!');
+    showToast('Merchant nearby! Press K to shop', 'info', 3000, '🏪');
+    return true;
+  }
+  return false;
+}
+
+// ─── FLOOR MODIFIERS ──────────────────────────────────────────
+const FLOOR_MODIFIERS = [
+  { id: 'glass_cannon', name: 'Glass Cannon', desc: '2x ATK, -30% Max HP', icon: '⚔', color: '#EF4444',
+    apply: (p) => { p.atk *= 2; p.maxHp = Math.floor(p.maxHp * 0.7); p.hp = Math.min(p.hp, p.maxHp); } },
+  { id: 'gold_rush', name: 'Gold Rush', desc: '2x Gold drops', icon: '💰', color: '#F8B800',
+    apply: () => {} }, // handled in gold calculation
+  { id: 'monster_surge', name: 'Monster Surge', desc: '2x Enemies, +100% XP', icon: '☠', color: '#E83838',
+    apply: () => {} }, // handled in spawn count
+  { id: 'no_heal', name: 'Cursed Floor', desc: 'Healing items disabled', icon: '💀', color: '#6B21A8',
+    apply: () => {} }, // handled in triggerHeal
+  { id: 'speed_demon', name: 'Speed Demon', desc: '+50% speed, +20% ATK', icon: '⚡', color: '#22D3EE',
+    apply: (p) => { p.speedMult += 0.5; p.atk = Math.floor(p.atk * 1.2); } },
+  { id: 'tank', name: 'Iron Wall', desc: '+3 DEF, -20% speed', icon: '🛡', color: '#3B82F6',
+    apply: (p) => { p.def += 3; p.speedMult = Math.max(0.5, p.speedMult - 0.2); } },
+  { id: 'greed', name: 'Greed Floor', desc: '2x chest gold, +50% enemies', icon: '💎', color: '#FBBF24',
+    apply: () => {} }, // handled in spawn + gold
+  { id: 'glass', name: 'Fragile', desc: '-40% Max HP, +40% ATK', icon: '💔', color: '#E87898',
+    apply: (p) => { p.maxHp = Math.floor(p.maxHp * 0.6); p.hp = Math.min(p.hp, p.maxHp); p.atk = Math.floor(p.atk * 1.4); } },
+];
+
+function rollFloorModifier() {
+  return FLOOR_MODIFIERS[Math.floor(Math.random() * FLOOR_MODIFIERS.length)];
+}
+
+function applyFloorModifier(modifier) {
+  if (!modifier) return;
+  modifier.apply(state.player);
+}
+
+function getFloorGoldMultiplier() {
+  if (!state.floorModifier) return 1;
+  if (state.floorModifier.id === 'gold_rush' || state.floorModifier.id === 'greed') return 2;
+  return 1;
+}
+
+function getFloorXpMultiplier() {
+  if (!state.floorModifier) return 1;
+  if (state.floorModifier.id === 'monster_surge') return 2;
+  return 1;
+}
+
+function getFloorEnemyMultiplier() {
+  if (!state.floorModifier) return 1;
+  if (state.floorModifier.id === 'monster_surge' || state.floorModifier.id === 'greed') return 2;
+  return 1;
+}
+
+function isFloorHealDisabled() {
+  return state.floorModifier && state.floorModifier.id === 'no_heal';
+}
+
+// ─── SYNERGY SYSTEM ────────────────────────────────────────────
+const SYNERGIES = [
+  { id: 'inferno', name: 'Inferno', requires: ['fire_staff', 'bomb'], desc: 'Bombs leave fire trails',
+    apply: (scene) => { state.player._inferno = true; } },
+  { id: 'frost_sprint', name: 'Frost Sprint', requires: ['ice_bow', 'speed_boots'], desc: 'Leave ice trail that slows',
+    apply: (scene) => { state.player._frostSprint = true; } },
+  { id: 'shadow_step', name: 'Shadow Step', requires: ['shadow_dagger', 'compass'], desc: 'Teleport to exit (SHIFT+E)',
+    apply: (scene) => { state.player._shadowStep = true; } },
+  { id: 'holy_guardian', name: 'Holy Guardian', requires: ['holy_lance', 'shield_item'], desc: 'Shield regenerates 1 block per kill',
+    apply: (scene) => { state.player._holyGuardian = true; } },
+];
+
+function checkSynergies() {
+  if (!state.player) return;
+  const weaponId = state.player.weapon?.id;
+  const hasItem = (id) => (state.player.inventory || []).some(inv => inv?.id === id);
+  SYNERGIES.forEach(s => {
+    const hasWeapon = weaponId === s.requires[0] || weaponId === s.requires[1];
+    const hasOther = hasItem(s.requires[0]) || hasItem(s.requires[1]);
+    if (hasWeapon && hasOther && !state.player['_' + s.id]) {
+      s.apply(this);
+      state.synergies.push(s.id);
+      state.log.push(`⚡ SYNERGY: ${s.name}! ${s.desc}`);
+      showToast(`${s.name} Synergy!`, 'legendary', 3000, '⚡');
+      SFX.levelup();
+    }
+  });
+}
+
+// ─── TEMP BUFFS (from mid-run shop) ────────────────────────────
+function addTempBuff(type, value, duration, name) {
+  state.tempBuffs.push({ type, value, remaining: duration, name });
+  switch(type) {
+    case 'atk': state.player.atk += value; break;
+    case 'def': state.player.def += value; break;
+    case 'speed': state.player.speedMult += value; break;
+    case 'crit': state.player._critBonus = (state.player._critBonus || 0) + value; break;
+  }
+}
+
+function updateTempBuffs(dt) {
+  if (!state.tempBuffs || !state.player) return;
+  for (let i = state.tempBuffs.length - 1; i >= 0; i--) {
+    const buff = state.tempBuffs[i];
+    buff.remaining -= dt;
+    if (buff.remaining <= 0) {
+      switch(buff.type) {
+        case 'atk': state.player.atk -= buff.value; break;
+        case 'def': state.player.def -= buff.value; break;
+        case 'speed': state.player.speedMult -= buff.value; break;
+        case 'crit': state.player._critBonus = Math.max(0, (state.player._critBonus || 0) - buff.value); break;
+      }
+      state.log.push(`Buff expired: ${buff.name}`);
+      state.tempBuffs.splice(i, 1);
+    }
+  }
+}
+
+// ─── BOSS RUSH MODE ────────────────────────────────────────────
+const BOSS_RUSH_BOSSES = [
+  { name: 'The Thread Wraith', color: 0xEF4444, hp: 200, speed: 35, damage: 22, size: 20 },
+  { name: 'Hydra of Forgotten Replies', color: 0xA855F7, hp: 350, speed: 40, damage: 28, size: 24 },
+  { name: 'The Original Poster', color: 0xFBBF24, hp: 500, speed: 45, damage: 38, size: 28 },
+];
+
+function startBossRush() {
+  state.bossRushMode = true;
+  state.bossRushUnlocked = true;
+  savePersistentData();
+  startGame();
+}
+
+function getBossRushBoss(floorIndex) {
+  const boss = BOSS_RUSH_BOSSES[Math.min(floorIndex, BOSS_RUSH_BOSSES.length - 1)];
+  const scale = Math.pow(1.5, floorIndex);
+  return {
+    ...boss,
+    hp: Math.floor(boss.hp * scale),
+    damage: Math.floor(boss.damage * (1 + floorIndex * 0.2)),
+    speed: boss.speed + floorIndex * 5,
+  };
+}
 window.addEventListener('message', (e) => {
   if (e.data && e.data.type === 'devvit_dungeon') {
     devvitDungeon = e.data.dungeon;
@@ -501,6 +798,7 @@ let state = {
     inventory: [], maxInventory: 12, equipped: null,
     speedMult: 1, shield: 0,
     statusEffects: [],
+    weapon: null, hasCompass: false, keys: 0,
   },
   dungeon: null,
   depth: 0,
@@ -513,12 +811,36 @@ let state = {
   floorTheme: 0,
   transitionAlpha: 0,
   isTransitioning: false,
+  floorEnemiesTotal: 0,
+  floorEnemiesKilled: 0,
+  riskTokens: 0,
+  riskMultiplier: 1,
+  floorModifier: null,
+  synergies: [],
+  tempBuffs: [],
+  bossRushUnlocked: false,
+  bossRushMode: false,
+  // Floor pressure system
+  floorTimer: 0,           // seconds remaining on current floor
+  floorTimerMax: 0,        // max timer for this floor
+  collapsing: false,       // floor is collapsing — damage over time
+  exitLocked: true,        // exit locked until 70% enemies killed
+  exitUnlockThreshold: 0.7,
+  waveNumber: 0,           // current enemy wave number
+  waveTimer: 0,            // time until next wave spawns
+  waveInterval: 15,        // seconds between waves
+  waveStrength: 1,         // multiplier for wave enemy stats
 };
 
 // Community multiplier: scales rewards based on comment engagement
 // 0 comments = 1x, 20 = 1.2x, 40 = 1.4x, 100 = 2x, 200 = 3x
 function getCommunityMultiplier() {
   return 1 + (state.commentCount / 20) * 0.2;
+}
+
+// Risk multiplier from refusing heals
+function getRiskMultiplier() {
+  return 1 + state.riskTokens * 0.15; // +15% per risk token, max ~3.5x at 16 tokens
 }
 
 // ─── POKEMON GAMEBOY THEMES ─────────────────────────────────
@@ -669,20 +991,7 @@ function generateDungeon(seed, depth) {
   // ─── STEP 4: Place features ───
   const spawn = rooms[0];
   const exit = rooms[rooms.length - 1];
-  map[spawn.cy][spawn.cx] = T.SPAWN;
-  map[exit.cy][exit.cx] = T.EXIT;
-
-  // Safety: ensure exit is on a walkable tile — search nearby if not
-  if (map[exit.cy][exit.cx] !== T.EXIT) {
-    for (let dy = -3; dy <= 3; dy++) for (let dx = -3; dx <= 3; dx++) {
-      const ny = exit.cy + dy, nx = exit.cx + dx;
-      if (ny > 0 && ny < MAP_H - 1 && nx > 0 && nx < MAP_W - 1 && map[ny][nx] === T.FLOOR) {
-        map[ny][nx] = T.EXIT;
-        exit.cx = nx; exit.cy = ny;
-        break;
-      }
-    }
-  }
+  // Spawn and exit placed in STEP 8 (after all decorations)
 
   // ─── STEP 5: Room decoration ───
   rooms.forEach((room, idx) => {
@@ -820,7 +1129,60 @@ function generateDungeon(seed, depth) {
     }
   }
 
-  // ─── STEP 8: Border walls (ensure edges are solid) ───
+  // ─── STEP 8: Place exit and spawn (AFTER all decorations/rooms) ───
+  // Ensures nothing overwrites these critical tiles
+  map[exit.cy][exit.cx] = T.EXIT;
+
+  // Safety: if exit was overwritten by decoration/water, find nearby walkable tile
+  if (map[exit.cy][exit.cx] !== T.EXIT) {
+    for (let dy = -3; dy <= 3; dy++) for (let dx = -3; dx <= 3; dx++) {
+      const ny = exit.cy + dy, nx = exit.cx + dx;
+      if (ny > 0 && ny < MAP_H - 1 && nx > 0 && nx < MAP_W - 1) {
+        const t = map[ny][nx];
+        if (t === T.FLOOR || t === T.FLOOR_ALT || t === T.PATH) {
+          map[ny][nx] = T.EXIT;
+          exit.cx = nx; exit.cy = ny;
+          break;
+        }
+      }
+    }
+  }
+
+  // Final guarantee: exit MUST be walkable
+  if (map[exit.cy][exit.cx] !== T.EXIT) {
+    const lastRoom = rooms[rooms.length - 1];
+    for (let ry = lastRoom.y; ry < lastRoom.y + lastRoom.h; ry++) {
+      for (let rx = lastRoom.x; rx < lastRoom.x + lastRoom.w; rx++) {
+        if (ry > 0 && ry < MAP_H - 1 && rx > 0 && rx < MAP_W - 1) {
+          const t = map[ry][rx];
+          if (t === T.FLOOR || t === T.FLOOR_ALT || t === T.PATH) {
+            map[ry][rx] = T.EXIT;
+            exit.cx = rx; exit.cy = ry;
+            break;
+          }
+        }
+      }
+      if (map[exit.cy][exit.cx] === T.EXIT) break;
+    }
+  }
+
+  // Spawn safety — ensure spawn is walkable
+  map[spawn.cy][spawn.cx] = T.SPAWN;
+  if (map[spawn.cy][spawn.cx] !== T.SPAWN) {
+    for (let dy = -3; dy <= 3; dy++) for (let dx = -3; dx <= 3; dx++) {
+      const ny = spawn.cy + dy, nx = spawn.cx + dx;
+      if (ny > 0 && ny < MAP_H - 1 && nx > 0 && nx < MAP_W - 1) {
+        const t = map[ny][nx];
+        if (t === T.FLOOR || t === T.FLOOR_ALT || t === T.PATH) {
+          map[ny][nx] = T.SPAWN;
+          spawn.cx = nx; spawn.cy = ny;
+          break;
+        }
+      }
+    }
+  }
+
+  // ─── STEP 9: Border walls (ensure edges are solid) ───
   for (let x = 0; x < MAP_W; x++) { map[0][x] = T.WALL; map[MAP_H - 1][x] = T.WALL; }
   for (let y = 0; y < MAP_H; y++) { map[y][0] = T.WALL; map[y][MAP_W - 1] = T.WALL; }
 
@@ -1414,12 +1776,18 @@ class GameScene extends Phaser.Scene {
 
     // ─── MONSTERS ───
     const cm = getCommunityMultiplier();
-    const monsterCount = Math.min(Math.floor((4 + state.depth * 1.5) * Math.sqrt(cm)), 14);
+    const em = getFloorEnemyMultiplier();
+    const monsterCount = Math.min(Math.floor((4 + state.depth * 1.5) * Math.sqrt(cm) * em), 20);
     for (let i = 0; i < monsterCount; i++) this.spawnMonster();
 
-    // Spawn boss on specific floors
-    const bossData = BOSSES.find(b => b.floor === state.depth);
-    if (bossData) this.spawnBoss(bossData);
+    // Spawn boss on specific floors (or all floors in boss rush)
+    if (state.bossRushMode) {
+      const rushBoss = getBossRushBoss(state.depth);
+      this.spawnBoss(rushBoss);
+    } else {
+      const bossData = BOSSES.find(b => b.floor === state.depth);
+      if (bossData) this.spawnBoss(bossData);
+    }
 
     // ─── PARTICLE POOL ───
     this.particles = new ParticlePool(this, 400);
@@ -1495,6 +1863,7 @@ class GameScene extends Phaser.Scene {
     this.iKey = this.input.keyboard.addKey('I');
     this.pKey = this.input.keyboard.addKey('P');
     this.mKey = this.input.keyboard.addKey('M');
+    this.kKey = this.input.keyboard.addKey('K');
 
     this.pKey.on('down', () => {
       gamePaused = !gamePaused;
@@ -1521,6 +1890,15 @@ class GameScene extends Phaser.Scene {
       }
     });
 
+    this.kKey.on('down', () => {
+      const shopEl = document.getElementById('shop-overlay');
+      if (shopEl && shopEl.classList.contains('show')) {
+        closeRunShop();
+      } else {
+        openRunShop();
+      }
+    });
+
     // ─── UI ───
     this.updateUI();
     this.addLog(`Floor ${state.depth + 1}: ${theme.name}`);
@@ -1533,11 +1911,12 @@ class GameScene extends Phaser.Scene {
       `FLOOR ${state.depth + 1}`,
       { fontFamily: 'Press Start 2P', fontSize: '14px', color: '#E87898', stroke: '#000', strokeThickness: 3 }
     ).setOrigin(0.5).setDepth(30).setAlpha(0);
+    const modifierText = state.floorModifier ? ` ${state.floorModifier.icon} ${state.floorModifier.name}` : '';
     const splashSub = this.add.text(
       this.cameras.main.scrollX + this.cameras.main.width / 2,
       this.cameras.main.scrollY + this.cameras.main.height / 2 + 2,
-      theme.name,
-      { fontFamily: 'VT323', fontSize: '16px', color: '#C8C8A8', stroke: '#000', strokeThickness: 2 }
+      `${theme.name}${modifierText}`,
+      { fontFamily: 'VT323', fontSize: '16px', color: state.floorModifier ? state.floorModifier.color : '#C8C8A8', stroke: '#000', strokeThickness: 2 }
     ).setOrigin(0.5).setDepth(30).setAlpha(0);
 
     // Fade in, hold, fade out
@@ -1742,6 +2121,7 @@ class GameScene extends Phaser.Scene {
 
     // ─── DODGE ROLL ───
     updateDodge(dt);
+    updateTempBuffs(dt);
     if (Phaser.Input.Keyboard.JustDown(this.shiftKey) && !dodgeState.rolling && dodgeState.charges > 0) {
       dodgeState.rolling = true;
       dodgeState.rollTimer = dodgeState.rollDuration;
@@ -1758,6 +2138,82 @@ class GameScene extends Phaser.Scene {
     // ─── COOLDOWNS ───
     if (this.interactionCooldown > 0) this.interactionCooldown -= dt;
     if (this.stepTimer > 0) this.stepTimer -= dt;
+
+    // ─── FLOOR PRESSURE: TIMER ───
+    if (!state.bossRushMode) {
+      state.floorTimer -= dt;
+      if (state.floorTimer <= 0 && !state.collapsing) {
+        state.collapsing = true;
+        state.floorTimer = 0;
+        showToast('FLOOR COLLAPSING!', 'warning', 3000, '💥');
+        this.addLog('💀 The floor is collapsing! ESCAPE NOW!');
+        SFX.jumpscare();
+        this.screenFX.shake(15);
+        this.screenFX.flash(0xEF4444, 500);
+      }
+      // Collapse damage every 0.5s
+      if (state.collapsing) {
+        this._collapseTimer = (this._collapseTimer || 0) + dt;
+        if (this._collapseTimer >= 0.5) {
+          this._collapseTimer = 0;
+          const collapseDmg = 5 + state.depth * 3;
+          this.damagePlayer(collapseDmg);
+          const sf = document.getElementById('screen-flash');
+          if (sf) {
+            sf.style.background = '#EF4444';
+            sf.style.opacity = '0.3';
+            setTimeout(() => { sf.style.opacity = '0'; }, 200);
+          }
+          this.screenFX.shake(8 + (1 - state.floorTimer / state.floorTimerMax) * 10);
+        }
+      }
+      // Time warning at 20% remaining
+      if (!state.collapsing && state.floorTimer <= state.floorTimerMax * 0.2 && state.floorTimer > 0) {
+        if (!this._timeWarned) {
+          this._timeWarned = true;
+          showToast(`HURRY! ${Math.ceil(state.floorTimer)}s left!`, 'warning', 1500, '⏰');
+          SFX.heartbeat();
+        }
+      }
+    }
+
+    // ─── FLOOR PRESSURE: EXIT LOCK ───
+    if (!state.bossRushMode && state.floorEnemiesTotal > 0 && state.dungeon) {
+      const killPct = state.floorEnemiesKilled / state.floorEnemiesTotal;
+      const wasLocked = state.exitLocked;
+      state.exitLocked = killPct < state.exitUnlockThreshold;
+      if (wasLocked && !state.exitLocked) {
+        showToast('EXIT UNLOCKED!', 'success', 2000, '🚪');
+        this.addLog('🚪 Exit unlocked! 70% of enemies defeated!');
+        SFX.exit();
+        this.screenFX.flash(0x48C848, 300);
+        // Kill the old LOCKED hint so "Press E" can appear
+        if (this.exitHint) { this.exitHint.destroy(); this.exitHint = null; }
+        for (let i = 0; i < 15; i++) {
+          this.particles.get(state.dungeon.exit.x * TILE + TILE/2, state.dungeon.exit.y * TILE + TILE/2,
+            (Math.random()-0.5)*60, (Math.random()-0.5)*60, 0x48C848, 2, 0.6);
+        }
+      }
+    }
+
+    // ─── FLOOR PRESSURE: ENEMY WAVES ───
+    if (!state.bossRushMode) {
+      state.waveTimer -= dt;
+      if (state.waveTimer <= 0) {
+        state.waveNumber++;
+        state.waveStrength += 0.15;
+        state.waveTimer = Math.max(8, state.waveInterval - state.depth * 0.5);
+        const waveCount = Math.min(2 + Math.floor(state.waveNumber * 0.5), 6);
+        for (let i = 0; i < waveCount; i++) {
+          this.spawnWaveEnemy();
+        }
+        this.addLog(`☠ Wave ${state.waveNumber}! ${waveCount} enemies (+${Math.round((state.waveStrength-1)*100)}% stronger)`);
+        showToast(`Wave ${state.waveNumber} incoming!`, 'warning', 1200, '☠');
+        SFX.monsterGrowl();
+        this.screenFX.shake(5);
+        this.screenFX.flash(0xEF4444, 150);
+      }
+    }
 
     // ─── PLAYER MOVEMENT ───
     let vx = 0, vy = 0;
@@ -1870,19 +2326,37 @@ class GameScene extends Phaser.Scene {
     // ─── EXIT INTERACTION ───
     if (tx >= 0 && tx < MAP_W && ty >= 0 && ty < MAP_H) {
       if (dungeon.map[ty][tx] === T.EXIT) {
-        if (Phaser.Input.Keyboard.JustDown(this.eKey)) {
-          this.nextFloor();
-        }
-        // Show exit hint
-        if (!this.exitHint) {
-          this.exitHint = this.add.text(
-            dungeon.exit.x * TILE + TILE/2, dungeon.exit.y * TILE - 8,
-            'Press E', {
-              fontFamily: 'Press Start 2P', fontSize: '5px', color: '#F8F8F0',
-              stroke: '#000', strokeThickness: 2, align: 'center',
-            }
-          ).setOrigin(0.5).setDepth(22);
-          this.tweens.add({ targets: this.exitHint, alpha: 0.5, yoyo: true, repeat: -1, duration: 600 });
+        // Check exit lock
+        if (state.exitLocked && !state.bossRushMode) {
+          // Exit is locked — show lock status
+          const killPct = state.floorEnemiesTotal > 0 ? Math.floor((state.floorEnemiesKilled / state.floorEnemiesTotal) * 100) : 0;
+          if (!this.exitHint) {
+            this.exitHint = this.add.text(
+              dungeon.exit.x * TILE + TILE/2, dungeon.exit.y * TILE - 8,
+              `LOCKED (${killPct}%)`, {
+                fontFamily: 'Press Start 2P', fontSize: '5px', color: '#E83838',
+                stroke: '#000', strokeThickness: 2, align: 'center',
+              }
+            ).setOrigin(0.5).setDepth(22);
+            this.tweens.add({ targets: this.exitHint, alpha: 0.5, yoyo: true, repeat: -1, duration: 600 });
+          } else {
+            this.exitHint.setText(`LOCKED (${killPct}%)`);
+          }
+        } else {
+          // Exit unlocked — allow E to proceed
+          if (Phaser.Input.Keyboard.JustDown(this.eKey)) {
+            this.nextFloor();
+          }
+          if (!this.exitHint) {
+            this.exitHint = this.add.text(
+              dungeon.exit.x * TILE + TILE/2, dungeon.exit.y * TILE - 8,
+              'Press E', {
+                fontFamily: 'Press Start 2P', fontSize: '5px', color: '#48C848',
+                stroke: '#000', strokeThickness: 2, align: 'center',
+              }
+            ).setOrigin(0.5).setDepth(22);
+            this.tweens.add({ targets: this.exitHint, alpha: 0.5, yoyo: true, repeat: -1, duration: 600 });
+          }
         }
       } else if (this.exitHint) {
         this.exitHint.destroy();
@@ -2488,9 +2962,9 @@ class GameScene extends Phaser.Scene {
     }
     if (crit) {
       damage = Math.floor(damage * 2);
-      this.screenFX.freeze(0.05); // hit-stop
-      this.screenFX.shake(8);
-      this.screenFX.flash(0xFFFFFF, 80);
+      this.screenFX.freeze(0.08); // hit-stop — longer on crit
+      this.screenFX.shake(12); // bigger shake on crit
+      this.screenFX.flash(0xFFFFFF, 100);
       showToast('CRIT!', 'warning', 800, '💥');
     }
 
@@ -2557,12 +3031,16 @@ class GameScene extends Phaser.Scene {
       // Death dissolve animation with enhanced particles
       const deathColor = monster.getData('behavior') === 'phase' ? 0x4444FF :
                          monster.getData('behavior') === 'teleport' ? 0xAA00FF : 0xEF4444;
-      for (let i = 0; i < 20; i++) {
-        this.particles.get(monster.x, monster.y, (Math.random()-0.5)*150, (Math.random()-0.5)*150, deathColor, 3, 0.6, { gravity: 40, friction: 0.96 });
+      for (let i = 0; i < 25; i++) {
+        this.particles.get(monster.x, monster.y, (Math.random()-0.5)*180, (Math.random()-0.5)*180, deathColor, 3, 0.7, { gravity: 40, friction: 0.96 });
       }
-      // Gold sparkles
-      for (let i = 0; i < 6; i++) {
-        this.particles.get(monster.x, monster.y, (Math.random()-0.5)*60, -40 - Math.random()*60, 0xF8B800, 2, 0.8, { gravity: 20 });
+      // Enhanced gold sparkles on every kill
+      for (let i = 0; i < 10; i++) {
+        this.particles.get(monster.x, monster.y, (Math.random()-0.5)*80, -40 - Math.random()*80, 0xF8B800, 2, 1.0, { gravity: 20 });
+      }
+      // White flash burst
+      for (let i = 0; i < 8; i++) {
+        this.particles.get(monster.x, monster.y, (Math.random()-0.5)*100, (Math.random()-0.5)*100, 0xFFFFFF, 1.5, 0.3, { gravity: 0 });
       }
       // Dissolve: shrink and fade over 300ms
       this.tweens.add({
@@ -2574,13 +3052,22 @@ class GameScene extends Phaser.Scene {
       });
       monster.body.setVelocity(0, 0);
       state.kills++;
+      state.floorEnemiesKilled++;
+      // Time bonus: +2s per kill (rewards killing enemies)
+      if (!state.bossRushMode && !state.collapsing) {
+        state.floorTimer = Math.min(state.floorTimerMax, state.floorTimer + 2);
+        state._timeWarned = false; // reset warning so it can trigger again
+      }
 
-      // Combo bonus XP (scaled by community engagement)
+      // Combo bonus XP (scaled by community engagement + floor depth + risk tokens + floor modifier)
       const cm = getCommunityMultiplier();
-      const comboXpBonus = Math.floor((15 + state.depth * 5) * (combo.multiplier - 1) * cm);
-      const baseXp = Math.floor((15 + state.depth * 5) * cm);
+      const rm = getRiskMultiplier();
+      const xm = getFloorXpMultiplier();
+      const gm = getFloorGoldMultiplier();
+      const comboXpBonus = Math.floor((15 + state.depth * 8) * (combo.multiplier - 1) * cm * rm * xm);
+      const baseXp = Math.floor((15 + state.depth * 8) * cm * rm * xm);
       state.player.xp += baseXp + comboXpBonus;
-      state.player.gold += Math.floor((8 + state.depth * 3) * cm);
+      state.player.gold += Math.floor((8 + state.depth * 5) * cm * rm * gm * (1 + state.depth * 0.05));
 
       // Holy lance heal on kill
       if (state.player.weapon && state.player.weapon.id === 'holy_lance') {
@@ -2590,6 +3077,11 @@ class GameScene extends Phaser.Scene {
       }
 
       this.addLog(`Monster defeated! +${baseXp + comboXpBonus} XP${comboXpBonus > 0 ? ` (${combo.multiplier}x combo!)` : ''}`);
+      // Show gold earned from kill
+      const goldEarned = Math.floor((8 + state.depth * 5) * cm * (1 + state.depth * 0.05));
+      if (goldEarned > 15) {
+        this.spawnDamageNumber(monster.x + 12, monster.y - 4, `+${goldEarned}G`, 0xF8B800);
+      }
       this.screenFX.shake(6);
       SFX.kill();
 
@@ -2618,7 +3110,8 @@ class GameScene extends Phaser.Scene {
         const rarity = rollRarity();
         const weapon = getRandomWeapon(state.depth);
         weapon.rarity = rarity;
-        if (!state.player.weapon || WEAPONS[weapon.id].atk > WEAPONS[state.player.weapon.id].atk) {
+        const currentWeapon = state.player.weapon;
+        if (!currentWeapon || WEAPONS[weapon.id].atk > (currentWeapon.atk || WEAPONS[currentWeapon.id]?.atk || 0)) {
           state.player.weapon = weapon;
           const rarityInfo = RARITY[rarity];
           this.addLog(`Found: ${rarityInfo.name} ${weapon.name}! (${weapon.desc})`);
@@ -2675,9 +3168,11 @@ class GameScene extends Phaser.Scene {
     const dmg = Math.max(1, amount - state.player.def);
     state.player.hp = Math.max(0, state.player.hp - dmg);
     state.player.invincible = 1.2;
-    this.screenFX.shake(6);
-    this.screenFX.flash(0xEF4444, 120);
-    this.screenFX.freeze(0.04); // hit-stop on player damage
+    // Bigger shake for bigger hits
+    const shakeAmount = Math.min(12, 6 + Math.floor(dmg / 10));
+    this.screenFX.shake(shakeAmount);
+    this.screenFX.flash(0xEF4444, 150);
+    this.screenFX.freeze(0.05); // hit-stop on player damage
     SFX.hurt();
 
     // Hurt animation — flash red overlay on player
@@ -2702,6 +3197,9 @@ class GameScene extends Phaser.Scene {
       state.phase = 'gameover';
       stopMusic();
       SFX.death();
+      // Save progress before showing game over
+      persistentGold += state.player.gold;
+      savePersistentData();
       document.getElementById('gameover-screen').classList.add('show');
       document.getElementById('go-title').textContent = 'GAME OVER';
       document.getElementById('go-title').style.color = '#E83838';
@@ -2734,6 +3232,29 @@ class GameScene extends Phaser.Scene {
   }
 
   triggerHeal(x, y) {
+    // SHIFT + interact = refuse heal, gain risk token (+15% gold/XP multiplier)
+    if (this.shiftKey && this.shiftKey.isDown) {
+      state.dungeon.map[y][x] = T.FLOOR;
+      state.riskTokens++;
+      state.riskMultiplier = getRiskMultiplier();
+      this.addLog(`⚡ REFUSED HEAL! Risk Token +1 (${state.riskTokens}) | ${Math.round((state.riskMultiplier - 1) * 100)}% bonus`);
+      showToast(`Risk Token +1! (${Math.round((state.riskMultiplier-1)*100)}% bonus)`, 'warning', 2000, '⚡');
+      SFX.power();
+      // Purple risk particles
+      for (let i = 0; i < 10; i++) {
+        this.particles.get(x * TILE + TILE/2, y * TILE + TILE/2, (Math.random() - 0.5) * 60, -Math.random() * 50, 0xA855F7, 2, 0.6, { gravity: 20 });
+      }
+      this.spawnDamageNumber(x * TILE + TILE/2, y * TILE + TILE/2, `+RISK`, 0xA855F7);
+      return;
+    }
+    // Cursed floor — healing disabled
+    if (isFloorHealDisabled()) {
+      state.dungeon.map[y][x] = T.FLOOR;
+      this.addLog('💀 Cursed floor — healing disabled!');
+      showToast('Cursed Floor — No Healing!', 'warning', 1500, '💀');
+      SFX.trap();
+      return;
+    }
     state.dungeon.map[y][x] = T.FLOOR;
     const heal = 20 + Math.floor(Math.random() * 15);
     state.player.hp = Math.min(state.player.maxHp, state.player.hp + heal);
@@ -2763,8 +3284,9 @@ class GameScene extends Phaser.Scene {
   triggerChest(x, y) {
     state.dungeon.map[y][x] = T.FLOOR;
     const cm = getCommunityMultiplier();
+    const rm = getRiskMultiplier();
     const lootTable = ['health_potion', 'bomb', 'atk_gem', 'def_gem', 'shield_item', 'speed_boots', 'mega_potion', 'compass'];
-    const goldAmount = Math.floor((15 + Math.floor(Math.random() * 25) + state.depth * 5) * cm);
+    const goldAmount = Math.floor((15 + Math.floor(Math.random() * 25) + state.depth * 8) * cm * rm * (1 + state.depth * 0.1));
     state.player.gold += goldAmount;
 
     if (Math.random() < 0.6 * cm) {
@@ -2785,7 +3307,7 @@ class GameScene extends Phaser.Scene {
     const cm = getCommunityMultiplier();
     // Community locked chests have 2x better loot
     const lootTable = ['mega_potion', 'compass', 'atk_gem', 'def_gem', 'shield_item', 'speed_boots', 'bomb', 'health_potion'];
-    const goldAmount = Math.floor((30 + Math.floor(Math.random() * 50) + state.depth * 10) * cm);
+    const goldAmount = Math.floor((30 + Math.floor(Math.random() * 50) + state.depth * 15) * cm * (1 + state.depth * 0.15));
     state.player.gold += goldAmount;
 
     // Always drop an item from community chest
@@ -3148,11 +3670,14 @@ class GameScene extends Phaser.Scene {
     const monster = this.add.container(x * TILE + TILE/2, y * TILE + TILE/2);
     const body = this.add.graphics();
     this.drawMonsterSprite(body, typeIdx);
+    // Aggressive floor scaling: HP doubles every 3 floors, ATK scales faster
+    const floorScale = Math.pow(1.35, state.depth);
     this.setupMonster(monster, body, type, typeIdx,
-      type.hp + state.depth * 12,
-      type.speed + state.depth * 3,
-      type.damage + state.depth * 3
+      Math.floor(type.hp * floorScale),
+      type.speed + state.depth * 4,
+      Math.floor(type.damage * (1 + state.depth * 0.18))
     );
+    state.floorEnemiesTotal++;
   }
 
   spawnMonsterAt(tileX, tileY) {
@@ -3169,11 +3694,52 @@ class GameScene extends Phaser.Scene {
     const monster = this.add.container(tileX * TILE + TILE/2, tileY * TILE + TILE/2);
     const body = this.add.graphics();
     this.drawMonsterSprite(body, typeIdx);
+    const floorScale = Math.pow(1.35, state.depth);
     this.setupMonster(monster, body, type, typeIdx,
-      type.hp + state.depth * 12,
-      type.speed + state.depth * 3 + 10,
-      type.damage + state.depth * 3
+      Math.floor(type.hp * floorScale),
+      type.speed + state.depth * 4 + 10,
+      Math.floor(type.damage * (1 + state.depth * 0.18))
     );
+    state.floorEnemiesTotal++;
+  }
+
+  spawnWaveEnemy() {
+    if (!this.player || !state.dungeon || !state.dungeon.map) return;
+    // Spawn near the player but not too close
+    let x, y, tries = 0;
+    do {
+      const angle = Math.random() * Math.PI * 2;
+      const dist = 80 + Math.random() * 120;
+      x = Math.floor((this.player.x + Math.cos(angle) * dist) / TILE);
+      y = Math.floor((this.player.y + Math.sin(angle) * dist) / TILE);
+      tries++;
+    } while ((SOLID_TILES.has(state.dungeon.map[y]?.[x]) || x < 3 || x >= MAP_W - 3 || y < 3 || y >= MAP_H - 3) && tries < 20);
+    if (tries >= 20) return;
+
+    const monsterTypes = [
+      { name: 'Shadow Crawler', color: 0x4A2A4A, hp: 25, speed: 40, damage: 8, behavior: 'flank' },
+      { name: 'Lost Soul', color: 0x3A3A5A, hp: 30, speed: 45, damage: 10, behavior: 'phase' },
+      { name: 'Flesh Golem', color: 0x5A2A2A, hp: 40, speed: 35, damage: 14, behavior: 'charge' },
+      { name: 'Void Stalker', color: 0x2A1A3A, hp: 50, speed: 50, damage: 18, behavior: 'teleport' },
+      { name: 'Bone Horror', color: 0x6A5A3A, hp: 65, speed: 45, damage: 22, behavior: 'ranged' },
+    ];
+    const typeIdx = Math.min(Math.floor(state.depth / 2), monsterTypes.length - 1);
+    const type = monsterTypes[typeIdx];
+
+    const monster = this.add.container(x * TILE + TILE/2, y * TILE + TILE/2);
+    const body = this.add.graphics();
+    this.drawMonsterSprite(body, typeIdx);
+    const floorScale = Math.pow(1.35, state.depth);
+    const waveMult = state.waveStrength;
+    this.setupMonster(monster, body, type, typeIdx,
+      Math.floor(type.hp * floorScale * waveMult),
+      type.speed + state.depth * 4 + 10,
+      Math.floor(type.damage * (1 + state.depth * 0.18) * waveMult)
+    );
+    // Red spawn flash
+    for (let i = 0; i < 6; i++) {
+      this.particles.get(x * TILE + TILE/2, y * TILE + TILE/2, (Math.random()-0.5)*40, -Math.random()*30, 0xEF4444, 2, 0.3);
+    }
   }
 
   spawnBoss(bossData) {
@@ -3198,6 +3764,10 @@ class GameScene extends Phaser.Scene {
     const light = Phaser.Display.Color.GetColor(Math.min(255, rv + 50), Math.min(255, gv + 50), Math.min(255, bv + 50));
 
     const s = bossData.size || 20;
+    // Boss scaling per floor
+    const bossScale = Math.pow(1.3, state.depth);
+    const scaledBossHp = Math.floor(bossData.hp * bossScale);
+    const scaledBossDmg = Math.floor(bossData.damage * (1 + state.depth * 0.15));
     body.fillStyle(mc, 0.9);
     body.fillRect(-s/2, -s/2, s, s);
     body.fillRect(-s/2 - 3, -s/2 + 4, s + 6, s - 8);
@@ -3228,10 +3798,10 @@ class GameScene extends Phaser.Scene {
     monster.add(nameTag);
 
     monster.setSize(s, s);
-    monster.setData('hp', bossData.hp);
-    monster.setData('maxHp', bossData.hp);
+    monster.setData('hp', scaledBossHp);
+    monster.setData('maxHp', scaledBossHp);
     monster.setData('speed', bossData.speed);
-    monster.setData('damage', bossData.damage);
+    monster.setData('damage', scaledBossDmg);
     monster.setData('offset', Math.random() * Math.PI * 2);
     monster.setData('name', bossData.name);
     monster.setData('isBoss', true);
@@ -3303,6 +3873,18 @@ class GameScene extends Phaser.Scene {
       }
     }
 
+    // Greed bonus: clear all enemies for extra gold
+    if (state.floorEnemiesTotal > 0 && state.floorEnemiesKilled >= state.floorEnemiesTotal) {
+      const greedBonus = Math.floor((50 + state.depth * 30) * getCommunityMultiplier());
+      persistentGold += greedBonus;
+      state.player.gold += greedBonus;
+      this.addLog(`💰 GREED BONUS! Cleared all enemies! +${greedBonus}G`);
+      showToast(`GREED BONUS! +${greedBonus}G`, 'legendary', 3000, '💰');
+      SFX.levelup();
+      for (let i = 0; i < 20; i++) {
+        this.particles.get(this.player.x, this.player.y, (Math.random()-0.5)*120, -40 - Math.random()*80, 0xF8B800, 3, 0.8, { gravity: 40 });
+      }
+    }
     // Save gold to persistent storage
     persistentGold += state.player.gold;
     savePersistentData();
@@ -3310,7 +3892,20 @@ class GameScene extends Phaser.Scene {
     state.depth++;
     state.floorTheme = (state.floorTheme + 1) % THEMES.length;
     floorDamageTaken = 0;
+    state.floorEnemiesTotal = 0;
+    state.floorEnemiesKilled = 0;
+    state.floorModifier = rollFloorModifier();
+    applyFloorModifier(state.floorModifier);
     resetCombo();
+    checkMerchantSpawn();
+    // Floor pressure: timer + exit lock + waves
+    state.floorTimerMax = Math.max(45, 90 - state.depth * 5); // 90s at floor 0, down to 45s min
+    state.floorTimer = state.floorTimerMax;
+    state.collapsing = false;
+    state.exitLocked = true;
+    state.waveNumber = 0;
+    state.waveTimer = state.waveInterval;
+    state.waveStrength = 1;
     SFX.exit();
 
     // Floor clear celebration
@@ -3319,6 +3914,11 @@ class GameScene extends Phaser.Scene {
     if (state.depth >= state.totalFloors) {
       state.phase = 'victory';
       persistentGold += 100; // bonus for clearing
+      if (!state.bossRushMode) {
+        state.bossRushUnlocked = true;
+        savePersistentData();
+        updateBossRushButton();
+      }
       savePersistentData();
       checkAchievements();
       document.getElementById('gameover-screen').classList.add('show');
@@ -3360,6 +3960,7 @@ class GameScene extends Phaser.Scene {
   }
 
   updateUI() {
+    if (!state || !state.player) return;
     const p = state.player;
     const hpBar = document.getElementById('hp-fill');
     const goldText = document.getElementById('hud-gold');
@@ -3397,17 +3998,20 @@ class GameScene extends Phaser.Scene {
       logEl.scrollTop = logEl.scrollHeight;
     }
 
-    // Combo display with pulse animation
+    // Combo display with pulse animation + multiplier glow
     const comboEl = document.getElementById('combo-display');
     if (comboEl) {
       if (combo.count >= 3) {
-        comboEl.textContent = `${combo.count}x COMBO`;
+        const multText = combo.multiplier > 1 ? ` (${combo.multiplier}x)` : '';
+        comboEl.textContent = `${combo.count}x COMBO${multText}`;
         comboEl.style.display = 'block';
         comboEl.style.color = combo.count >= 12 ? '#F8D838' : combo.count >= 5 ? '#E87898' : '#A882F7';
         // Trigger pulse animation
         comboEl.classList.remove('pulse');
         void comboEl.offsetWidth; // force reflow
         comboEl.classList.add('pulse');
+        // Scale up text size at high combos
+        comboEl.style.fontSize = combo.count >= 12 ? '16px' : combo.count >= 8 ? '14px' : '12px';
       } else {
         comboEl.style.display = 'none';
       }
@@ -3427,6 +4031,136 @@ class GameScene extends Phaser.Scene {
     // Sync sidebar
     if (typeof syncSidebarInventory === 'function') syncSidebarInventory();
     if (typeof syncSidebarLog === 'function') syncSidebarLog();
+
+    // Greed counter — show remaining enemies
+    const greedEl = document.getElementById('greed-display');
+    if (greedEl) {
+      const remaining = state.floorEnemiesTotal - state.floorEnemiesKilled;
+      if (state.floorEnemiesTotal > 0 && remaining > 0) {
+        greedEl.textContent = `☠ ${state.floorEnemiesKilled}/${state.floorEnemiesTotal}`;
+        greedEl.style.display = 'block';
+        // Color shifts from gray to gold as you kill more
+        const progress = state.floorEnemiesKilled / state.floorEnemiesTotal;
+        if (progress >= 0.8) greedEl.style.color = '#F8B800';
+        else if (progress >= 0.5) greedEl.style.color = '#A882F7';
+        else greedEl.style.color = '#888868';
+      } else if (state.floorEnemiesTotal > 0 && remaining === 0) {
+        greedEl.textContent = '💰 GREED!';
+        greedEl.style.display = 'block';
+        greedEl.style.color = '#F8B800';
+      } else {
+        greedEl.style.display = 'none';
+      }
+    }
+
+    // Floor modifier display
+    const modEl = document.getElementById('floor-mod-display');
+    if (modEl) {
+      if (state.floorModifier) {
+        modEl.textContent = `${state.floorModifier.icon} ${state.floorModifier.name}`;
+        modEl.style.display = 'block';
+        modEl.style.color = state.floorModifier.color;
+      } else {
+        modEl.style.display = 'none';
+      }
+    }
+
+    // Risk token display
+    const riskEl = document.getElementById('risk-display');
+    if (riskEl) {
+      if (state.riskTokens > 0) {
+        riskEl.textContent = `⚡ ${state.riskTokens} Risk (${Math.round((state.riskMultiplier-1)*100)}%)`;
+        riskEl.style.display = 'block';
+      } else {
+        riskEl.style.display = 'none';
+      }
+    }
+
+    // Synergy display
+    const synEl = document.getElementById('synergy-display');
+    if (synEl) {
+      const syns = state.synergies || [];
+      if (syns.length > 0) {
+        synEl.textContent = `⚡ ${syns.length} Synergy${syns.length > 1 ? 's' : ''}`;
+        synEl.style.display = 'block';
+      } else {
+        synEl.style.display = 'none';
+      }
+    }
+
+    // Temp buffs display
+    const buffEl = document.getElementById('temp-buffs-display');
+    if (buffEl) {
+      const buffs = state.tempBuffs || [];
+      if (buffs.length > 0) {
+        buffEl.innerHTML = buffs.map(b => {
+          const timeLeft = Math.ceil(b.remaining);
+          return `<span style="color:${b.type === 'atk' ? '#EF4444' : b.type === 'def' ? '#3B82F6' : '#FBBF24'}">${b.name} (${timeLeft}s)</span>`;
+        }).join(' ');
+        buffEl.style.display = 'block';
+      } else {
+        buffEl.style.display = 'none';
+      }
+    }
+
+    // Floor timer display
+    const timerEl = document.getElementById('floor-timer');
+    if (timerEl && !state.bossRushMode) {
+      const timeLeft = Math.max(0, Math.ceil(state.floorTimer));
+      const pct = state.floorTimerMax > 0 ? state.floorTimer / state.floorTimerMax : 1;
+      timerEl.style.display = 'block';
+      if (state.collapsing) {
+        timerEl.textContent = '💀 COLLAPSE!';
+        timerEl.style.color = '#EF4444';
+        timerEl.style.fontSize = '9px';
+      } else if (pct <= 0.2) {
+        timerEl.textContent = `⏰ ${timeLeft}s`;
+        timerEl.style.color = '#EF4444';
+        timerEl.style.fontSize = '8px';
+      } else if (pct <= 0.5) {
+        timerEl.textContent = `⏰ ${timeLeft}s`;
+        timerEl.style.color = '#F8D838';
+        timerEl.style.fontSize = '7px';
+      } else {
+        timerEl.textContent = `⏰ ${timeLeft}s`;
+        timerEl.style.color = '#888868';
+        timerEl.style.fontSize = '7px';
+      }
+    } else if (timerEl) {
+      timerEl.style.display = 'none';
+    }
+
+    // Exit status display
+    const exitEl = document.getElementById('exit-status');
+    if (exitEl && !state.bossRushMode) {
+      if (state.exitLocked && state.floorEnemiesTotal > 0) {
+        const killPct = Math.floor((state.floorEnemiesKilled / state.floorEnemiesTotal) * 100);
+        exitEl.textContent = `🚪 ${killPct}/70%`;
+        exitEl.style.display = 'block';
+        exitEl.style.color = killPct >= 60 ? '#F8D838' : '#E83838';
+      } else if (!state.exitLocked) {
+        exitEl.textContent = '🚪 READY';
+        exitEl.style.display = 'block';
+        exitEl.style.color = '#48C848';
+      } else {
+        exitEl.style.display = 'none';
+      }
+    } else if (exitEl) {
+      exitEl.style.display = 'none';
+    }
+
+    // Wave display
+    const waveEl = document.getElementById('wave-display');
+    if (waveEl && !state.bossRushMode) {
+      if (state.waveNumber > 0) {
+        waveEl.textContent = `☠ Wave ${state.waveNumber}`;
+        waveEl.style.display = 'block';
+      } else {
+        waveEl.style.display = 'none';
+      }
+    } else if (waveEl) {
+      waveEl.style.display = 'none';
+    }
   }
 }
 
@@ -3822,7 +4556,8 @@ function renderStats() {
 
 // ─── INVENTORY SYSTEM ────────────────────────────────────────
 function addToInventory(itemId) {
-  if (state.player.inventory.length >= state.player.maxInventory) {
+  if (!state.player) return false;
+  if ((state.player.inventory || []).length >= state.player.maxInventory) {
     state.log.push('Inventory full!');
     SFX.trap();
     return false;
@@ -3833,11 +4568,14 @@ function addToInventory(itemId) {
   state.log.push(`Got: ${item.name}`);
   SFX.power();
   updateInventoryUI();
+  // Check for synergies
+  if (typeof checkSynergies === 'function') checkSynergies();
   return true;
 }
 
 function useItem(index) {
-  const item = state.player.inventory[index];
+  if (!state.player) return;
+  const item = (state.player.inventory || [])[index];
   if (!item) return;
   if (item.type === 'consumable') {
     // Special handling for bomb — needs access to scene/monsters
@@ -4032,8 +4770,10 @@ function updateStatusUI() {
 
 // ─── GAME LIFECYCLE ──────────────────────────────────────────
 function startGame() {
-  loadPersistentData();
+  // Capture commentCount before reset
+  const savedCommentCount = state.commentCount;
 
+  // Reset state first
   state = {
     phase: 'explore',
     player: {
@@ -4043,12 +4783,19 @@ function startGame() {
       speedMult: 1, shield: 0, statusEffects: [],
       weapon: null, hasCompass: false, keys: 0,
     },
-    dungeon: null, depth: 0, commentCount: state.commentCount,
-    totalFloors: 10 + Math.floor(state.commentCount / 20),
+    dungeon: null, depth: 0, commentCount: savedCommentCount,
+    totalFloors: 10 + Math.floor(savedCommentCount / 20),
     kills: 0, log: [],
     visited: new Set(), keys: 0, floorTheme: 0,
     transitionAlpha: 0, isTransitioning: false,
+    floorEnemiesTotal: 0, floorEnemiesKilled: 0,
+    riskTokens: 0, synergies: [], tempBuffs: [],
+    bossRushMode: false, bossRushUnlocked: false,
+    floorModifier: null,
   };
+
+  // Load persistent data (weapon, gold, upgrades) AFTER state reset
+  loadPersistentData();
 
   // Apply persistent upgrades
   applyPersistentUpgrades();
@@ -4056,6 +4803,22 @@ function startGame() {
   // Reset combo
   combo = { count: 0, timer: 0, multiplier: 1, maxCombo: 0 };
   floorDamageTaken = 0;
+  state.floorModifier = rollFloorModifier();
+  applyFloorModifier(state.floorModifier);
+
+  // Boss rush mode settings
+  if (state.bossRushMode) {
+    state.totalFloors = 3; // 3 bosses
+  }
+
+  // Floor pressure init
+  state.floorTimerMax = Math.max(45, 90 - state.depth * 5);
+  state.floorTimer = state.floorTimerMax;
+  state.collapsing = false;
+  state.exitLocked = true;
+  state.waveNumber = 0;
+  state.waveTimer = state.waveInterval;
+  state.waveStrength = 1;
 
   document.getElementById('title-screen').classList.remove('show');
   document.getElementById('gameover-screen').classList.remove('show');
