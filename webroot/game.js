@@ -5,8 +5,13 @@
 
 // ─── SOUND ENGINE ────────────────────────────────────────────
 let audioCtx = null;
+let musicPlaying = false;
+let musicNodes = [];
+let masterMusicGain = null;
+
 function getAudioCtx() {
   if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+  if (audioCtx.state === 'suspended') audioCtx.resume();
   return audioCtx;
 }
 
@@ -24,6 +29,165 @@ function playSound(freq, duration, type = 'square', volume = 0.08) {
     osc.start(ctx.currentTime);
     osc.stop(ctx.currentTime + duration);
   } catch(e) {}
+}
+
+// ─── PROCEDURAL MUSIC ENGINE ─────────────────────────────────
+const MUSIC_PATTERNS = {
+  0: { // Thread Depths - mysterious ambient
+    bpm: 90, bass: [110,0,110,0,130,0,110,0,146,0,130,0,110,0,98,0],
+    melody: [440,0,0,523,0,0,440,0,392,0,0,349,0,440,0,0],
+    pad: [220, 261, 293, 261],
+  },
+  1: { // Void Corridor - dark drone
+    bpm: 75, bass: [82,0,82,0,0,82,0,0,92,0,92,0,0,82,0,0],
+    melody: [330,0,0,0,294,0,0,0,262,0,0,0,294,0,0,0],
+    pad: [165, 196, 220, 196],
+  },
+  2: { // Emerald Cavern - flowing water
+    bpm: 100, bass: [146,0,164,0,146,0,130,0,146,0,164,0,196,0,164,0],
+    melody: [587,0,659,0,587,0,0,523,587,0,659,0,784,0,659,0],
+    pad: [293, 330, 392, 330],
+  },
+  3: { // Crimson Depths - tense chase
+    bpm: 120, bass: [146,146,0,146,164,0,146,0,130,130,0,130,146,0,130,0],
+    melody: [587,0,698,0,587,0,523,0,494,0,587,0,523,0,440,0],
+    pad: [293, 349, 392, 349],
+  },
+  4: { // Golden Halls - regal fanfare
+    bpm: 110, bass: [164,0,196,0,220,0,196,0,164,0,220,0,261,0,220,0],
+    melody: [659,0,784,0,880,0,784,0,659,0,880,0,1046,0,880,0],
+    pad: [330, 392, 440, 392],
+  },
+  5: { // Frozen Abyss - crystalline
+    bpm: 85, bass: [116,0,0,116,0,0,130,0,0,130,0,0,146,0,0,146],
+    melody: [466,0,0,523,0,0,466,0,0,392,0,0,466,0,0,0],
+    pad: [233, 261, 293, 261],
+  },
+  6: { // Shadow Realm - eerie whispers
+    bpm: 70, bass: [87,0,0,0,98,0,0,0,87,0,0,0,73,0,0,0],
+    melody: [349,0,0,0,0,330,0,0,294,0,0,0,0,262,0,0],
+    pad: [174, 196, 220, 174],
+  },
+};
+
+function startMusic(floorTheme) {
+  try {
+    const ctx = getAudioCtx();
+    if (musicPlaying) stopMusic();
+
+    masterMusicGain = ctx.createGain();
+    masterMusicGain.gain.setValueAtTime(0.12, ctx.currentTime);
+    masterMusicGain.connect(ctx.destination);
+
+    const pattern = MUSIC_PATTERNS[floorTheme % 7];
+    const beatLen = 60 / pattern.bpm;
+    const loopLen = pattern.bass.length * beatLen;
+
+    // Bass line
+    const bassOsc = ctx.createOscillator();
+    const bassGain = ctx.createGain();
+    bassOsc.type = 'square';
+    bassGain.gain.setValueAtTime(0.3, ctx.currentTime);
+    bassOsc.connect(bassGain);
+    bassGain.connect(masterMusicGain);
+    bassOsc.start(ctx.currentTime);
+    musicNodes.push(bassOsc, bassGain);
+
+    // Schedule bass notes in a loop
+    function scheduleBass() {
+      const now = ctx.currentTime;
+      pattern.bass.forEach((note, i) => {
+        if (note > 0) {
+          bassOsc.frequency.setValueAtTime(note, now + i * beatLen);
+          bassGain.gain.setValueAtTime(0.3, now + i * beatLen);
+          bassGain.gain.exponentialRampToValueAtTime(0.05, now + i * beatLen + beatLen * 0.8);
+        } else {
+          bassGain.gain.setValueAtTime(0.001, now + i * beatLen);
+        }
+      });
+    }
+    scheduleBass();
+    const bassLoop = setInterval(scheduleBass, loopLen * 1000);
+    musicNodes.push({ stop: () => clearInterval(bassLoop) });
+
+    // Melody line
+    const melOsc = ctx.createOscillator();
+    const melGain = ctx.createGain();
+    melOsc.type = 'sine';
+    melGain.gain.setValueAtTime(0.15, ctx.currentTime);
+    melOsc.connect(melGain);
+    melGain.connect(masterMusicGain);
+    melOsc.start(ctx.currentTime);
+    musicNodes.push(melOsc, melGain);
+
+    function scheduleMelody() {
+      const now = ctx.currentTime;
+      pattern.melody.forEach((note, i) => {
+        if (note > 0) {
+          melOsc.frequency.setValueAtTime(note, now + i * beatLen);
+          melGain.gain.setValueAtTime(0.15, now + i * beatLen);
+          melGain.gain.exponentialRampToValueAtTime(0.01, now + i * beatLen + beatLen * 1.5);
+        } else {
+          melGain.gain.setValueAtTime(0.001, now + i * beatLen);
+        }
+      });
+    }
+    scheduleMelody();
+    const melLoop = setInterval(scheduleMelody, loopLen * 1000);
+    musicNodes.push({ stop: () => clearInterval(melLoop) });
+
+    // Pad (sustained chords)
+    const padOsc = ctx.createOscillator();
+    const padGain = ctx.createGain();
+    padOsc.type = 'triangle';
+    padGain.gain.setValueAtTime(0.06, ctx.currentTime);
+    padOsc.connect(padGain);
+    padGain.connect(masterMusicGain);
+    padOsc.start(ctx.currentTime);
+    musicNodes.push(padOsc, padGain);
+
+    let padIdx = 0;
+    function cyclePad() {
+      padOsc.frequency.setValueAtTime(pattern.pad[padIdx % pattern.pad.length], ctx.currentTime);
+      padIdx++;
+    }
+    cyclePad();
+    const padLoop = setInterval(cyclePad, loopLen * 1000 / 4);
+    musicNodes.push({ stop: () => clearInterval(padLoop) });
+
+    // Noise layer (atmosphere)
+    const bufferSize = ctx.sampleRate * 2;
+    const noiseBuffer = ctx.createBuffer(1, bufferSize, ctx.sampleRate);
+    const data = noiseBuffer.getChannelData(0);
+    for (let i = 0; i < bufferSize; i++) data[i] = (Math.random() * 2 - 1) * 0.5;
+    const noiseSource = ctx.createBufferSource();
+    noiseSource.buffer = noiseBuffer;
+    noiseSource.loop = true;
+    const noiseFilter = ctx.createBiquadFilter();
+    noiseFilter.type = 'lowpass';
+    noiseFilter.frequency.setValueAtTime(200, ctx.currentTime);
+    const noiseGain = ctx.createGain();
+    noiseGain.gain.setValueAtTime(0.03, ctx.currentTime);
+    noiseSource.connect(noiseFilter);
+    noiseFilter.connect(noiseGain);
+    noiseGain.connect(masterMusicGain);
+    noiseSource.start(ctx.currentTime);
+    musicNodes.push(noiseSource, noiseFilter, noiseGain);
+
+    musicPlaying = true;
+  } catch(e) {}
+}
+
+function stopMusic() {
+  musicNodes.forEach(n => { try { if (n.stop) n.stop(); else if (n.disconnect) n.disconnect(); } catch(e) {} });
+  musicNodes = [];
+  musicPlaying = false;
+}
+
+function setMusicVolume(vol) {
+  if (masterMusicGain) {
+    try { masterMusicGain.gain.setValueAtTime(vol, audioCtx.currentTime); } catch(e) {}
+  }
 }
 
 const SFX = {
@@ -991,6 +1155,13 @@ class GameScene extends Phaser.Scene {
     state.dungeon = dungeon;
     const theme = THEMES[state.floorTheme % THEMES.length];
 
+    // Start music for this floor
+    startMusic(state.floorTheme);
+
+    // Hide boss health bar until boss spawns
+    const bossBar = document.getElementById('boss-health-bar');
+    if (bossBar) bossBar.style.display = 'none';
+
     this.physics.world.setBounds(0, 0, MAP_W * TILE, MAP_H * TILE);
 
     // ─── RENDER TILEMAP (Pokemon Gameboy style) ───
@@ -1016,6 +1187,11 @@ class GameScene extends Phaser.Scene {
     this.playerBody = this.add.graphics();
     this.drawCatPlayer(this.playerBody, 0, { x: 0, y: 1 });
     this.player.add(this.playerBody);
+    // Hurt flash overlay (red rectangle, hidden by default)
+    this.playerHurtOverlay = this.add.rectangle(0, 0, 16, 16, 0xFF0000, 0.5);
+    this.playerHurtOverlay.setVisible(false);
+    this.playerHurtOverlay.setDepth(1);
+    this.player.add(this.playerHurtOverlay);
     this.player.setSize(12, 12);
     this.player.setDepth(10);
     this.physics.world.enable(this.player);
@@ -1084,6 +1260,25 @@ class GameScene extends Phaser.Scene {
     this.updateUI();
     this.addLog(`Floor ${state.depth + 1}: ${theme.name}`);
     this.addLog(`${dungeon.rooms.length} rooms found`);
+
+    // Floor name splash — appears briefly on screen
+    const splashTitle = this.add.text(
+      this.cameras.main.scrollX + this.cameras.main.width / 2,
+      this.cameras.main.scrollY + this.cameras.main.height / 2 - 20,
+      `FLOOR ${state.depth + 1}`,
+      { fontFamily: 'Press Start 2P', fontSize: '14px', color: '#E87898', stroke: '#000', strokeThickness: 3 }
+    ).setOrigin(0.5).setDepth(30).setAlpha(0);
+    const splashSub = this.add.text(
+      this.cameras.main.scrollX + this.cameras.main.width / 2,
+      this.cameras.main.scrollY + this.cameras.main.height / 2 + 2,
+      theme.name,
+      { fontFamily: 'VT323', fontSize: '16px', color: '#C8C8A8', stroke: '#000', strokeThickness: 2 }
+    ).setOrigin(0.5).setDepth(30).setAlpha(0);
+
+    // Fade in, hold, fade out
+    this.tweens.add({ targets: [splashTitle, splashSub], alpha: 1, duration: 400, yoyo: true, hold: 1200, delay: 200,
+      onComplete: () => { splashTitle.destroy(); splashSub.destroy(); }
+    });
     document.getElementById('controls-hint').classList.add('show');
   }
 
@@ -1322,8 +1517,9 @@ class GameScene extends Phaser.Scene {
       }
     } else {
       this.animTimer = 0;
-      this.playerBody.y = 0;
-      // Idle animation — redraw facing direction
+      // Idle animation — subtle breathing
+      const breathe = Math.sin(time * 0.003) * 0.5;
+      this.playerBody.y = breathe;
       this.drawCatPlayer(this.playerBody, 0, this.playerFacing);
     }
 
@@ -1396,21 +1592,168 @@ class GameScene extends Phaser.Scene {
       const dx = this.player.x - m.x;
       const dy = this.player.y - m.y;
       const dist = Math.sqrt(dx * dx + dy * dy);
+      const spd = m.getData('speed') || 50;
+      const behavior = m.getData('behavior') || 'chase';
+      const body = m.getAt(0);
 
-      if (dist < 150) {
-        // Chase player
-        const spd = m.getData('speed') || 50;
-        m.body.setVelocity((dx / dist) * spd, (dy / dist) * spd);
-        m.setAlpha(0.9);
-      } else if (dist < 250) {
-        // Wander
-        const angle = time * 0.001 + m.getData('offset');
-        m.body.setVelocity(Math.cos(angle) * 15, Math.sin(angle) * 15);
-        m.setAlpha(0.7);
-      } else {
-        // Idle
-        m.body.setVelocity(0, 0);
-        m.setAlpha(0.5);
+      // Boss has its own AI system
+      if (m.getData('isBoss')) {
+        this.updateBossAI(m, dx, dy, dist, time, dt);
+        return;
+      }
+
+      // Pulsing glow effect
+      if (body && body.active) {
+        const pulse = 0.7 + Math.sin(time * 0.005 + m.getData('offset')) * 0.3;
+        m.setAlpha(pulse);
+      }
+
+      switch (behavior) {
+        case 'flank': {
+          // Shadow Crawler — tries to circle behind the player
+          if (dist < 180) {
+            const angle = Math.atan2(dy, dx);
+            const flankAngle = angle + Math.PI * 0.6; // offset to the side
+            const tx = this.player.x + Math.cos(flankAngle) * 40;
+            const ty = this.player.y + Math.sin(flankAngle) * 40;
+            const fdx = tx - m.x, fdy = ty - m.y;
+            const fdist = Math.sqrt(fdx * fdx + fdy * fdy);
+            if (fdist > 2) m.body.setVelocity((fdx / fdist) * spd, (fdy / fdist) * spd);
+          } else if (dist < 300) {
+            const angle = time * 0.001 + m.getData('offset');
+            m.body.setVelocity(Math.cos(angle) * spd * 0.3, Math.sin(angle) * spd * 0.3);
+          } else {
+            m.body.setVelocity(0, 0);
+          }
+          break;
+        }
+
+        case 'phase': {
+          // Lost Soul — phases through walls, teleports when stuck
+          if (dist < 200) {
+            m.body.setVelocity((dx / dist) * spd * 0.8, (dy / dist) * spd * 0.8);
+            m.body.setAllowGravity(false);
+            // Teleport closer occasionally
+            if (dist > 100 && Math.random() < 0.005) {
+              const tAngle = Math.random() * Math.PI * 2;
+              m.x = this.player.x + Math.cos(tAngle) * 60;
+              m.y = this.player.y + Math.sin(tAngle) * 60;
+              for (let i = 0; i < 6; i++) {
+                this.spawnParticle(m.x, m.y, (Math.random()-0.5)*60, (Math.random()-0.5)*60, 0x4444FF, 0.6);
+              }
+              SFX.whisper();
+            }
+          } else {
+            // Float aimlessly
+            const angle = time * 0.0008 + m.getData('offset');
+            m.body.setVelocity(Math.cos(angle) * spd * 0.2, Math.sin(angle) * 0.001 * spd * 0.2);
+          }
+          break;
+        }
+
+        case 'charge': {
+          // Flesh Golem — charges in a straight line, then stops to recover
+          const charging = m.getData('charging');
+          const chargeCooldown = m.getData('chargeCooldown') || 0;
+          const chargeDir = m.getData('chargeDir') || { x: 0, y: 0 };
+
+          if (chargeCooldown > 0) {
+            m.setData('chargeCooldown', chargeCooldown - dt);
+            m.body.setVelocity(0, 0);
+            // Recovery wobble
+            if (body) body.y = Math.sin(time * 0.01) * 1;
+          } else if (charging) {
+            m.body.setVelocity(chargeDir.x * spd * 2.5, chargeDir.y * spd * 2.5);
+            // Stop after a short charge
+            if (m.getData('chargeTime') > 0) {
+              m.setData('chargeTime', m.getData('chargeTime') - dt);
+            } else {
+              m.setData('charging', false);
+              m.setData('chargeCooldown', 2.0);
+            }
+          } else if (dist < 200 && dist > 30) {
+            // Wind up and charge
+            const angle = Math.atan2(dy, dx);
+            m.setData('chargeDir', { x: Math.cos(angle), y: Math.sin(angle) });
+            m.setData('charging', true);
+            m.setData('chargeTime', 0.4);
+          } else {
+            // Slowly approach
+            if (dist > 30) m.body.setVelocity((dx / dist) * spd * 0.3, (dy / dist) * spd * 0.3);
+            else m.body.setVelocity(0, 0);
+          }
+          break;
+        }
+
+        case 'teleport': {
+          // Void Stalker — teleports closer when far, circles when close
+          if (dist > 200) {
+            // Blink closer
+            if (Math.random() < 0.01) {
+              const tAngle = Math.atan2(dy, dx);
+              m.x = this.player.x - Math.cos(tAngle) * 50;
+              m.y = this.player.y - Math.sin(tAngle) * 50;
+              for (let i = 0; i < 5; i++) {
+                this.spawnParticle(m.x, m.y, (Math.random()-0.5)*50, (Math.random()-0.5)*50, 0xAA00FF, 0.7);
+              }
+              SFX.power();
+            }
+            m.body.setVelocity((dx / dist) * spd, (dy / dist) * spd);
+          } else if (dist < 80) {
+            // Circle the player
+            const orbitAngle = time * 0.002 + m.getData('offset');
+            const orbitX = this.player.x + Math.cos(orbitAngle) * 60;
+            const orbitY = this.player.y + Math.sin(orbitAngle) * 60;
+            const odx = orbitX - m.x, ody = orbitY - m.y;
+            const odist = Math.sqrt(odx * odx + ody * ody);
+            if (odist > 2) m.body.setVelocity((odx / odist) * spd, (ody / odist) * spd);
+          } else {
+            m.body.setVelocity((dx / dist) * spd * 0.6, (dy / dist) * spd * 0.6);
+          }
+          break;
+        }
+
+        case 'ranged': {
+          // Bone Horror — stays at range, fires bone projectiles
+          if (dist < 100) {
+            // Retreat
+            m.body.setVelocity((-dx / dist) * spd, (-dy / dist) * spd);
+          } else if (dist < 250) {
+            // Strafe
+            const strafeAngle = time * 0.001 + m.getData('offset');
+            m.body.setVelocity(Math.cos(strafeAngle) * spd * 0.5, Math.sin(strafeAngle) * spd * 0.5);
+            // Fire projectile occasionally
+            if (Math.random() < 0.015) {
+              const angle = Math.atan2(dy, dx);
+              const bone = this.add.circle(m.x, m.y, 3, 0xD4C5B0, 0.8);
+              bone.setDepth(8);
+              this.physics.world.enable(bone);
+              bone.body.setAllowGravity(false);
+              bone.body.setVelocity(Math.cos(angle) * 150, Math.sin(angle) * 150);
+              this.time.delayedCall(2000, () => { if (bone.active) bone.destroy(); });
+              this.physics.add.overlap(bone, this.player, () => {
+                this.damagePlayer(m.getData('damage') * 0.6);
+                bone.destroy();
+              });
+              SFX.creak();
+            }
+          } else {
+            m.body.setVelocity(0, 0);
+          }
+          break;
+        }
+
+        default: {
+          // Generic chase
+          if (dist < 150) {
+            m.body.setVelocity((dx / dist) * spd, (dy / dist) * spd);
+          } else if (dist < 250) {
+            const angle = time * 0.001 + m.getData('offset');
+            m.body.setVelocity(Math.cos(angle) * 15, Math.sin(angle) * 15);
+          } else {
+            m.body.setVelocity(0, 0);
+          }
+        }
       }
 
       // Melee damage
@@ -1505,9 +1848,16 @@ class GameScene extends Phaser.Scene {
     // ─── INVINCIBILITY ───
     if (state.player.invincible > 0) {
       state.player.invincible -= dt;
-      this.player.setAlpha(Math.sin(time * 0.02) > 0 ? 1 : 0.3);
+      // Flicker between visible and semi-transparent
+      const flicker = Math.sin(time * 0.015) > 0;
+      this.player.setAlpha(flicker ? 1 : 0.25);
+      // Tint flicker during i-frames
+      if (this.playerHurtOverlay) {
+        this.playerHurtOverlay.setVisible(!flicker);
+      }
     } else {
       this.player.setAlpha(1);
+      if (this.playerHurtOverlay) this.playerHurtOverlay.setVisible(false);
     }
 
     // ─── BULLET CLEANUP ───
@@ -1668,7 +2018,14 @@ class GameScene extends Phaser.Scene {
       if (!m.active) return;
       const mx = Math.floor(m.x / TILE), my = Math.floor(m.y / TILE);
       const dist = Math.sqrt((mx - px) ** 2 + (my - py) ** 2);
-      if (dist < VIEW_RADIUS) {
+      if (m.getData('isBoss')) {
+        // Boss — pulsing skull indicator (always visible on minimap)
+        const bossPulse = 0.6 + Math.sin(Date.now() * 0.006) * 0.4;
+        g.fillStyle(0xFF4444, bossPulse);
+        g.fillCircle(mmX + mx * mmScale + mmScale / 2, mmY + my * mmScale + mmScale / 2, 3);
+        g.fillStyle(0xFF8888, bossPulse * 0.5);
+        g.fillCircle(mmX + mx * mmScale + mmScale / 2, mmY + my * mmScale + mmScale / 2, 5);
+      } else if (dist < VIEW_RADIUS) {
         g.fillStyle(0xEF4444, 0.8);
         g.fillCircle(mmX + mx * mmScale + mmScale / 2, mmY + my * mmScale + mmScale / 2, 1.5);
       }
@@ -1682,11 +2039,24 @@ class GameScene extends Phaser.Scene {
     const nx = len > 0 ? dirX / len : 0;
     const ny = len > 0 ? dirY / len : 1;
 
-    // Attack animation (frame 10+ = sword slash)
+    // Attack animation (frame 10+ = energy blast)
     this.drawCatPlayer(this.playerBody, 10, this.playerFacing);
-    this.time.delayedCall(200, () => {
+    // Lunge forward
+    const lungeX = (this.playerFacing.x || 0) * 3;
+    const lungeY = (this.playerFacing.y || 0) * 3;
+    this.playerBody.x = lungeX;
+    this.playerBody.y = lungeY;
+    this.time.delayedCall(80, () => {
+      if (this.playerBody && this.playerBody.active) {
+        this.playerBody.x = lungeX * 0.5;
+        this.playerBody.y = lungeY * 0.5;
+      }
+    });
+    this.time.delayedCall(160, () => {
       if (this.playerBody && this.playerBody.active) {
         this.drawCatPlayer(this.playerBody, 0, this.playerFacing);
+        this.playerBody.x = 0;
+        this.playerBody.y = 0;
       }
     });
 
@@ -1774,9 +2144,17 @@ class GameScene extends Phaser.Scene {
       else hpFill.setFillStyle(0xEF4444, 0.8);
     }
 
-    // Hit flash
-    monster.setAlpha(0.3);
-    this.time.delayedCall(80, () => { if (monster.active) monster.setAlpha(0.9); });
+    // Hit flash — tint body white briefly
+    const monsterBody = monster.getAt(0);
+    if (monsterBody && monsterBody.setTint) {
+      monsterBody.setTint(0xFFFFFF);
+      this.time.delayedCall(60, () => { if (monsterBody.active) monsterBody.clearTint(); });
+      this.time.delayedCall(120, () => { if (monsterBody.active) monsterBody.setTint(0xFF8888); });
+      this.time.delayedCall(180, () => { if (monsterBody.active) monsterBody.clearTint(); });
+    } else {
+      monster.setAlpha(0.3);
+      this.time.delayedCall(80, () => { if (monster.active) monster.setAlpha(0.9); });
+    }
 
     // Hit particles
     for (let i = 0; i < 6; i++) {
@@ -1803,11 +2181,22 @@ class GameScene extends Phaser.Scene {
     }
 
     if (hp <= 0) {
-      // Death explosion
-      for (let i = 0; i < 10; i++) {
-        this.spawnParticle(monster.x, monster.y, (Math.random() - 0.5) * 100, (Math.random() - 0.5) * 100, 0xEF4444, 0.9);
+      // Death dissolve animation
+      const deathColor = monster.getData('behavior') === 'phase' ? 0x4444FF :
+                         monster.getData('behavior') === 'teleport' ? 0xAA00FF : 0xEF4444;
+      for (let i = 0; i < 12; i++) {
+        this.spawnParticle(monster.x, monster.y, (Math.random() - 0.5) * 120, (Math.random() - 0.5) * 120, deathColor, 0.9);
       }
-      monster.destroy();
+      // Dissolve: shrink and fade over 300ms
+      this.tweens.add({
+        targets: monster,
+        scaleX: 0, scaleY: 0, alpha: 0,
+        duration: 300,
+        ease: 'Back.easeIn',
+        onComplete: () => { if (monster.active) monster.destroy(); }
+      });
+      // Stop movement immediately
+      monster.body.setVelocity(0, 0);
       state.kills++;
 
       // Combo bonus XP
@@ -1833,6 +2222,12 @@ class GameScene extends Phaser.Scene {
         state.player.weapon = weapon;
         this.addLog(`🗡 Boss dropped: ${weapon.name}! (${weapon.desc})`);
         SFX.chest();
+        // Hide boss health bar
+        const bossBar = document.getElementById('boss-health-bar');
+        if (bossBar) bossBar.style.display = 'none';
+        // Boss defeat celebration
+        this.screenShake = 10;
+        this.cameras.main.flash(500, 251, 191, 36);
       }
 
       // Random weapon drop from normal monsters (5% chance)
@@ -1882,9 +2277,19 @@ class GameScene extends Phaser.Scene {
 
     const dmg = Math.max(1, amount - state.player.def);
     state.player.hp = Math.max(0, state.player.hp - dmg);
-    state.player.invincible = 0.8;
+    state.player.invincible = 1.2; // Longer i-frames for fairness
     this.screenShake = 5;
     SFX.hurt();
+
+    // Hurt animation — flash red overlay on player
+    if (this.playerHurtOverlay) {
+      this.playerHurtOverlay.setVisible(true);
+      this.time.delayedCall(100, () => { if (this.playerHurtOverlay) this.playerHurtOverlay.setVisible(false); });
+      this.time.delayedCall(200, () => { if (this.playerHurtOverlay) this.playerHurtOverlay.setVisible(true); });
+      this.time.delayedCall(300, () => { if (this.playerHurtOverlay) this.playerHurtOverlay.setVisible(false); });
+      this.time.delayedCall(400, () => { if (this.playerHurtOverlay) this.playerHurtOverlay.setVisible(true); });
+      this.time.delayedCall(500, () => { if (this.playerHurtOverlay) this.playerHurtOverlay.setVisible(false); });
+    }
 
     this.cameras.main.flash(150, 239, 68, 68);
     this.addLog(`Took ${dmg} damage!`);
@@ -1896,6 +2301,7 @@ class GameScene extends Phaser.Scene {
 
     if (state.player.hp <= 0) {
       state.phase = 'gameover';
+      stopMusic();
       SFX.death();
       document.getElementById('gameover-screen').classList.add('show');
       document.getElementById('go-title').textContent = 'GAME OVER';
@@ -1973,6 +2379,171 @@ class GameScene extends Phaser.Scene {
     for (let i = 0; i < 8; i++) this.spawnParticle(x * TILE + TILE/2, y * TILE + TILE/2, (Math.random() - 0.5) * 60, -Math.random() * 60, 0xFBBF24, 0.9);
   }
 
+  // ─── BOSS AI ────────────────────────────────────────────────
+  updateBossAI(boss, dx, dy, dist, time, dt) {
+    const spd = boss.getData('speed');
+    const bossData = BOSSES.find(b => b.name === boss.getData('name'));
+    const abilityCooldown = boss.getData('abilityCooldown') || 0;
+    const attackPattern = boss.getData('attackPattern') || 0;
+
+    // Update cooldown
+    if (abilityCooldown > 0) boss.setData('abilityCooldown', abilityCooldown - dt);
+
+    // Update boss HP bar in UI
+    this.updateBossHPBar(boss);
+
+    // Pulsing scale effect
+    const pulseScale = 1 + Math.sin(time * 0.004) * 0.08;
+    boss.setScale(pulseScale);
+
+    // Phase 1: Chase + special attacks
+    if (dist < 200) {
+      // Chase player
+      const angle = Math.atan2(dy, dx);
+      boss.body.setVelocity(Math.cos(angle) * spd, Math.sin(angle) * spd);
+
+      // Special attack when off cooldown
+      if (abilityCooldown <= 0) {
+        const pattern = (attackPattern + 1) % 4;
+        boss.setData('attackPattern', pattern);
+        boss.setData('abilityCooldown', 2.5);
+
+        switch (bossData.name) {
+          case 'The Thread Wraith':
+            // Fire 3 projectiles in a spread
+            for (let i = -1; i <= 1; i++) {
+              const a = angle + i * 0.4;
+              this.bossFireProjectile(boss.x, boss.y, a, 0xEF4444, 180, 15);
+            }
+            SFX.shoot();
+            break;
+
+          case 'Hydra of Forgotten Replies':
+            if (pattern < 2) {
+              // Ring of projectiles
+              for (let i = 0; i < 8; i++) {
+                const a = (i / 8) * Math.PI * 2;
+                this.bossFireProjectile(boss.x, boss.y, a, 0xA855F7, 120, 12);
+              }
+              SFX.monsterGrowl();
+            } else {
+              // Charge at player
+              boss.body.setVelocity(Math.cos(angle) * spd * 3, Math.sin(angle) * spd * 3);
+              this.time.delayedCall(400, () => {
+                if (boss.active) boss.body.setVelocity(Math.cos(angle) * spd, Math.sin(angle) * spd);
+              });
+              SFX.jumpscare();
+            }
+            break;
+
+          case 'The Original Poster':
+            if (pattern === 0) {
+              // Spiral of projectiles
+              for (let i = 0; i < 12; i++) {
+                const a = (i / 12) * Math.PI * 2;
+                this.time.delayedCall(i * 50, () => {
+                  if (boss.active) this.bossFireProjectile(boss.x, boss.y, a, 0xFBBF24, 150, 18);
+                });
+              }
+              SFX.jumpscare();
+            } else if (pattern === 1) {
+              // Summon 2 minions
+              for (let i = 0; i < 2; i++) {
+                const ma = Math.random() * Math.PI * 2;
+                const mx = boss.x + Math.cos(ma) * 60;
+                const my = boss.y + Math.sin(ma) * 60;
+                const tx = Math.floor(mx / TILE), ty = Math.floor(my / TILE);
+                if (tx >= 0 && tx < MAP_W && ty >= 0 && ty < MAP_H && !SOLID_TILES.has(state.dungeon.map[ty][tx])) {
+                  this.spawnMonsterAt(tx, ty);
+                }
+              }
+              this.addLog('The Original Poster summons minions!');
+              SFX.monsterGrowl();
+            } else {
+              // Slam — area damage
+              this.damagePlayer(bossData.damage * 1.5);
+              for (let i = 0; i < 12; i++) {
+                this.spawnParticle(boss.x, boss.y, (Math.random()-0.5)*120, (Math.random()-0.5)*120, 0xFBBF24, 0.9);
+              }
+              this.screenShake = 10;
+              SFX.jumpscare();
+            }
+            break;
+        }
+      }
+    } else if (dist < 350) {
+      // Patrol around the room
+      const patrolAngle = time * 0.001 + boss.getData('offset');
+      boss.body.setVelocity(Math.cos(patrolAngle) * spd * 0.5, Math.sin(patrolAngle) * spd * 0.5);
+    } else {
+      // Move toward player slowly
+      const angle = Math.atan2(dy, dx);
+      boss.body.setVelocity(Math.cos(angle) * spd * 0.3, Math.sin(angle) * spd * 0.3);
+    }
+
+    // Melee damage
+    if (dist < 30 && state.player.invincible <= 0) {
+      this.damagePlayer(boss.getData('damage'));
+    }
+  }
+
+  bossFireProjectile(x, y, angle, color, speed, damage) {
+    // Warning indicator — larger, brighter dot with pulse effect
+    const warnX = x + Math.cos(angle) * 20;
+    const warnY = y + Math.sin(angle) * 20;
+    const warning = this.add.circle(warnX, warnY, 5, color, 0.9);
+    warning.setDepth(9);
+    // Pulsing ring around the warning
+    const ring = this.add.circle(warnX, warnY, 8, color, 0.4);
+    ring.setDepth(8);
+    // Warning sound — soft two-tone ping
+    playSound(660, 0.1, 'sine', 0.04);
+    playSound(880, 0.12, 'sine', 0.03);
+    // Blink the warning dot rapidly
+    this.tweens.add({ targets: warning, alpha: 0.2, duration: 60, yoyo: true, repeat: 3 });
+    // Pulse the ring outward
+    this.tweens.add({ targets: ring, scaleX: 2, scaleY: 2, alpha: 0, duration: 200, ease: 'Quad.easeOut' });
+    this.time.delayedCall(250, () => {
+      if (warning.active) warning.destroy();
+      if (ring.active) ring.destroy();
+      // Fire the actual projectile (slightly slower for dodgeability)
+      const bullet = this.add.circle(x, y, 4, color, 0.9);
+      bullet.setDepth(8);
+      this.physics.world.enable(bullet);
+      bullet.body.setAllowGravity(false);
+      bullet.body.setVelocity(Math.cos(angle) * speed * 0.8, Math.sin(angle) * speed * 0.8);
+      this.time.delayedCall(3000, () => { if (bullet.active) bullet.destroy(); });
+      this.physics.add.overlap(bullet, this.player, () => {
+        if (state.player.invincible <= 0) {
+          this.damagePlayer(damage);
+          bullet.destroy();
+        }
+      });
+      this.physics.add.collider(bullet, this.walls, () => bullet.destroy());
+    });
+  }
+
+  updateBossHPBar(boss) {
+    const hpFill = boss.getData('hpFill');
+    const hp = boss.getData('hp');
+    const maxHp = boss.getData('maxHp');
+    if (hpFill && hpFill.active) {
+      const ratio = Math.max(0, hp / maxHp);
+      hpFill.setScale(ratio, 1);
+      if (ratio > 0.5) hpFill.setFillStyle(0xEF4444, 0.8);
+      else if (ratio > 0.25) hpFill.setFillStyle(0xFBBF24, 0.8);
+      else hpFill.setFillStyle(0xFF0000, 0.9);
+    }
+
+    // Update HTML boss health bar
+    const bossHP = document.getElementById('boss-hp-fill');
+    const bossHPText = document.getElementById('boss-hp-text');
+    const bossBar = document.getElementById('boss-health-bar');
+    if (bossBar) bossBar.style.display = 'block';
+    if (bossHP) bossHP.style.width = `${(hp / maxHp) * 100}%`;
+    if (bossHPText) bossHPText.textContent = `${hp}/${maxHp}`;
+  }
+
   spawnMonster() {
     // Retry up to 20 times to find a valid spawn
     let x, y, tries = 0;
@@ -1985,11 +2556,11 @@ class GameScene extends Phaser.Scene {
 
     const theme = THEMES[state.floorTheme % THEMES.length];
     const monsterTypes = [
-      { name: 'Shadow Crawler', color: 0x4A2A4A, hp: 25, speed: 40, damage: 8 },
-      { name: 'Lost Soul', color: 0x3A3A5A, hp: 30, speed: 45, damage: 10 },
-      { name: 'Flesh Golem', color: 0x5A2A2A, hp: 40, speed: 35, damage: 14 },
-      { name: 'Void Stalker', color: 0x2A1A3A, hp: 50, speed: 50, damage: 18 },
-      { name: 'Bone Horror', color: 0x6A5A3A, hp: 65, speed: 45, damage: 22 },
+      { name: 'Shadow Crawler', color: 0x4A2A4A, hp: 25, speed: 40, damage: 8, behavior: 'flank' },
+      { name: 'Lost Soul', color: 0x3A3A5A, hp: 30, speed: 45, damage: 10, behavior: 'phase' },
+      { name: 'Flesh Golem', color: 0x5A2A2A, hp: 40, speed: 35, damage: 14, behavior: 'charge' },
+      { name: 'Void Stalker', color: 0x2A1A3A, hp: 50, speed: 50, damage: 18, behavior: 'teleport' },
+      { name: 'Bone Horror', color: 0x6A5A3A, hp: 65, speed: 45, damage: 22, behavior: 'ranged' },
     ];
     const typeIdx = Math.min(Math.floor(state.depth / 2), monsterTypes.length - 1);
     const type = monsterTypes[typeIdx];
@@ -2171,6 +2742,9 @@ class GameScene extends Phaser.Scene {
     monster.setData('damage', type.damage + state.depth * 2);
     monster.setData('offset', Math.random() * Math.PI * 2);
     monster.setData('name', type.name);
+    monster.setData('behavior', type.behavior);
+    monster.setData('charging', false);
+    monster.setData('chargeCooldown', 0);
     monster.setDepth(8);
 
     this.physics.world.enable(monster);
@@ -2184,11 +2758,11 @@ class GameScene extends Phaser.Scene {
     // Spawn monster at specific tile (for grass encounters)
     const theme = THEMES[state.floorTheme % THEMES.length];
     const monsterTypes = [
-      { name: 'Shadow Crawler', color: 0x4A2A4A, hp: 25, speed: 40, damage: 8 },
-      { name: 'Lost Soul', color: 0x3A3A5A, hp: 30, speed: 45, damage: 10 },
-      { name: 'Flesh Golem', color: 0x5A2A2A, hp: 40, speed: 35, damage: 14 },
-      { name: 'Void Stalker', color: 0x2A1A3A, hp: 50, speed: 50, damage: 18 },
-      { name: 'Bone Horror', color: 0x6A5A3A, hp: 65, speed: 45, damage: 22 },
+      { name: 'Shadow Crawler', color: 0x4A2A4A, hp: 25, speed: 40, damage: 8, behavior: 'flank' },
+      { name: 'Lost Soul', color: 0x3A3A5A, hp: 30, speed: 45, damage: 10, behavior: 'phase' },
+      { name: 'Flesh Golem', color: 0x5A2A2A, hp: 40, speed: 35, damage: 14, behavior: 'charge' },
+      { name: 'Void Stalker', color: 0x2A1A3A, hp: 50, speed: 50, damage: 18, behavior: 'teleport' },
+      { name: 'Bone Horror', color: 0x6A5A3A, hp: 65, speed: 45, damage: 22, behavior: 'ranged' },
     ];
     const typeIdx = Math.min(Math.floor(state.depth / 2), monsterTypes.length - 1);
     const type = monsterTypes[typeIdx];
@@ -2413,7 +2987,24 @@ class GameScene extends Phaser.Scene {
     this.physics.add.collider(monster, this.walls);
     this.monsters.push(monster);
 
+    // Boss entrance effect
+    this.screenShake = 12;
+    SFX.jumpscare();
     this.addLog(`⚠ BOSS: ${bossData.name} appeared!`);
+
+    // Flash the screen red briefly
+    this.cameras.main.flash(300, 239, 68, 68);
+
+    // Boss entrance text
+    const bossText = this.add.text(
+      this.cameras.main.scrollX + this.cameras.main.width / 2,
+      this.cameras.main.scrollY + this.cameras.main.height / 2,
+      `⚠ ${bossData.name}`,
+      { fontFamily: 'Press Start 2P', fontSize: '8px', color: '#E83838', stroke: '#000', strokeThickness: 3 }
+    ).setOrigin(0.5).setDepth(30).setAlpha(0);
+    this.tweens.add({ targets: bossText, alpha: 1, duration: 300, yoyo: true, hold: 1500,
+      onComplete: () => bossText.destroy()
+    });
   }
 
   spawnParticle(x, y, vx, vy, color, alpha) {
@@ -2480,8 +3071,13 @@ class GameScene extends Phaser.Scene {
 
     state.player.hp = Math.min(state.player.maxHp, state.player.hp + 20);
     state.visited.clear();
+    const nextTheme = THEMES[state.floorTheme % THEMES.length];
     this.addLog(`Descending to floor ${state.depth + 1}...`);
-    startTransition(() => this.scene.restart());
+    startTransition(
+      () => this.scene.restart(),
+      `FLOOR ${state.depth + 1}`,
+      nextTheme.name
+    );
   }
 
   getTitle(level) {
@@ -2676,10 +3272,15 @@ function hasStatus(effectKey) {
 }
 
 // ─── ROOM TRANSITION ─────────────────────────────────────────
-function startTransition(callback) {
+function startTransition(callback, title, sub) {
   state.isTransitioning = true;
   const transition = document.getElementById('gb-transition');
+  const titleEl = document.getElementById('transition-title');
+  const subEl = document.getElementById('transition-sub');
   if (!transition) { callback(); return; }
+
+  if (titleEl) titleEl.textContent = title || '';
+  if (subEl) subEl.textContent = sub || '';
 
   transition.classList.add('active');
   setTimeout(() => {
@@ -2687,8 +3288,8 @@ function startTransition(callback) {
     setTimeout(() => {
       transition.classList.remove('active');
       state.isTransitioning = false;
-    }, 300);
-  }, 350);
+    }, 400);
+  }, 450);
 }
 
 // ─── INVENTORY UI ────────────────────────────────────────────
