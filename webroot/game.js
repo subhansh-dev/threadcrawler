@@ -283,11 +283,13 @@ const T = {
   WATER: 7, GRASS_TALL: 8, PATH: 9, FENCE: 10, TREE: 11,
   FLOOR_ALT: 12, CARPET: 13, STAIRS: 14, CHEST: 15,
   LAVA: 16, ICE: 17, SAND: 18, BRIDGE: 19, FLOWER: 20, POISON: 21, SPIKES: 22,
+  LOCKED_CHEST: 23, BONUS: 24,
 };
 
 const SOLID_TILES = new Set([T.WALL, T.FENCE, T.TREE, T.LAVA]);
 const SLOW_TILES = new Set([T.WATER, T.GRASS_TALL, T.ICE]);
 const HAZARD_TILES = new Set([T.TRAP, T.LAVA, T.POISON, T.SPIKES]);
+const COMMUNITY_LOCKED = new Set([T.LOCKED_CHEST]);
 
 // ─── ITEM DEFINITIONS ────────────────────────────────────────
 const ITEMS = {
@@ -398,7 +400,7 @@ const ACHIEVEMENTS = [
   { id: 'first_blood', name: 'First Blood', desc: 'Kill your first monster', check: () => state.kills >= 1 },
   { id: 'combo_5', name: 'Combo King', desc: 'Reach 5x combo', check: () => combo.maxCombo >= 5 },
   { id: 'floor_3', name: 'Deep Diver', desc: 'Reach floor 3', check: () => state.depth >= 3 },
-  { id: 'floor_7', name: 'Thread Master', desc: 'Clear all 7 floors', check: () => state.depth >= 7 },
+    { id: 'floor_7', name: 'Thread Master', desc: 'Clear all floors', check: () => state.depth >= state.totalFloors },
   { id: 'kills_50', name: 'Monster Slayer', desc: 'Kill 50 monsters total', check: () => state.kills >= 50 },
   { id: 'gold_500', name: 'Gold Hoarder', desc: 'Collect 500 gold', check: () => state.player.gold >= 500 },
   { id: 'level_10', name: 'Veteran', desc: 'Reach level 10', check: () => state.player.level >= 10 },
@@ -487,6 +489,10 @@ if (window.parent !== window) {
 }
 
 // ─── GAME STATE ──────────────────────────────────────────────
+// commentCount can be set via URL: ?comments=50
+const urlParams = new URLSearchParams(window.location.search);
+const commentCountFromUrl = parseInt(urlParams.get('comments') || '0', 10);
+
 let state = {
   phase: 'title',
   player: {
@@ -498,7 +504,8 @@ let state = {
   },
   dungeon: null,
   depth: 0,
-  totalFloors: 7,
+  commentCount: commentCountFromUrl,
+  totalFloors: 10 + Math.floor(commentCountFromUrl / 20),
   kills: 0,
   log: [],
   visited: new Set(),
@@ -507,6 +514,12 @@ let state = {
   transitionAlpha: 0,
   isTransitioning: false,
 };
+
+// Community multiplier: scales rewards based on comment engagement
+// 0 comments = 1x, 20 = 1.2x, 40 = 1.4x, 100 = 2x, 200 = 3x
+function getCommunityMultiplier() {
+  return 1 + (state.commentCount / 20) * 0.2;
+}
 
 // ─── POKEMON GAMEBOY THEMES ─────────────────────────────────
 // Bright, colorful palettes inspired by Pokemon RBY/GSC
@@ -659,6 +672,18 @@ function generateDungeon(seed, depth) {
   map[spawn.cy][spawn.cx] = T.SPAWN;
   map[exit.cy][exit.cx] = T.EXIT;
 
+  // Safety: ensure exit is on a walkable tile — search nearby if not
+  if (map[exit.cy][exit.cx] !== T.EXIT) {
+    for (let dy = -3; dy <= 3; dy++) for (let dx = -3; dx <= 3; dx++) {
+      const ny = exit.cy + dy, nx = exit.cx + dx;
+      if (ny > 0 && ny < MAP_H - 1 && nx > 0 && nx < MAP_W - 1 && map[ny][nx] === T.FLOOR) {
+        map[ny][nx] = T.EXIT;
+        exit.cx = nx; exit.cy = ny;
+        break;
+      }
+    }
+  }
+
   // ─── STEP 5: Room decoration ───
   rooms.forEach((room, idx) => {
     if (idx === 0) return;
@@ -676,12 +701,13 @@ function generateDungeon(seed, depth) {
       }
       if (room.type === 'water_feature' && r < 0.15) { map[y][x] = T.WATER; continue; }
 
-      // General decoration + hazards
+      // General decoration + hazards (scaled by community engagement)
+      const cm = getCommunityMultiplier();
       if (r < 0.025) { map[y][x] = T.TRAP; continue; }
       if (r < 0.035) { map[y][x] = T.SPIKES; continue; }
       if (r < 0.045) { map[y][x] = T.POISON; continue; }
-      if (r < 0.075) { map[y][x] = T.HEAL; continue; }
-      if (r < 0.095) { map[y][x] = T.POWER; continue; }
+      if (r < 0.075 * cm) { map[y][x] = T.HEAL; continue; }
+      if (r < 0.095 * cm) { map[y][x] = T.POWER; continue; }
       if (r < 0.11) { map[y][x] = T.GRASS_TALL; continue; }
       if (r < 0.12) { map[y][x] = T.FLOWER; continue; }
 
@@ -694,12 +720,22 @@ function generateDungeon(seed, depth) {
       map[room.cy][room.cx] = T.STAIRS;
     }
 
-    // Treasure chests
-    if (idx > 0 && rng() < 0.5) {
+    // Treasure chests (scaled by community engagement)
+    const cm = getCommunityMultiplier();
+    if (idx > 0 && rng() < 0.3 * cm) {
       const cx = room.x + 1 + Math.floor(rng() * Math.max(1, room.w - 2));
       const cy = room.y + 1 + Math.floor(rng() * Math.max(1, room.h - 2));
       if (cx >= 0 && cx < MAP_W && cy >= 0 && cy < MAP_H && map[cy][cx] === T.FLOOR) {
         map[cy][cx] = T.CHEST;
+      }
+    }
+
+    // Community-locked chests (need 20+ comments to unlock)
+    if (state.commentCount >= 20 && idx > 2 && rng() < 0.15) {
+      const cx = room.x + 1 + Math.floor(rng() * Math.max(1, room.w - 2));
+      const cy = room.y + 1 + Math.floor(rng() * Math.max(1, room.h - 2));
+      if (cx >= 0 && cx < MAP_W && cy >= 0 && cy < MAP_H && map[cy][cx] === T.FLOOR) {
+        map[cy][cx] = T.LOCKED_CHEST;
       }
     }
   });
@@ -744,6 +780,39 @@ function generateDungeon(seed, depth) {
       // Hidden entrance — one wall tile becomes a path
       const entranceX = sx + Math.floor(rng() * secretW);
       const entranceY = sy - 1;
+      if (entranceY >= 0 && map[entranceY][entranceX] === T.WALL) {
+        map[entranceY][entranceX] = T.FLOOR;
+      }
+      break;
+    }
+  }
+
+  // ─── STEP 7b: Community bonus rooms (every 20 comments = bonus room) ───
+  const bonusRooms = Math.floor(state.commentCount / 20);
+  for (let b = 0; b < bonusRooms; b++) {
+    const bw = 5 + Math.floor(rng() * 3);
+    const bh = 5 + Math.floor(rng() * 3);
+    for (let attempt = 0; attempt < 30; attempt++) {
+      const bx = 3 + Math.floor(rng() * (MAP_W - bw - 6));
+      const by = 3 + Math.floor(rng() * (MAP_H - bh - 6));
+      let wallCount = 0;
+      for (let dy = 0; dy < bh; dy++) for (let dx = 0; dx < bw; dx++) {
+        if (map[by + dy][bx + dx] === T.WALL) wallCount++;
+      }
+      if (wallCount < bw * bh * 0.7) continue;
+      // Carve bonus room
+      for (let dy = 0; dy < bh; dy++) for (let dx = 0; dx < bw; dx++) {
+        map[by + dy][bx + dx] = T.BONUS;
+      }
+      // Fill with loot
+      map[by + Math.floor(bh / 2)][bx + Math.floor(bw / 2)] = T.CHEST;
+      map[by + 1][bx + 1] = T.HEAL;
+      map[by + 1][bx + bw - 2] = T.POWER;
+      map[by + bh - 2][bx + 1] = T.HEAL;
+      map[by + bh - 2][bx + bw - 2] = T.POWER;
+      // Hidden entrance
+      const entranceX = bx + Math.floor(rng() * bw);
+      const entranceY = by - 1;
       if (entranceY >= 0 && map[entranceY][entranceX] === T.WALL) {
         map[entranceY][entranceX] = T.FLOOR;
       }
@@ -1210,6 +1279,43 @@ function drawTile(g, tileType, px, py, theme, x, y, time) {
       g.fillRect(px + 1, py + 13, 14, 2);
       break;
     }
+    case T.LOCKED_CHEST: {
+      g.fillStyle(theme.floorColor, 1);
+      g.fillRect(px, py, T16, T16);
+      // Locked chest — community requires 20+ comments to open
+      g.fillStyle(0x8B4513, 0.9);
+      g.fillRect(px + 2, py + 4, 12, 10);
+      // Lock
+      g.fillStyle(0xFFD700, 0.9);
+      g.fillRect(px + 6, py + 6, 4, 4);
+      g.fillStyle(0x000000, 0.8);
+      g.fillRect(px + 7, py + 8, 2, 2);
+      // Lock glow
+      const lockGlow = 0.15 + Math.sin(time * 0.003) * 0.1;
+      g.fillStyle(0xFFD700, lockGlow);
+      g.fillRect(px + 1, py + 3, 14, 12);
+      // Community label
+      if (state.commentCount < 20) {
+        g.fillStyle(0xFF4444, 0.6);
+        g.fillRect(px + 3, py + 2, 10, 2);
+      }
+      break;
+    }
+    case T.BONUS: {
+      g.fillStyle(0x1a0a2e, 1);
+      g.fillRect(px, py, T16, T16);
+      // Bonus room — community reward room
+      const bonusGlow = 0.1 + Math.sin(time * 0.005 + x * 0.5 + y * 0.5) * 0.08;
+      g.fillStyle(0xA882F7, bonusGlow);
+      g.fillRect(px, py, T16, T16);
+      // Sparkle
+      const sparkle = Math.sin(time * 0.007 + x * 3 + y * 7) > 0.7;
+      if (sparkle) {
+        g.fillStyle(0xFFFFFF, 0.6);
+        g.fillRect(px + 7, py + 7, 2, 2);
+      }
+      break;
+    }
     default: {
       g.fillStyle(theme.floorColor, 1);
       g.fillRect(px, py, T16, T16);
@@ -1307,7 +1413,8 @@ class GameScene extends Phaser.Scene {
     this.bullets = this.physics.add.group();
 
     // ─── MONSTERS ───
-    const monsterCount = Math.min(3 + state.depth, 8);
+    const cm = getCommunityMultiplier();
+    const monsterCount = Math.min(Math.floor((4 + state.depth * 1.5) * Math.sqrt(cm)), 14);
     for (let i = 0; i < monsterCount; i++) this.spawnMonster();
 
     // Spawn boss on specific floors
@@ -1741,6 +1848,14 @@ class GameScene extends Phaser.Scene {
         this.interactionCooldown = INTERACTION_COOLDOWN;
       } else if (tile === T.CHEST) {
         this.triggerChest(tx, ty);
+        this.interactionCooldown = INTERACTION_COOLDOWN;
+      } else if (tile === T.LOCKED_CHEST) {
+        if (state.commentCount >= 20) {
+          this.triggerLockedChest(tx, ty);
+        } else {
+          this.addLog(`Locked! Need 20+ comments to open.`);
+          SFX.hit();
+        }
         this.interactionCooldown = INTERACTION_COOLDOWN;
       } else if (tile === T.GRASS_TALL) {
         // Pokemon-style grass encounter!
@@ -2460,11 +2575,12 @@ class GameScene extends Phaser.Scene {
       monster.body.setVelocity(0, 0);
       state.kills++;
 
-      // Combo bonus XP
-      const comboXpBonus = Math.floor((15 + state.depth * 5) * (combo.multiplier - 1));
-      const baseXp = 15 + state.depth * 5;
+      // Combo bonus XP (scaled by community engagement)
+      const cm = getCommunityMultiplier();
+      const comboXpBonus = Math.floor((15 + state.depth * 5) * (combo.multiplier - 1) * cm);
+      const baseXp = Math.floor((15 + state.depth * 5) * cm);
       state.player.xp += baseXp + comboXpBonus;
-      state.player.gold += 8 + state.depth * 3;
+      state.player.gold += Math.floor((8 + state.depth * 3) * cm);
 
       // Holy lance heal on kill
       if (state.player.weapon && state.player.weapon.id === 'holy_lance') {
@@ -2593,7 +2709,8 @@ class GameScene extends Phaser.Scene {
         Floor: ${state.depth + 1} / ${state.totalFloors}<br>
         Kills: ${state.kills}<br>
         Gold: ${state.player.gold}<br>
-        Level: ${state.player.level} (${state.player.title})
+        Level: ${state.player.level} (${state.player.title})<br>
+        ${state.commentCount > 0 ? `Community: ${state.commentCount} comments (${getCommunityMultiplier().toFixed(1)}x)` : ''}
       `;
     }
   }
@@ -2645,11 +2762,12 @@ class GameScene extends Phaser.Scene {
 
   triggerChest(x, y) {
     state.dungeon.map[y][x] = T.FLOOR;
+    const cm = getCommunityMultiplier();
     const lootTable = ['health_potion', 'bomb', 'atk_gem', 'def_gem', 'shield_item', 'speed_boots', 'mega_potion', 'compass'];
-    const goldAmount = 15 + Math.floor(Math.random() * 25) + state.depth * 5;
+    const goldAmount = Math.floor((15 + Math.floor(Math.random() * 25) + state.depth * 5) * cm);
     state.player.gold += goldAmount;
 
-    if (Math.random() < 0.6) {
+    if (Math.random() < 0.6 * cm) {
       const itemId = lootTable[Math.floor(Math.random() * lootTable.length)];
       addToInventory(itemId);
     } else {
@@ -2660,6 +2778,26 @@ class GameScene extends Phaser.Scene {
     flash.setDepth(15);
     this.tweens.add({ targets: flash, alpha: 0, duration: 500, onComplete: () => flash.destroy() });
     for (let i = 0; i < 8; i++) this.spawnParticle(x * TILE + TILE/2, y * TILE + TILE/2, (Math.random() - 0.5) * 60, -Math.random() * 60, 0xFBBF24, 0.9);
+  }
+
+  triggerLockedChest(x, y) {
+    state.dungeon.map[y][x] = T.FLOOR;
+    const cm = getCommunityMultiplier();
+    // Community locked chests have 2x better loot
+    const lootTable = ['mega_potion', 'compass', 'atk_gem', 'def_gem', 'shield_item', 'speed_boots', 'bomb', 'health_potion'];
+    const goldAmount = Math.floor((30 + Math.floor(Math.random() * 50) + state.depth * 10) * cm);
+    state.player.gold += goldAmount;
+
+    // Always drop an item from community chest
+    const itemId = lootTable[Math.floor(Math.random() * lootTable.length)];
+    addToInventory(itemId);
+    this.addLog(`Community chest opened! +${goldAmount}G, +${ITEMS[itemId].name}`);
+
+    SFX.chest();
+    const flash = this.add.rectangle(x * TILE + TILE/2, y * TILE + TILE/2, TILE, TILE, 0xFFD700, 0.7);
+    flash.setDepth(15);
+    this.tweens.add({ targets: flash, alpha: 0, duration: 800, onComplete: () => flash.destroy() });
+    for (let i = 0; i < 12; i++) this.spawnParticle(x * TILE + TILE/2, y * TILE + TILE/2, (Math.random() - 0.5) * 80, -Math.random() * 80, 0xFFD700, 1);
   }
 
   // ─── BOSS AI ────────────────────────────────────────────────
@@ -3011,9 +3149,9 @@ class GameScene extends Phaser.Scene {
     const body = this.add.graphics();
     this.drawMonsterSprite(body, typeIdx);
     this.setupMonster(monster, body, type, typeIdx,
-      type.hp + state.depth * 8,
-      type.speed + state.depth * 2,
-      type.damage + state.depth * 2
+      type.hp + state.depth * 12,
+      type.speed + state.depth * 3,
+      type.damage + state.depth * 3
     );
   }
 
@@ -3032,9 +3170,9 @@ class GameScene extends Phaser.Scene {
     const body = this.add.graphics();
     this.drawMonsterSprite(body, typeIdx);
     this.setupMonster(monster, body, type, typeIdx,
-      type.hp + state.depth * 8,
-      type.speed + state.depth * 2 + 10, // slightly faster for encounters
-      type.damage + state.depth * 2
+      type.hp + state.depth * 12,
+      type.speed + state.depth * 3 + 10,
+      type.damage + state.depth * 3
     );
   }
 
@@ -3192,7 +3330,8 @@ class GameScene extends Phaser.Scene {
         Gold: ${state.player.gold}<br>
         Level: ${state.player.level} (${state.player.title})<br>
         Max Combo: ${combo.maxCombo}x<br>
-        Achievements: ${unlockedAchievements.size}/${ACHIEVEMENTS.length}
+        Achievements: ${unlockedAchievements.size}/${ACHIEVEMENTS.length}<br>
+        ${state.commentCount > 0 ? `Community: ${state.commentCount} comments (${getCommunityMultiplier().toFixed(1)}x)` : ''}
       `;
       return;
     }
@@ -3904,7 +4043,9 @@ function startGame() {
       speedMult: 1, shield: 0, statusEffects: [],
       weapon: null, hasCompass: false, keys: 0,
     },
-    dungeon: null, depth: 0, totalFloors: 7, kills: 0, log: [],
+    dungeon: null, depth: 0, commentCount: state.commentCount,
+    totalFloors: 10 + Math.floor(state.commentCount / 20),
+    kills: 0, log: [],
     visited: new Set(), keys: 0, floorTheme: 0,
     transitionAlpha: 0, isTransitioning: false,
   };
@@ -3920,6 +4061,25 @@ function startGame() {
   document.getElementById('gameover-screen').classList.remove('show');
   document.getElementById('power-led').classList.add('on');
   document.getElementById('controls-hint').classList.add('show');
+
+  // Generate dynamic depth pips based on totalFloors
+  const depthBar = document.querySelector('.gb-depth-bar');
+  if (depthBar) {
+    depthBar.innerHTML = '';
+    for (let i = 0; i < state.totalFloors; i++) {
+      const pip = document.createElement('div');
+      pip.className = 'gb-depth-pip' + (i === 0 ? ' active' : '');
+      depthBar.appendChild(pip);
+    }
+  }
+
+  // Show community multiplier in HUD
+  const logEl = document.getElementById('log');
+  if (logEl && state.commentCount > 0) {
+    const cm = getCommunityMultiplier();
+    state.log.push(`Community: ${state.commentCount} comments (${cm.toFixed(1)}x rewards)`);
+  }
+
   if (game) game.destroy(true);
   game = new Phaser.Game(config);
 
