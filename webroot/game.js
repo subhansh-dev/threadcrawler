@@ -255,8 +255,8 @@ function mulberry32(a) {
   };
 }
 
-function cellularAutomata(w, h, fill = 0.42, iters = 5) {
-  let g = Array.from({ length: h }, () => Array.from({ length: w }, () => Math.random() < fill ? 1 : 0));
+function cellularAutomata(w, h, fill = 0.42, iters = 5, rng = Math.random) {
+  let g = Array.from({ length: h }, () => Array.from({ length: w }, () => rng() < fill ? 1 : 0));
   for (let n = 0; n < iters; n++) {
     const ng = g.map(r => [...r]);
     for (let y = 1; y < h - 1; y++) for (let x = 1; x < w - 1; x++) {
@@ -282,17 +282,18 @@ const T = {
   FLOOR: 0, WALL: 1, EXIT: 2, SPAWN: 3, TRAP: 4, HEAL: 5, POWER: 6,
   WATER: 7, GRASS_TALL: 8, PATH: 9, FENCE: 10, TREE: 11,
   FLOOR_ALT: 12, CARPET: 13, STAIRS: 14, CHEST: 15,
-  LAVA: 16, ICE: 17, SAND: 18, BRIDGE: 19, FLOWER: 20,
+  LAVA: 16, ICE: 17, SAND: 18, BRIDGE: 19, FLOWER: 20, POISON: 21, SPIKES: 22,
 };
 
 const SOLID_TILES = new Set([T.WALL, T.FENCE, T.TREE, T.LAVA]);
 const SLOW_TILES = new Set([T.WATER, T.GRASS_TALL, T.ICE]);
+const HAZARD_TILES = new Set([T.TRAP, T.LAVA, T.POISON, T.SPIKES]);
 
 // ─── ITEM DEFINITIONS ────────────────────────────────────────
 const ITEMS = {
   health_potion: { name: 'Health Potion', desc: 'Restore 40 HP', type: 'consumable', icon: '♥', color: 0x34D399, effect: (p) => { p.hp = Math.min(p.maxHp, p.hp + 40); } },
   mega_potion: { name: 'Mega Potion', desc: 'Restore 80 HP', type: 'consumable', icon: '♥+', color: 0x22C55E, effect: (p) => { p.hp = Math.min(p.maxHp, p.hp + 80); } },
-  bomb: { name: 'Bomb', desc: 'Deal 50 damage to all nearby enemies', type: 'consumable', icon: '●', color: 0xEF4444, effect: null },
+  bomb: { name: 'Bomb', desc: 'Deal 50 damage to all nearby enemies', type: 'consumable', icon: '●', color: 0xEF4444, effect: (p) => { /* handled in useItem with scene access */ } },
   shield_item: { name: 'Shield', desc: 'Block the next 3 hits', type: 'equipment', icon: '◆', color: 0x93C5FD, effect: (p) => { p.shield = 3; } },
   speed_boots: { name: 'Speed Boots', desc: '+30% movement speed', type: 'equipment', icon: '»', color: 0xFBBF24, effect: (p) => { p.speedMult = 1.3; } },
   atk_gem: { name: 'Attack Gem', desc: '+5 ATK permanently', type: 'consumable', icon: '▲', color: 0xEF4444, effect: (p) => { p.atk += 5; } },
@@ -444,6 +445,7 @@ function savePersistentData() {
       gold: persistentGold,
       upgrades: upgradeLevels,
       achievements: [...unlockedAchievements],
+      hasCompass: state.player.hasCompass || false,
     }));
   } catch(e) {}
 }
@@ -591,7 +593,7 @@ function generateDungeon(seed, depth) {
   const map = Array.from({ length: MAP_H }, () => new Array(MAP_W).fill(T.WALL));
 
   // ─── STEP 1: Cellular automata for base cave ───
-  const cave = cellularAutomata(MAP_W, MAP_H, 0.40 + depth * 0.012, 6);
+  const cave = cellularAutomata(MAP_W, MAP_H, 0.40 + depth * 0.012, 6, rng);
   for (let y = 0; y < MAP_H; y++) for (let x = 0; x < MAP_W; x++) {
     const n = fbm(perlin, x * 0.07, y * 0.07, 3);
     if (cave[y][x] === 0 && n > -0.15) map[y][x] = T.FLOOR;
@@ -674,12 +676,14 @@ function generateDungeon(seed, depth) {
       }
       if (room.type === 'water_feature' && r < 0.15) { map[y][x] = T.WATER; continue; }
 
-      // General decoration
-      if (r < 0.035) { map[y][x] = T.TRAP; continue; }
-      if (r < 0.065) { map[y][x] = T.HEAL; continue; }
-      if (r < 0.085) { map[y][x] = T.POWER; continue; }
-      if (r < 0.10) { map[y][x] = T.GRASS_TALL; continue; }
-      if (r < 0.11) { map[y][x] = T.FLOWER; continue; }
+      // General decoration + hazards
+      if (r < 0.025) { map[y][x] = T.TRAP; continue; }
+      if (r < 0.035) { map[y][x] = T.SPIKES; continue; }
+      if (r < 0.045) { map[y][x] = T.POISON; continue; }
+      if (r < 0.075) { map[y][x] = T.HEAL; continue; }
+      if (r < 0.095) { map[y][x] = T.POWER; continue; }
+      if (r < 0.11) { map[y][x] = T.GRASS_TALL; continue; }
+      if (r < 0.12) { map[y][x] = T.FLOWER; continue; }
 
       // Floor variation
       if (rng() < 0.08) map[y][x] = T.FLOOR_ALT;
@@ -707,7 +711,47 @@ function generateDungeon(seed, depth) {
     if (w > 0.35) map[y][x] = T.WATER;
   }
 
-  // ─── STEP 7: Border walls (ensure edges are solid) ───
+  // ─── STEP 7: Secret rooms (hidden treasure rooms) ───
+  if (depth > 0 && rng() < 0.6) {
+    const secretW = 4 + Math.floor(rng() * 3);
+    const secretH = 4 + Math.floor(rng() * 3);
+    // Find a spot near a wall
+    for (let attempt = 0; attempt < 30; attempt++) {
+      const sx = 3 + Math.floor(rng() * (MAP_W - secretW - 6));
+      const sy = 3 + Math.floor(rng() * (MAP_H - secretH - 6));
+      // Check if adjacent to wall
+      let adjacentToWall = false;
+      for (let dy = -1; dy <= secretH; dy++) for (let dx = -1; dx <= secretW; dx++) {
+        const ny = sy + dy, nx = sx + dx;
+        if (ny >= 0 && ny < MAP_H && nx >= 0 && nx < MAP_W && map[ny][nx] === T.WALL) adjacentToWall = true;
+      }
+      if (!adjacentToWall) continue;
+      // Check if area is mostly wall (hidden)
+      let wallCount = 0;
+      for (let dy = 0; dy < secretH; dy++) for (let dx = 0; dx < secretW; dx++) {
+        if (map[sy + dy][sx + dx] === T.WALL) wallCount++;
+      }
+      if (wallCount < secretW * secretH * 0.5) continue;
+      // Carve secret room
+      for (let dy = 0; dy < secretH; dy++) for (let dx = 0; dx < secretW; dx++) {
+        map[sy + dy][sx + dx] = T.FLOOR_ALT;
+      }
+      // Place treasure (heals, power-ups, chest)
+      const cx = Math.floor(sx + secretW / 2);
+      const cy = Math.floor(sy + secretH / 2);
+      map[cy][cx] = T.CHEST;
+      if (secretW > 3) { map[cy - 1][cx] = T.HEAL; map[cy + 1][cx] = T.POWER; }
+      // Hidden entrance — one wall tile becomes a path
+      const entranceX = sx + Math.floor(rng() * secretW);
+      const entranceY = sy - 1;
+      if (entranceY >= 0 && map[entranceY][entranceX] === T.WALL) {
+        map[entranceY][entranceX] = T.FLOOR;
+      }
+      break;
+    }
+  }
+
+  // ─── STEP 8: Border walls (ensure edges are solid) ───
   for (let x = 0; x < MAP_W; x++) { map[0][x] = T.WALL; map[MAP_H - 1][x] = T.WALL; }
   for (let y = 0; y < MAP_H; y++) { map[y][0] = T.WALL; map[y][MAP_W - 1] = T.WALL; }
 
@@ -1060,14 +1104,71 @@ function drawTile(g, tileType, px, py, theme, x, y, time) {
     case T.LAVA: {
       g.fillStyle(0xCC2200, 1);
       g.fillRect(px, py, T16, T16);
-      // Lava flow
       const lavaWave = Math.sin(time * 0.004 + x * 1.2 + y * 0.8) * 0.15;
       g.fillStyle(0xFF6600, 0.5 + lavaWave);
       g.fillRect(px + 2, py + 2, 12, 12);
-      // Bright spots
       g.fillStyle(0xFFAA00, 0.4 + lavaWave);
       g.fillRect(px + 4, py + 4, 4, 4);
       g.fillRect(px + 9, py + 8, 3, 3);
+      break;
+    }
+    case T.POISON: {
+      g.fillStyle(theme.floorColor, 1);
+      g.fillRect(px, py, T16, T16);
+      // Poison pool — bubbling green
+      const poisonWave = Math.sin(time * 0.003 + x * 2 + y * 1.5) * 0.15;
+      g.fillStyle(0x1A4A1A, 0.6);
+      g.fillRect(px + 2, py + 2, 12, 12);
+      g.fillStyle(0x34D399, 0.3 + poisonWave);
+      g.fillRect(px + 3, py + 3, 10, 10);
+      // Bubbles
+      const bubblePhase = (time * 0.005 + x * 7 + y * 13) % 3;
+      if (bubblePhase < 1) {
+        g.fillStyle(0x4ADE80, 0.5);
+        g.fillRect(px + 5, py + 4 + bubblePhase * 3, 2, 2);
+      }
+      if (bubblePhase > 1.5 && bubblePhase < 2.5) {
+        g.fillStyle(0x4ADE80, 0.4);
+        g.fillRect(px + 9, py + 6 + (bubblePhase - 1.5) * 3, 2, 2);
+      }
+      // Skull warning
+      g.fillStyle(0xFFFFFF, 0.15);
+      g.fillRect(px + 6, py + 5, 4, 3);
+      g.fillRect(px + 7, py + 4, 2, 1);
+      break;
+    }
+    case T.SPIKES: {
+      g.fillStyle(theme.floorColor, 1);
+      g.fillRect(px, py, T16, T16);
+      // Spike trap — retractable metal spikes
+      const spikePhase = Math.sin(time * 0.004 + x + y) > 0.3 ? 1 : 0;
+      if (spikePhase) {
+        // Spikes extended
+        g.fillStyle(0x888888, 0.8);
+        g.fillRect(px + 3, py + 2, 2, 6);
+        g.fillRect(px + 7, py + 3, 2, 5);
+        g.fillRect(px + 11, py + 2, 2, 6);
+        g.fillRect(px + 5, py + 7, 2, 5);
+        g.fillRect(px + 9, py + 8, 2, 4);
+        // Spike tips
+        g.fillStyle(0xCCCCCC, 0.9);
+        g.fillRect(px + 3, py + 1, 2, 2);
+        g.fillRect(px + 7, py + 2, 2, 2);
+        g.fillRect(px + 11, py + 1, 2, 2);
+        // Blood on tips
+        g.fillStyle(0xEF4444, 0.4);
+        g.fillRect(px + 3, py + 3, 2, 1);
+        g.fillRect(px + 11, py + 3, 2, 1);
+      } else {
+        // Spikes retracted — warning pattern
+        g.fillStyle(0x555555, 0.3);
+        g.fillRect(px + 3, py + 6, 2, 3);
+        g.fillRect(px + 7, py + 7, 2, 2);
+        g.fillRect(px + 11, py + 6, 2, 3);
+      }
+      // Warning glow
+      g.fillStyle(0xEF4444, 0.1 + Math.sin(time * 0.006) * 0.05);
+      g.fillRect(px, py, T16, T16);
       break;
     }
     case T.ICE: {
@@ -1133,7 +1234,8 @@ class GameScene extends Phaser.Scene {
     this.walls = null;
     this.monsters = [];
     this.bullets = null;
-    this.particles = [];
+    this.particles = null; // will be ParticlePool
+    this.screenFX = null; // will be ScreenFX
     this.fogGraphics = null;
     this.minimapGraphics = null;
     this.compassGraphics = null;
@@ -1148,6 +1250,8 @@ class GameScene extends Phaser.Scene {
     this.stepTimer = 0;
     this.mapGraphics = null;
     this.exitHint = null;
+    this.hitFreezeTimer = 0;
+    this.dynamicGlowTiles = []; // torch/furnace positions
   }
 
   create() {
@@ -1210,9 +1314,45 @@ class GameScene extends Phaser.Scene {
     const bossData = BOSSES.find(b => b.floor === state.depth);
     if (bossData) this.spawnBoss(bossData);
 
+    // ─── PARTICLE POOL ───
+    this.particles = new ParticlePool(this, 400);
+
+    // ─── SCREEN EFFECTS ───
+    this.screenFX = new ScreenFX(this);
+
     // ─── FOG OF WAR ───
     this.fogGraphics = this.add.graphics();
     this.fogGraphics.setDepth(20);
+
+    // ─── ABILITY KEYS (1-4) ───
+    this.input.keyboard.on('keydown-ONE', () => useAbility('fireball'));
+    this.input.keyboard.on('keydown-TWO', () => useAbility('heal'));
+    this.input.keyboard.on('keydown-THREE', () => useAbility('dash'));
+    this.input.keyboard.on('keydown-FOUR', () => useAbility('shield'));
+    initAbilities();
+
+    // ─── DODGE KEY (SHIFT) ───
+    this.shiftKey = this.input.keyboard.addKey('SHIFT');
+
+    // ─── DYNAMIC GLOW TILES (torches, furnaces) ───
+    this.dynamicGlowTiles = [];
+    dungeon.rooms.forEach((room, idx) => {
+      if (idx % 2 === 0 && room.w >= 4 && room.h >= 4) {
+        // Place torches at room corners
+        const corners = [
+          { x: room.x + 1, y: room.y + 1 },
+          { x: room.x + room.w - 2, y: room.y + 1 },
+        ];
+        corners.forEach(c => {
+          if (c.x >= 0 && c.x < MAP_W && c.y >= 0 && c.y < MAP_H && dungeon.map[c.y][c.x] === T.FLOOR) {
+            this.dynamicGlowTiles.push({ x: c.x, y: c.y, type: 'torch', intensity: 0.5 + Math.random() * 0.3 });
+          }
+        });
+      }
+    });
+
+    // ─── LOADING COMPLETE TOAST ───
+    showToast(`Floor ${state.depth + 1}: ${theme.name}`, 'info', 2500, '⚔');
 
     // ─── MINIMAP ───
     this.minimapGraphics = this.add.graphics();
@@ -1246,6 +1386,24 @@ class GameScene extends Phaser.Scene {
     this.spaceKey = this.input.keyboard.addKey('SPACE');
     this.eKey = this.input.keyboard.addKey('E');
     this.iKey = this.input.keyboard.addKey('I');
+    this.pKey = this.input.keyboard.addKey('P');
+    this.mKey = this.input.keyboard.addKey('M');
+
+    this.pKey.on('down', () => {
+      gamePaused = !gamePaused;
+      if (gamePaused) {
+        this.physics.pause();
+        this.addLog('PAUSED — Press P to resume');
+      } else {
+        this.physics.resume();
+        this.addLog('Resumed');
+      }
+    });
+
+    this.mKey.on('down', () => {
+      minimapVisible = !minimapVisible;
+      this.addLog(minimapVisible ? 'Minimap: ON' : 'Minimap: OFF');
+    });
 
     this.iKey.on('down', () => {
       const panel = document.getElementById('inventory-panel');
@@ -1458,10 +1616,37 @@ class GameScene extends Phaser.Scene {
   }
 
   update(time, delta) {
-    if (state.phase !== 'explore' || !this.player || this.transitioning) return;
+    if (state.phase !== 'explore' || !this.player || this.transitioning || gamePaused) return;
     const dt = delta / 1000;
     const dungeon = state.dungeon;
     const theme = THEMES[state.floorTheme % THEMES.length];
+
+    // ─── HIT FREEZE ───
+    if (this.hitFreezeTimer > 0) { this.hitFreezeTimer -= dt; return; }
+
+    // ─── PARTICLE POOL UPDATE ───
+    this.particles.update(dt);
+
+    // ─── SCREEN EFFECTS UPDATE ───
+    this.screenFX.update(dt);
+
+    // ─── ABILITY COOLDOWNS ───
+    updateAbilities(dt);
+
+    // ─── DODGE ROLL ───
+    updateDodge(dt);
+    if (Phaser.Input.Keyboard.JustDown(this.shiftKey) && !dodgeState.rolling && dodgeState.charges > 0) {
+      dodgeState.rolling = true;
+      dodgeState.rollTimer = dodgeState.rollDuration;
+      dodgeState.charges--;
+      state.player.invincible = 0.3; // i-frames
+      // Trail particles
+      for (let i = 0; i < 8; i++) {
+        this.particles.get(this.player.x + (Math.random()-0.5)*10, this.player.y + (Math.random()-0.5)*10,
+          (Math.random()-0.5)*60, (Math.random()-0.5)*60, 0x3890F8, 2, 0.3);
+      }
+      SFX.step();
+    }
 
     // ─── COOLDOWNS ───
     if (this.interactionCooldown > 0) this.interactionCooldown -= dt;
@@ -1484,6 +1669,9 @@ class GameScene extends Phaser.Scene {
     const ty = Math.floor(this.player.y / TILE);
 
     let speedMult = state.player.speedMult;
+
+    // Dodge roll speed boost
+    if (dodgeState.rolling) speedMult *= dodgeState.rollSpeed;
 
     // Tile-based speed: water/grass/ice slow you down
     const currentTile = (ty >= 0 && ty < MAP_H && tx >= 0 && tx < MAP_W) ? dungeon.map[ty][tx] : T.FLOOR;
@@ -1531,8 +1719,19 @@ class GameScene extends Phaser.Scene {
     // ─── TILE INTERACTIONS (with cooldown) ───
     if (tx >= 0 && tx < MAP_W && ty >= 0 && ty < MAP_H && this.interactionCooldown <= 0) {
       const tile = dungeon.map[ty][tx];
-      if (tile === T.TRAP) {
+      if (tile === T.TRAP || tile === T.SPIKES) {
         this.triggerTrap(tx, ty);
+        this.interactionCooldown = INTERACTION_COOLDOWN;
+      } else if (tile === T.POISON) {
+        // Poison: apply poison status + damage
+        if (!hasStatus('POISON')) {
+          addStatusEffect('POISON');
+          showToast('Poisoned!', 'error', 1500, '☠');
+        }
+        this.interactionCooldown = INTERACTION_COOLDOWN;
+      } else if (tile === T.LAVA) {
+        this.damagePlayer(20 + state.depth * 3);
+        addStatusEffect('BURN');
         this.interactionCooldown = INTERACTION_COOLDOWN;
       } else if (tile === T.HEAL) {
         this.triggerHeal(tx, ty);
@@ -1584,6 +1783,15 @@ class GameScene extends Phaser.Scene {
       if (nx >= 0 && nx < MAP_W && ny >= 0 && ny < MAP_H) {
         state.visited.add(`${nx},${ny}`);
       }
+    }
+
+    // ─── DYNAMIC MUSIC (combat intensity) ───
+    const activeThreats = this.monsters.filter(m => m.active && m.getData('hp') > 0).length;
+    if (activeThreats > 0 && musicPlaying) {
+      // Increase music intensity during combat
+      setMusicVolume(Math.min(0.25, 0.12 + activeThreats * 0.02));
+    } else if (musicPlaying) {
+      setMusicVolume(0.12);
     }
 
     // ─── MONSTER AI ───
@@ -1794,9 +2002,7 @@ class GameScene extends Phaser.Scene {
     if (Math.random() < 0.01 * dt) {
       const px = this.player.x + (Math.random() - 0.5) * 200;
       const py = this.player.y + (Math.random() - 0.5) * 200;
-      const dust = this.add.circle(px, py, 1 + Math.random() * 2, 0xFFFFFF, 0.03 + Math.random() * 0.04);
-      dust.setDepth(12);
-      this.particles.push({ gfx: dust, vx: (Math.random() - 0.5) * 8, vy: -5 - Math.random() * 10, life: 2 + Math.random() * 2, maxLife: 4 });
+      this.particles.get(px, py, (Math.random()-0.5)*8, -5 - Math.random()*10, 0xFFFFFF, 2, 3, { alpha: 0.04 });
     }
 
     // Flickering torch light (subtle)
@@ -1871,7 +2077,7 @@ class GameScene extends Phaser.Scene {
     // ─── CAMERA TRACKING ───
 
     // ─── FOG OF WAR ───
-    this.drawFog(dungeon, tx, ty);
+    this.drawFog(dungeon, tx, ty, time);
 
     // ─── MINIMAP ───
     this.drawMinimap(dungeon, tx, ty);
@@ -1884,14 +2090,9 @@ class GameScene extends Phaser.Scene {
     }
 
     // ─── PARTICLES ───
-    this.particles = this.particles.filter(p => {
-      p.life -= dt;
-      if (p.life <= 0) { p.gfx.destroy(); return false; }
-      p.gfx.setAlpha(p.life / p.maxLife);
-      p.gfx.setPosition(p.gfx.x + p.vx * dt, p.gfx.y + p.vy * dt);
-      p.vy += 30 * dt;
-      return true;
-    });
+    if (this.particles && this.particles.update) {
+      this.particles.update(dt);
+    }
 
     // ─── RE-RENDER MAP (for animated tiles like water, lava) ───
     // Only re-render every few frames for performance
@@ -1935,7 +2136,7 @@ class GameScene extends Phaser.Scene {
     this.updateUI();
   }
 
-  drawFog(dungeon, px, py) {
+  drawFog(dungeon, px, py, time) {
     this.fogGraphics.clear();
     const g = this.fogGraphics;
 
@@ -1962,6 +2163,29 @@ class GameScene extends Phaser.Scene {
         g.fillRect(x * TILE, y * TILE, TILE, TILE);
       }
     }
+
+    // ─── TORCH GLOW EFFECTS ───
+    this.dynamicGlowTiles.forEach(torch => {
+      const dist = Math.sqrt((torch.x - px) ** 2 + (torch.y - py) ** 2);
+      if (dist > VIEW_RADIUS + 3) return;
+      const flicker = torch.intensity + Math.sin(time * 0.008 + torch.x * 3) * 0.15 + Math.sin(time * 0.013 + torch.y * 5) * 0.1;
+      const glowSize = 3 + Math.sin(time * 0.006) * 0.5;
+      const px2 = torch.x * TILE + TILE / 2;
+      const py2 = torch.y * TILE + TILE / 2;
+      // Warm glow circle
+      g.fillStyle(0xFF8800, flicker * 0.08);
+      g.fillCircle(px2, py2, TILE * glowSize);
+      g.fillStyle(0xFFAA00, flicker * 0.15);
+      g.fillCircle(px2, py2, TILE * (glowSize * 0.6));
+      g.fillStyle(0xFFCC44, flicker * 0.25);
+      g.fillCircle(px2, py2, TILE * (glowSize * 0.3));
+      // Torch flame pixels
+      const flameH = 3 + Math.sin(time * 0.015) * 1.5;
+      g.fillStyle(0xFF6600, 0.8);
+      g.fillRect(px2 - 2, py2 - flameH, 4, flameH);
+      g.fillStyle(0xFFAA00, 0.6);
+      g.fillRect(px2 - 1, py2 - flameH - 1, 2, 2);
+    });
   }
 
   drawMinimap(dungeon, px, py) {
@@ -2005,6 +2229,13 @@ class GameScene extends Phaser.Scene {
       const exitPx = mmX + dungeon.exit.x * mmScale;
       const exitPy = mmY + dungeon.exit.y * mmScale;
       const pulse = 0.5 + Math.sin(Date.now() * 0.005) * 0.5;
+      // Compass effect: larger, brighter exit indicator + path hint
+      if (state.player.hasCompass) {
+        g.fillStyle(0x34D399, 0.15);
+        g.fillCircle(exitPx + mmScale/2, exitPy + mmScale/2, 6);
+        g.fillStyle(0x34D399, 0.3);
+        g.fillCircle(exitPx + mmScale/2, exitPy + mmScale/2, 4);
+      }
       g.fillStyle(0x34D399, pulse);
       g.fillRect(exitPx - 1, exitPy - 1, mmScale + 2, mmScale + 2);
     }
@@ -2118,17 +2349,35 @@ class GameScene extends Phaser.Scene {
   }
 
   hitMonster(monster) {
+    this.damageMonster(monster, 0, false);
+  }
+
+  damageMonster(monster, abilityDmg = 0, isCrit = false) {
     const theme = THEMES[state.floorTheme % THEMES.length];
-    let damage = state.player.atk;
+    let damage = abilityDmg || state.player.atk;
 
     // Weapon bonus
-    if (state.player.weapon) {
+    if (state.player.weapon && !abilityDmg) {
       damage += state.player.weapon.atk || 0;
     }
 
     // Combo multiplier
-    addCombo();
+    if (!abilityDmg) addCombo();
     damage = Math.floor(damage * combo.multiplier);
+
+    // Critical hit (15% base chance, +5% per combo tier)
+    let crit = isCrit;
+    if (!crit) {
+      const critChance = 0.15 + (combo.count >= 8 ? 0.15 : combo.count >= 5 ? 0.10 : combo.count >= 3 ? 0.05 : 0);
+      crit = Math.random() < critChance;
+    }
+    if (crit) {
+      damage = Math.floor(damage * 2);
+      this.screenFX.freeze(0.05); // hit-stop
+      this.screenFX.shake(8);
+      this.screenFX.flash(0xFFFFFF, 80);
+      showToast('CRIT!', 'warning', 800, '💥');
+    }
 
     const hp = monster.getData('hp') - damage;
     const maxHp = monster.getData('maxHp');
@@ -2147,7 +2396,7 @@ class GameScene extends Phaser.Scene {
     // Hit flash — tint body white briefly
     const monsterBody = monster.getAt(0);
     if (monsterBody && monsterBody.setTint) {
-      monsterBody.setTint(0xFFFFFF);
+      monsterBody.setTint(crit ? 0xFFFF00 : 0xFFFFFF);
       this.time.delayedCall(60, () => { if (monsterBody.active) monsterBody.clearTint(); });
       this.time.delayedCall(120, () => { if (monsterBody.active) monsterBody.setTint(0xFF8888); });
       this.time.delayedCall(180, () => { if (monsterBody.active) monsterBody.clearTint(); });
@@ -2156,20 +2405,29 @@ class GameScene extends Phaser.Scene {
       this.time.delayedCall(80, () => { if (monster.active) monster.setAlpha(0.9); });
     }
 
-    // Hit particles
-    for (let i = 0; i < 6; i++) {
-      this.spawnParticle(monster.x, monster.y, (Math.random() - 0.5) * 60, (Math.random() - 0.5) * 60, theme.accent, 0.7);
+    // Enhanced hit particles from pool
+    const hitColor = crit ? 0xFBBF24 : theme.accent;
+    for (let i = 0; i < (crit ? 12 : 6); i++) {
+      this.particles.get(monster.x, monster.y, (Math.random()-0.5)*80, (Math.random()-0.5)*80, hitColor, crit ? 3 : 2, 0.4, { gravity: 30 });
     }
 
-    this.screenShake = 4;
+    // Blood splatter on crit
+    if (crit) {
+      for (let i = 0; i < 8; i++) {
+        this.particles.get(monster.x, monster.y, (Math.random()-0.5)*120, (Math.random()-0.5)*120, 0xEF4444, 2, 0.6, { gravity: 60 });
+      }
+    }
+
+    this.screenFX.shake(crit ? 8 : 4);
     SFX.hit();
 
     // Show combo + damage number
     const comboText = combo.count > 1 ? ` (${combo.count}x)` : '';
-    this.spawnDamageNumber(monster.x, monster.y, `-${damage}${comboText}`, combo.count >= 5 ? 0xFBBF24 : 0xFFFFFF);
+    const critText = crit ? ' CRIT!' : '';
+    this.spawnDamageNumber(monster.x, monster.y, `-${damage}${critText}${comboText}`, crit ? 0xFBBF24 : combo.count >= 5 ? 0xA882F7 : 0xFFFFFF);
 
     // Weapon special effects
-    if (state.player.weapon) {
+    if (state.player.weapon && !abilityDmg) {
       if (state.player.weapon.id === 'fire_staff' && Math.random() < 0.3) {
         addStatusEffect('BURN');
         state.log.push('Weapon: Burn applied!');
@@ -2181,11 +2439,15 @@ class GameScene extends Phaser.Scene {
     }
 
     if (hp <= 0) {
-      // Death dissolve animation
+      // Death dissolve animation with enhanced particles
       const deathColor = monster.getData('behavior') === 'phase' ? 0x4444FF :
                          monster.getData('behavior') === 'teleport' ? 0xAA00FF : 0xEF4444;
-      for (let i = 0; i < 12; i++) {
-        this.spawnParticle(monster.x, monster.y, (Math.random() - 0.5) * 120, (Math.random() - 0.5) * 120, deathColor, 0.9);
+      for (let i = 0; i < 20; i++) {
+        this.particles.get(monster.x, monster.y, (Math.random()-0.5)*150, (Math.random()-0.5)*150, deathColor, 3, 0.6, { gravity: 40, friction: 0.96 });
+      }
+      // Gold sparkles
+      for (let i = 0; i < 6; i++) {
+        this.particles.get(monster.x, monster.y, (Math.random()-0.5)*60, -40 - Math.random()*60, 0xF8B800, 2, 0.8, { gravity: 20 });
       }
       // Dissolve: shrink and fade over 300ms
       this.tweens.add({
@@ -2195,7 +2457,6 @@ class GameScene extends Phaser.Scene {
         ease: 'Back.easeIn',
         onComplete: () => { if (monster.active) monster.destroy(); }
       });
-      // Stop movement immediately
       monster.body.setVelocity(0, 0);
       state.kills++;
 
@@ -2209,40 +2470,50 @@ class GameScene extends Phaser.Scene {
       if (state.player.weapon && state.player.weapon.id === 'holy_lance') {
         const heal = 5;
         state.player.hp = Math.min(state.player.maxHp, state.player.hp + heal);
-        this.spawnDamageNumber(this.player.x, this.player.y, `+${heal}`, 0x34D399);
+        this.particles.get(this.player.x, this.player.y, 0, -30, 0x34D399, 2, 0.5, { gravity: -10 });
       }
 
       this.addLog(`Monster defeated! +${baseXp + comboXpBonus} XP${comboXpBonus > 0 ? ` (${combo.multiplier}x combo!)` : ''}`);
-      this.screenShake = 6;
+      this.screenFX.shake(6);
       SFX.kill();
 
       // Boss drops weapon
       if (monster.getData('isBoss')) {
+        const rarity = rollRarity();
         const weapon = getRandomWeapon(state.depth);
+        weapon.rarity = rarity;
         state.player.weapon = weapon;
-        this.addLog(`🗡 Boss dropped: ${weapon.name}! (${weapon.desc})`);
+        const rarityInfo = RARITY[rarity];
+        this.addLog(`🗡 ${rarityInfo.name} ${weapon.name}! (${weapon.desc})`);
+        showToast(`${rarityInfo.name} ${weapon.name}!`, rarity === 'legendary' ? 'legendary' : 'loot', 3000, weapon.icon);
         SFX.chest();
-        // Hide boss health bar
         const bossBar = document.getElementById('boss-health-bar');
         if (bossBar) bossBar.style.display = 'none';
-        // Boss defeat celebration
-        this.screenShake = 10;
-        this.cameras.main.flash(500, 251, 191, 36);
+        this.screenFX.shake(12);
+        this.screenFX.flash(0xF8B800, 400);
+        // Victory particles
+        for (let i = 0; i < 30; i++) {
+          this.particles.get(monster.x, monster.y, (Math.random()-0.5)*200, -50 - Math.random()*150, 0xF8B800, 3, 1.2, { gravity: 60, friction: 0.97 });
+        }
       }
 
       // Random weapon drop from normal monsters (5% chance)
       if (!monster.getData('isBoss') && Math.random() < 0.05) {
+        const rarity = rollRarity();
         const weapon = getRandomWeapon(state.depth);
+        weapon.rarity = rarity;
         if (!state.player.weapon || WEAPONS[weapon.id].atk > WEAPONS[state.player.weapon.id].atk) {
           state.player.weapon = weapon;
-          this.addLog(`Found: ${weapon.name}! (${weapon.desc})`);
+          const rarityInfo = RARITY[rarity];
+          this.addLog(`Found: ${rarityInfo.name} ${weapon.name}! (${weapon.desc})`);
+          showToast(`${rarityInfo.name} ${weapon.name}!`, rarity === 'legendary' ? 'legendary' : 'loot', 3000, weapon.icon);
           SFX.power();
         }
       }
 
       checkAchievements();
 
-      // Level up
+      // Level up with celebration
       if (state.player.xp >= state.player.xpNext) {
         state.player.level++;
         state.player.xp -= state.player.xpNext;
@@ -2253,13 +2524,21 @@ class GameScene extends Phaser.Scene {
         state.player.def += 1;
         state.player.title = this.getTitle(state.player.level);
         this.addLog(`LEVEL UP! Now ${state.player.title}`);
+        showToast(`Level ${state.player.level}! ${state.player.title}`, 'success', 2500, '⭐');
         SFX.levelup();
+        this.screenFX.flash(0xFBBF24, 200);
+        // Level up particles
+        for (let i = 0; i < 20; i++) {
+          const angle = (Math.PI * 2 * i) / 20;
+          this.particles.get(this.player.x + Math.cos(angle)*15, this.player.y + Math.sin(angle)*15,
+            Math.cos(angle)*60, Math.sin(angle)*60, 0xFBBF24, 3, 0.6, { friction: 0.95 });
+        }
       }
     }
   }
 
   damagePlayer(amount) {
-    if (state.player.invincible > 0) return;
+    if (state.player.invincible > 0 || dodgeState.rolling) return;
 
     // Reset combo on taking damage
     resetCombo();
@@ -2270,15 +2549,19 @@ class GameScene extends Phaser.Scene {
       state.player.shield--;
       state.player.invincible = 0.5;
       this.addLog(`Shield blocked! (${state.player.shield} left)`);
+      showToast(`Shield! (${state.player.shield} left)`, 'info', 1200, '🛡');
       SFX.power();
-      for (let i = 0; i < 4; i++) this.spawnParticle(this.player.x, this.player.y, (Math.random() - 0.5) * 40, (Math.random() - 0.5) * 40, 0x3B82F6, 0.8);
+      this.screenFX.flash(0x3B82F6, 100);
+      for (let i = 0; i < 8; i++) this.particles.get(this.player.x, this.player.y, (Math.random()-0.5)*60, (Math.random()-0.5)*60, 0x3B82F6, 2, 0.4);
       return;
     }
 
     const dmg = Math.max(1, amount - state.player.def);
     state.player.hp = Math.max(0, state.player.hp - dmg);
-    state.player.invincible = 1.2; // Longer i-frames for fairness
-    this.screenShake = 5;
+    state.player.invincible = 1.2;
+    this.screenFX.shake(6);
+    this.screenFX.flash(0xEF4444, 120);
+    this.screenFX.freeze(0.04); // hit-stop on player damage
     SFX.hurt();
 
     // Hurt animation — flash red overlay on player
@@ -2291,12 +2574,12 @@ class GameScene extends Phaser.Scene {
       this.time.delayedCall(500, () => { if (this.playerHurtOverlay) this.playerHurtOverlay.setVisible(false); });
     }
 
-    this.cameras.main.flash(150, 239, 68, 68);
     this.addLog(`Took ${dmg} damage!`);
     this.spawnDamageNumber(this.player.x, this.player.y, `-${dmg}`, 0xEF4444);
 
-    for (let i = 0; i < 4; i++) {
-      this.spawnParticle(this.player.x, this.player.y, (Math.random() - 0.5) * 40, (Math.random() - 0.5) * 40, 0xEF4444, 0.8);
+    // Blood particles
+    for (let i = 0; i < 8; i++) {
+      this.particles.get(this.player.x, this.player.y, (Math.random()-0.5)*80, (Math.random()-0.5)*80, 0xEF4444, 2, 0.5, { gravity: 40 });
     }
 
     if (state.player.hp <= 0) {
@@ -2544,190 +2827,140 @@ class GameScene extends Phaser.Scene {
     if (bossHPText) bossHPText.textContent = `${hp}/${maxHp}`;
   }
 
-  spawnMonster() {
-    // Retry up to 20 times to find a valid spawn
-    let x, y, tries = 0;
-    do {
-      x = 3 + Math.floor(Math.random() * (MAP_W - 6));
-      y = 3 + Math.floor(Math.random() * (MAP_H - 6));
-      tries++;
-    } while (SOLID_TILES.has(state.dungeon.map[y][x]) && tries < 20);
-    if (SOLID_TILES.has(state.dungeon.map[y][x])) return;
-
-    const theme = THEMES[state.floorTheme % THEMES.length];
-    const monsterTypes = [
-      { name: 'Shadow Crawler', color: 0x4A2A4A, hp: 25, speed: 40, damage: 8, behavior: 'flank' },
-      { name: 'Lost Soul', color: 0x3A3A5A, hp: 30, speed: 45, damage: 10, behavior: 'phase' },
-      { name: 'Flesh Golem', color: 0x5A2A2A, hp: 40, speed: 35, damage: 14, behavior: 'charge' },
-      { name: 'Void Stalker', color: 0x2A1A3A, hp: 50, speed: 50, damage: 18, behavior: 'teleport' },
-      { name: 'Bone Horror', color: 0x6A5A3A, hp: 65, speed: 45, damage: 22, behavior: 'ranged' },
-    ];
-    const typeIdx = Math.min(Math.floor(state.depth / 2), monsterTypes.length - 1);
-    const type = monsterTypes[typeIdx];
-
-    const monster = this.add.container(x * TILE + TILE/2, y * TILE + TILE/2);
-
-    // Horror monster sprite (unique per type)
-    const body = this.add.graphics();
+  // ─── SHARED MONSTER SPRITE DRAWING ────────────────────────
+  drawMonsterSprite(g, typeIdx) {
+    g.clear();
     const ps = 1;
 
-    // Draw based on monster type index
     if (typeIdx === 0) {
       // Shadow Crawler — dark amorphous blob with glowing eyes
-      body.fillStyle(0x1A0A1A, 0.9);
-      body.fillRect(3 * ps, 4 * ps, 10 * ps, 8 * ps);
-      body.fillRect(2 * ps, 6 * ps, 12 * ps, 4 * ps);
-      body.fillRect(4 * ps, 3 * ps, 8 * ps, 2 * ps);
-      // Tendrils
-      body.fillRect(1 * ps, 8 * ps, 2 * ps, 3 * ps);
-      body.fillRect(13 * ps, 7 * ps, 2 * ps, 4 * ps);
-      body.fillRect(0 * ps, 10 * ps, 2 * ps, 2 * ps);
-      body.fillRect(14 * ps, 9 * ps, 2 * ps, 3 * ps);
-      // Glowing red eyes
-      body.fillStyle(0xFF0000, 0.9);
-      body.fillRect(5 * ps, 6 * ps, 2 * ps, 2 * ps);
-      body.fillRect(9 * ps, 6 * ps, 2 * ps, 2 * ps);
-      body.fillStyle(0xFF4444, 0.4);
-      body.fillRect(5 * ps, 5 * ps, 2 * ps, 1 * ps);
-      body.fillRect(9 * ps, 5 * ps, 2 * ps, 1 * ps);
-      // Mouth
-      body.fillStyle(0xFF0000, 0.3);
-      body.fillRect(6 * ps, 9 * ps, 4 * ps, 2 * ps);
-      body.fillStyle(0x000000, 0.6);
-      body.fillRect(7 * ps, 10 * ps, 2 * ps, 1 * ps);
-
+      g.fillStyle(0x1A0A1A, 0.9);
+      g.fillRect(3*ps, 4*ps, 10*ps, 8*ps);
+      g.fillRect(2*ps, 6*ps, 12*ps, 4*ps);
+      g.fillRect(4*ps, 3*ps, 8*ps, 2*ps);
+      g.fillRect(1*ps, 8*ps, 2*ps, 3*ps);
+      g.fillRect(13*ps, 7*ps, 2*ps, 4*ps);
+      g.fillRect(0*ps, 10*ps, 2*ps, 2*ps);
+      g.fillRect(14*ps, 9*ps, 2*ps, 3*ps);
+      g.fillStyle(0xFF0000, 0.9);
+      g.fillRect(5*ps, 6*ps, 2*ps, 2*ps);
+      g.fillRect(9*ps, 6*ps, 2*ps, 2*ps);
+      g.fillStyle(0xFF4444, 0.4);
+      g.fillRect(5*ps, 5*ps, 2*ps, 1*ps);
+      g.fillRect(9*ps, 5*ps, 2*ps, 1*ps);
+      g.fillStyle(0xFF0000, 0.3);
+      g.fillRect(6*ps, 9*ps, 4*ps, 2*ps);
+      g.fillStyle(0x000000, 0.6);
+      g.fillRect(7*ps, 10*ps, 2*ps, 1*ps);
     } else if (typeIdx === 1) {
       // Lost Soul — ghostly floating figure
-      body.fillStyle(0x8888AA, 0.5);
-      body.fillRect(5 * ps, 1 * ps, 6 * ps, 4 * ps); // head
-      body.fillRect(4 * ps, 3 * ps, 8 * ps, 6 * ps); // body
-      body.fillRect(3 * ps, 5 * ps, 10 * ps, 4 * ps); // wider
-      // Wispy bottom
-      body.fillRect(3 * ps, 9 * ps, 3 * ps, 4 * ps);
-      body.fillRect(7 * ps, 10 * ps, 2 * ps, 3 * ps);
-      body.fillRect(10 * ps, 9 * ps, 3 * ps, 4 * ps);
-      // Hollow eyes (black void)
-      body.fillStyle(0x000000, 0.9);
-      body.fillRect(5 * ps, 3 * ps, 3 * ps, 3 * ps);
-      body.fillRect(9 * ps, 3 * ps, 3 * ps, 3 * ps);
-      // Eye glow
-      body.fillStyle(0x4444FF, 0.3);
-      body.fillRect(6 * ps, 4 * ps, 1 * ps, 1 * ps);
-      body.fillRect(10 * ps, 4 * ps, 1 * ps, 1 * ps);
-      // Mouth (open scream)
-      body.fillStyle(0x000000, 0.8);
-      body.fillRect(7 * ps, 7 * ps, 3 * ps, 2 * ps);
-      // Translucent highlight
-      body.fillStyle(0xAAAACC, 0.2);
-      body.fillRect(5 * ps, 2 * ps, 2 * ps, 2 * ps);
-
+      g.fillStyle(0x8888AA, 0.5);
+      g.fillRect(5*ps, 1*ps, 6*ps, 4*ps);
+      g.fillRect(4*ps, 3*ps, 8*ps, 6*ps);
+      g.fillRect(3*ps, 5*ps, 10*ps, 4*ps);
+      g.fillRect(3*ps, 9*ps, 3*ps, 4*ps);
+      g.fillRect(7*ps, 10*ps, 2*ps, 3*ps);
+      g.fillRect(10*ps, 9*ps, 3*ps, 4*ps);
+      g.fillStyle(0x000000, 0.9);
+      g.fillRect(5*ps, 3*ps, 3*ps, 3*ps);
+      g.fillRect(9*ps, 3*ps, 3*ps, 3*ps);
+      g.fillStyle(0x4444FF, 0.3);
+      g.fillRect(6*ps, 4*ps, 1*ps, 1*ps);
+      g.fillRect(10*ps, 4*ps, 1*ps, 1*ps);
+      g.fillStyle(0x000000, 0.8);
+      g.fillRect(7*ps, 7*ps, 3*ps, 2*ps);
+      g.fillStyle(0xAAAACC, 0.2);
+      g.fillRect(5*ps, 2*ps, 2*ps, 2*ps);
     } else if (typeIdx === 2) {
       // Flesh Golem — hulking mass with exposed bone
-      body.fillStyle(0x8B4040, 0.9);
-      body.fillRect(3 * ps, 3 * ps, 10 * ps, 10 * ps);
-      body.fillRect(2 * ps, 5 * ps, 12 * ps, 6 * ps);
-      body.fillRect(1 * ps, 7 * ps, 14 * ps, 4 * ps);
-      // Flesh texture
-      body.fillStyle(0xAA5050, 0.6);
-      body.fillRect(4 * ps, 4 * ps, 3 * ps, 3 * ps);
-      body.fillRect(9 * ps, 6 * ps, 3 * ps, 2 * ps);
-      body.fillRect(5 * ps, 9 * ps, 4 * ps, 2 * ps);
-      // Exposed bone
-      body.fillStyle(0xD4C5B0, 0.7);
-      body.fillRect(7 * ps, 5 * ps, 2 * ps, 4 * ps);
-      body.fillRect(11 * ps, 7 * ps, 2 * ps, 3 * ps);
-      // Stitches
-      body.fillStyle(0x281808, 0.6);
-      body.fillRect(6 * ps, 7 * ps, 4 * ps, 1 * ps);
-      body.fillRect(6 * ps, 9 * ps, 4 * ps, 1 * ps);
-      body.fillRect(7 * ps, 7 * ps, 1 * ps, 3 * ps);
-      body.fillRect(9 * ps, 7 * ps, 1 * ps, 3 * ps);
-      // Eyes (uneven, creepy)
-      body.fillStyle(0xFFFF00, 0.8);
-      body.fillRect(4 * ps, 4 * ps, 3 * ps, 2 * ps);
-      body.fillRect(10 * ps, 5 * ps, 2 * ps, 2 * ps);
-      body.fillStyle(0x000000, 0.9);
-      body.fillRect(5 * ps, 4 * ps, 1 * ps, 2 * ps);
-      body.fillRect(10 * ps, 5 * ps, 1 * ps, 2 * ps);
-
+      g.fillStyle(0x8B4040, 0.9);
+      g.fillRect(3*ps, 3*ps, 10*ps, 10*ps);
+      g.fillRect(2*ps, 5*ps, 12*ps, 6*ps);
+      g.fillRect(1*ps, 7*ps, 14*ps, 4*ps);
+      g.fillStyle(0xAA5050, 0.6);
+      g.fillRect(4*ps, 4*ps, 3*ps, 3*ps);
+      g.fillRect(9*ps, 6*ps, 3*ps, 2*ps);
+      g.fillRect(5*ps, 9*ps, 4*ps, 2*ps);
+      g.fillStyle(0xD4C5B0, 0.7);
+      g.fillRect(7*ps, 5*ps, 2*ps, 4*ps);
+      g.fillRect(11*ps, 7*ps, 2*ps, 3*ps);
+      g.fillStyle(0x281808, 0.6);
+      g.fillRect(6*ps, 7*ps, 4*ps, 1*ps);
+      g.fillRect(6*ps, 9*ps, 4*ps, 1*ps);
+      g.fillRect(7*ps, 7*ps, 1*ps, 3*ps);
+      g.fillRect(9*ps, 7*ps, 1*ps, 3*ps);
+      g.fillStyle(0xFFFF00, 0.8);
+      g.fillRect(4*ps, 4*ps, 3*ps, 2*ps);
+      g.fillRect(10*ps, 5*ps, 2*ps, 2*ps);
+      g.fillStyle(0x000000, 0.9);
+      g.fillRect(5*ps, 4*ps, 1*ps, 2*ps);
+      g.fillRect(10*ps, 5*ps, 1*ps, 2*ps);
     } else if (typeIdx === 3) {
       // Void Stalker — tall dark figure with purple glow
-      body.fillStyle(0x1A0A2A, 0.95);
-      body.fillRect(6 * ps, 0 * ps, 4 * ps, 3 * ps); // head
-      body.fillRect(5 * ps, 3 * ps, 6 * ps, 8 * ps); // body
-      body.fillRect(4 * ps, 5 * ps, 8 * ps, 4 * ps); // wider
-      // Cloak/robe
-      body.fillRect(3 * ps, 7 * ps, 10 * ps, 5 * ps);
-      body.fillRect(2 * ps, 10 * ps, 12 * ps, 3 * ps);
-      // Void texture (dark purple)
-      body.fillStyle(0x2A1A3A, 0.5);
-      body.fillRect(6 * ps, 4 * ps, 4 * ps, 6 * ps);
-      // Glowing purple eyes
-      body.fillStyle(0xAA00FF, 0.9);
-      body.fillRect(6 * ps, 1 * ps, 2 * ps, 2 * ps);
-      body.fillRect(9 * ps, 1 * ps, 2 * ps, 2 * ps);
-      body.fillStyle(0xDD44FF, 0.4);
-      body.fillRect(6 * ps, 0 * ps, 2 * ps, 1 * ps);
-      body.fillRect(9 * ps, 0 * ps, 2 * ps, 1 * ps);
-      // Purple energy wisps
-      body.fillStyle(0x8800CC, 0.3);
-      body.fillRect(2 * ps, 11 * ps, 2 * ps, 2 * ps);
-      body.fillRect(12 * ps, 12 * ps, 2 * ps, 1 * ps);
-
+      g.fillStyle(0x1A0A2A, 0.95);
+      g.fillRect(6*ps, 0*ps, 4*ps, 3*ps);
+      g.fillRect(5*ps, 3*ps, 6*ps, 8*ps);
+      g.fillRect(4*ps, 5*ps, 8*ps, 4*ps);
+      g.fillRect(3*ps, 7*ps, 10*ps, 5*ps);
+      g.fillRect(2*ps, 10*ps, 12*ps, 3*ps);
+      g.fillStyle(0x2A1A3A, 0.5);
+      g.fillRect(6*ps, 4*ps, 4*ps, 6*ps);
+      g.fillStyle(0xAA00FF, 0.9);
+      g.fillRect(6*ps, 1*ps, 2*ps, 2*ps);
+      g.fillRect(9*ps, 1*ps, 2*ps, 2*ps);
+      g.fillStyle(0xDD44FF, 0.4);
+      g.fillRect(6*ps, 0*ps, 2*ps, 1*ps);
+      g.fillRect(9*ps, 0*ps, 2*ps, 1*ps);
+      g.fillStyle(0x8800CC, 0.3);
+      g.fillRect(2*ps, 11*ps, 2*ps, 2*ps);
+      g.fillRect(12*ps, 12*ps, 2*ps, 1*ps);
     } else {
       // Bone Horror — skeletal with exposed ribcage
-      body.fillStyle(0xD4C5B0, 0.9); // bone color
-      // Skull
-      body.fillRect(5 * ps, 0 * ps, 6 * ps, 4 * ps);
-      body.fillRect(4 * ps, 1 * ps, 8 * ps, 3 * ps);
-      // Eye sockets
-      body.fillStyle(0x000000, 0.9);
-      body.fillRect(5 * ps, 1 * ps, 2 * ps, 2 * ps);
-      body.fillRect(9 * ps, 1 * ps, 2 * ps, 2 * ps);
-      // Glowing red in sockets
-      body.fillStyle(0xFF0000, 0.4);
-      body.fillRect(6 * ps, 2 * ps, 1 * ps, 1 * ps);
-      body.fillRect(10 * ps, 2 * ps, 1 * ps, 1 * ps);
-      // Jaw
-      body.fillStyle(0xB8A890, 0.8);
-      body.fillRect(5 * ps, 3 * ps, 6 * ps, 1 * ps);
-      // Teeth
-      body.fillStyle(0xFFFFFF, 0.7);
-      body.fillRect(6 * ps, 3 * ps, 1 * ps, 1 * ps);
-      body.fillRect(8 * ps, 3 * ps, 1 * ps, 1 * ps);
-      body.fillRect(10 * ps, 3 * ps, 1 * ps, 1 * ps);
-      // Ribcage
-      body.fillStyle(0xD4C5B0, 0.8);
-      body.fillRect(5 * ps, 4 * ps, 6 * ps, 1 * ps);
-      body.fillRect(4 * ps, 5 * ps, 8 * ps, 1 * ps);
-      body.fillRect(5 * ps, 6 * ps, 6 * ps, 1 * ps);
-      body.fillRect(4 * ps, 7 * ps, 8 * ps, 1 * ps);
-      body.fillRect(5 * ps, 8 * ps, 6 * ps, 1 * ps);
-      // Spine
-      body.fillRect(7 * ps, 4 * ps, 2 * ps, 6 * ps);
-      // Arms (bone)
-      body.fillRect(3 * ps, 5 * ps, 2 * ps, 1 * ps);
-      body.fillRect(11 * ps, 5 * ps, 2 * ps, 1 * ps);
-      body.fillRect(2 * ps, 6 * ps, 2 * ps, 1 * ps);
-      body.fillRect(12 * ps, 6 * ps, 2 * ps, 1 * ps);
-      body.fillRect(1 * ps, 7 * ps, 2 * ps, 1 * ps);
-      body.fillRect(13 * ps, 7 * ps, 2 * ps, 1 * ps);
-      // Legs (bone)
-      body.fillRect(5 * ps, 9 * ps, 2 * ps, 4 * ps);
-      body.fillRect(9 * ps, 9 * ps, 2 * ps, 4 * ps);
-      // Feet
-      body.fillRect(4 * ps, 13 * ps, 3 * ps, 1 * ps);
-      body.fillRect(9 * ps, 13 * ps, 3 * ps, 1 * ps);
-      // Shadow/outline
-      body.fillStyle(0x8A7A6A, 0.4);
-      body.fillRect(4 * ps, 0 * ps, 1 * ps, 4 * ps);
-      body.fillRect(11 * ps, 0 * ps, 1 * ps, 4 * ps);
+      g.fillStyle(0xD4C5B0, 0.9);
+      g.fillRect(5*ps, 0*ps, 6*ps, 4*ps);
+      g.fillRect(4*ps, 1*ps, 8*ps, 3*ps);
+      g.fillStyle(0x000000, 0.9);
+      g.fillRect(5*ps, 1*ps, 2*ps, 2*ps);
+      g.fillRect(9*ps, 1*ps, 2*ps, 2*ps);
+      g.fillStyle(0xFF0000, 0.4);
+      g.fillRect(6*ps, 2*ps, 1*ps, 1*ps);
+      g.fillRect(10*ps, 2*ps, 1*ps, 1*ps);
+      g.fillStyle(0xB8A890, 0.8);
+      g.fillRect(5*ps, 3*ps, 6*ps, 1*ps);
+      g.fillStyle(0xFFFFFF, 0.7);
+      g.fillRect(6*ps, 3*ps, 1*ps, 1*ps);
+      g.fillRect(8*ps, 3*ps, 1*ps, 1*ps);
+      g.fillRect(10*ps, 3*ps, 1*ps, 1*ps);
+      g.fillStyle(0xD4C5B0, 0.8);
+      g.fillRect(5*ps, 4*ps, 6*ps, 1*ps);
+      g.fillRect(4*ps, 5*ps, 8*ps, 1*ps);
+      g.fillRect(5*ps, 6*ps, 6*ps, 1*ps);
+      g.fillRect(4*ps, 7*ps, 8*ps, 1*ps);
+      g.fillRect(5*ps, 8*ps, 6*ps, 1*ps);
+      g.fillRect(7*ps, 4*ps, 2*ps, 6*ps);
+      g.fillRect(3*ps, 5*ps, 2*ps, 1*ps);
+      g.fillRect(11*ps, 5*ps, 2*ps, 1*ps);
+      g.fillRect(2*ps, 6*ps, 2*ps, 1*ps);
+      g.fillRect(12*ps, 6*ps, 2*ps, 1*ps);
+      g.fillRect(1*ps, 7*ps, 2*ps, 1*ps);
+      g.fillRect(13*ps, 7*ps, 2*ps, 1*ps);
+      g.fillRect(5*ps, 9*ps, 2*ps, 4*ps);
+      g.fillRect(9*ps, 9*ps, 2*ps, 4*ps);
+      g.fillRect(4*ps, 13*ps, 3*ps, 1*ps);
+      g.fillRect(9*ps, 13*ps, 3*ps, 1*ps);
+      g.fillStyle(0x8A7A6A, 0.4);
+      g.fillRect(4*ps, 0*ps, 1*ps, 4*ps);
+      g.fillRect(11*ps, 0*ps, 1*ps, 4*ps);
     }
 
+    g.setPosition(-8, -8);
+  }
+
+  // ─── SHARED MONSTER SETUP ──────────────────────────────────
+  setupMonster(monster, body, type, typeIdx, hp, speed, damage) {
     body.setPosition(-8, -8);
     monster.add(body);
 
-    // HP bar
     const hpBg = this.add.rectangle(0, -12, 14, 2, 0x000000, 0.5);
     const hpFill = this.add.rectangle(0, -12, 14, 2, 0xEF4444, 0.8);
     hpFill.setOrigin(0.5);
@@ -2736,10 +2969,10 @@ class GameScene extends Phaser.Scene {
     monster.setData('hpFill', hpFill);
 
     monster.setSize(12, 12);
-    monster.setData('hp', type.hp + state.depth * 8);
-    monster.setData('maxHp', type.hp + state.depth * 8);
-    monster.setData('speed', type.speed + state.depth * 2);
-    monster.setData('damage', type.damage + state.depth * 2);
+    monster.setData('hp', hp);
+    monster.setData('maxHp', hp);
+    monster.setData('speed', speed);
+    monster.setData('damage', damage);
     monster.setData('offset', Math.random() * Math.PI * 2);
     monster.setData('name', type.name);
     monster.setData('behavior', type.behavior);
@@ -2754,9 +2987,37 @@ class GameScene extends Phaser.Scene {
     this.monsters.push(monster);
   }
 
+  spawnMonster() {
+    // Retry up to 20 times to find a valid spawn
+    let x, y, tries = 0;
+    do {
+      x = 3 + Math.floor(Math.random() * (MAP_W - 6));
+      y = 3 + Math.floor(Math.random() * (MAP_H - 6));
+      tries++;
+    } while (SOLID_TILES.has(state.dungeon.map[y][x]) && tries < 20);
+    if (SOLID_TILES.has(state.dungeon.map[y][x])) return;
+
+    const monsterTypes = [
+      { name: 'Shadow Crawler', color: 0x4A2A4A, hp: 25, speed: 40, damage: 8, behavior: 'flank' },
+      { name: 'Lost Soul', color: 0x3A3A5A, hp: 30, speed: 45, damage: 10, behavior: 'phase' },
+      { name: 'Flesh Golem', color: 0x5A2A2A, hp: 40, speed: 35, damage: 14, behavior: 'charge' },
+      { name: 'Void Stalker', color: 0x2A1A3A, hp: 50, speed: 50, damage: 18, behavior: 'teleport' },
+      { name: 'Bone Horror', color: 0x6A5A3A, hp: 65, speed: 45, damage: 22, behavior: 'ranged' },
+    ];
+    const typeIdx = Math.min(Math.floor(state.depth / 2), monsterTypes.length - 1);
+    const type = monsterTypes[typeIdx];
+
+    const monster = this.add.container(x * TILE + TILE/2, y * TILE + TILE/2);
+    const body = this.add.graphics();
+    this.drawMonsterSprite(body, typeIdx);
+    this.setupMonster(monster, body, type, typeIdx,
+      type.hp + state.depth * 8,
+      type.speed + state.depth * 2,
+      type.damage + state.depth * 2
+    );
+  }
+
   spawnMonsterAt(tileX, tileY) {
-    // Spawn monster at specific tile (for grass encounters)
-    const theme = THEMES[state.floorTheme % THEMES.length];
     const monsterTypes = [
       { name: 'Shadow Crawler', color: 0x4A2A4A, hp: 25, speed: 40, damage: 8, behavior: 'flank' },
       { name: 'Lost Soul', color: 0x3A3A5A, hp: 30, speed: 45, damage: 10, behavior: 'phase' },
@@ -2769,155 +3030,12 @@ class GameScene extends Phaser.Scene {
 
     const monster = this.add.container(tileX * TILE + TILE/2, tileY * TILE + TILE/2);
     const body = this.add.graphics();
-    const ps = 1;
-
-    // Use same horror sprites as spawnMonster
-    if (typeIdx === 0) {
-      // Shadow Crawler
-      body.fillStyle(0x1A0A1A, 0.9);
-      body.fillRect(3 * ps, 4 * ps, 10 * ps, 8 * ps);
-      body.fillRect(2 * ps, 6 * ps, 12 * ps, 4 * ps);
-      body.fillRect(4 * ps, 3 * ps, 8 * ps, 2 * ps);
-      body.fillRect(1 * ps, 8 * ps, 2 * ps, 3 * ps);
-      body.fillRect(13 * ps, 7 * ps, 2 * ps, 4 * ps);
-      body.fillRect(0 * ps, 10 * ps, 2 * ps, 2 * ps);
-      body.fillRect(14 * ps, 9 * ps, 2 * ps, 3 * ps);
-      body.fillStyle(0xFF0000, 0.9);
-      body.fillRect(5 * ps, 6 * ps, 2 * ps, 2 * ps);
-      body.fillRect(9 * ps, 6 * ps, 2 * ps, 2 * ps);
-      body.fillStyle(0xFF4444, 0.4);
-      body.fillRect(5 * ps, 5 * ps, 2 * ps, 1 * ps);
-      body.fillRect(9 * ps, 5 * ps, 2 * ps, 1 * ps);
-      body.fillStyle(0xFF0000, 0.3);
-      body.fillRect(6 * ps, 9 * ps, 4 * ps, 2 * ps);
-      body.fillStyle(0x000000, 0.6);
-      body.fillRect(7 * ps, 10 * ps, 2 * ps, 1 * ps);
-    } else if (typeIdx === 1) {
-      // Lost Soul
-      body.fillStyle(0x8888AA, 0.5);
-      body.fillRect(5 * ps, 1 * ps, 6 * ps, 4 * ps);
-      body.fillRect(4 * ps, 3 * ps, 8 * ps, 6 * ps);
-      body.fillRect(3 * ps, 5 * ps, 10 * ps, 4 * ps);
-      body.fillRect(3 * ps, 9 * ps, 3 * ps, 4 * ps);
-      body.fillRect(7 * ps, 10 * ps, 2 * ps, 3 * ps);
-      body.fillRect(10 * ps, 9 * ps, 3 * ps, 4 * ps);
-      body.fillStyle(0x000000, 0.9);
-      body.fillRect(5 * ps, 3 * ps, 3 * ps, 3 * ps);
-      body.fillRect(9 * ps, 3 * ps, 3 * ps, 3 * ps);
-      body.fillStyle(0x4444FF, 0.3);
-      body.fillRect(6 * ps, 4 * ps, 1 * ps, 1 * ps);
-      body.fillRect(10 * ps, 4 * ps, 1 * ps, 1 * ps);
-      body.fillStyle(0x000000, 0.8);
-      body.fillRect(7 * ps, 7 * ps, 3 * ps, 2 * ps);
-      body.fillStyle(0xAAAACC, 0.2);
-      body.fillRect(5 * ps, 2 * ps, 2 * ps, 2 * ps);
-    } else if (typeIdx === 2) {
-      // Flesh Golem
-      body.fillStyle(0x8B4040, 0.9);
-      body.fillRect(3 * ps, 3 * ps, 10 * ps, 10 * ps);
-      body.fillRect(2 * ps, 5 * ps, 12 * ps, 6 * ps);
-      body.fillRect(1 * ps, 7 * ps, 14 * ps, 4 * ps);
-      body.fillStyle(0xAA5050, 0.6);
-      body.fillRect(4 * ps, 4 * ps, 3 * ps, 3 * ps);
-      body.fillRect(9 * ps, 6 * ps, 3 * ps, 2 * ps);
-      body.fillRect(5 * ps, 9 * ps, 4 * ps, 2 * ps);
-      body.fillStyle(0xD4C5B0, 0.7);
-      body.fillRect(7 * ps, 5 * ps, 2 * ps, 4 * ps);
-      body.fillRect(11 * ps, 7 * ps, 2 * ps, 3 * ps);
-      body.fillStyle(0x281808, 0.6);
-      body.fillRect(6 * ps, 7 * ps, 4 * ps, 1 * ps);
-      body.fillRect(6 * ps, 9 * ps, 4 * ps, 1 * ps);
-      body.fillRect(7 * ps, 7 * ps, 1 * ps, 3 * ps);
-      body.fillRect(9 * ps, 7 * ps, 1 * ps, 3 * ps);
-      body.fillStyle(0xFFFF00, 0.8);
-      body.fillRect(4 * ps, 4 * ps, 3 * ps, 2 * ps);
-      body.fillRect(10 * ps, 5 * ps, 2 * ps, 2 * ps);
-      body.fillStyle(0x000000, 0.9);
-      body.fillRect(5 * ps, 4 * ps, 1 * ps, 2 * ps);
-      body.fillRect(10 * ps, 5 * ps, 1 * ps, 2 * ps);
-    } else if (typeIdx === 3) {
-      // Void Stalker
-      body.fillStyle(0x1A0A2A, 0.95);
-      body.fillRect(6 * ps, 0 * ps, 4 * ps, 3 * ps);
-      body.fillRect(5 * ps, 3 * ps, 6 * ps, 8 * ps);
-      body.fillRect(4 * ps, 5 * ps, 8 * ps, 4 * ps);
-      body.fillRect(3 * ps, 7 * ps, 10 * ps, 5 * ps);
-      body.fillRect(2 * ps, 10 * ps, 12 * ps, 3 * ps);
-      body.fillStyle(0x2A1A3A, 0.5);
-      body.fillRect(6 * ps, 4 * ps, 4 * ps, 6 * ps);
-      body.fillStyle(0xAA00FF, 0.9);
-      body.fillRect(6 * ps, 1 * ps, 2 * ps, 2 * ps);
-      body.fillRect(9 * ps, 1 * ps, 2 * ps, 2 * ps);
-      body.fillStyle(0xDD44FF, 0.4);
-      body.fillRect(6 * ps, 0 * ps, 2 * ps, 1 * ps);
-      body.fillRect(9 * ps, 0 * ps, 2 * ps, 1 * ps);
-      body.fillStyle(0x8800CC, 0.3);
-      body.fillRect(2 * ps, 11 * ps, 2 * ps, 2 * ps);
-      body.fillRect(12 * ps, 12 * ps, 2 * ps, 1 * ps);
-    } else {
-      // Bone Horror
-      body.fillStyle(0xD4C5B0, 0.9);
-      body.fillRect(5 * ps, 0 * ps, 6 * ps, 4 * ps);
-      body.fillRect(4 * ps, 1 * ps, 8 * ps, 3 * ps);
-      body.fillStyle(0x000000, 0.9);
-      body.fillRect(5 * ps, 1 * ps, 2 * ps, 2 * ps);
-      body.fillRect(9 * ps, 1 * ps, 2 * ps, 2 * ps);
-      body.fillStyle(0xFF0000, 0.4);
-      body.fillRect(6 * ps, 2 * ps, 1 * ps, 1 * ps);
-      body.fillRect(10 * ps, 2 * ps, 1 * ps, 1 * ps);
-      body.fillStyle(0xB8A890, 0.8);
-      body.fillRect(5 * ps, 3 * ps, 6 * ps, 1 * ps);
-      body.fillStyle(0xFFFFFF, 0.7);
-      body.fillRect(6 * ps, 3 * ps, 1 * ps, 1 * ps);
-      body.fillRect(8 * ps, 3 * ps, 1 * ps, 1 * ps);
-      body.fillRect(10 * ps, 3 * ps, 1 * ps, 1 * ps);
-      body.fillStyle(0xD4C5B0, 0.8);
-      body.fillRect(5 * ps, 4 * ps, 6 * ps, 1 * ps);
-      body.fillRect(4 * ps, 5 * ps, 8 * ps, 1 * ps);
-      body.fillRect(5 * ps, 6 * ps, 6 * ps, 1 * ps);
-      body.fillRect(4 * ps, 7 * ps, 8 * ps, 1 * ps);
-      body.fillRect(5 * ps, 8 * ps, 6 * ps, 1 * ps);
-      body.fillRect(7 * ps, 4 * ps, 2 * ps, 6 * ps);
-      body.fillRect(3 * ps, 5 * ps, 2 * ps, 1 * ps);
-      body.fillRect(11 * ps, 5 * ps, 2 * ps, 1 * ps);
-      body.fillRect(2 * ps, 6 * ps, 2 * ps, 1 * ps);
-      body.fillRect(12 * ps, 6 * ps, 2 * ps, 1 * ps);
-      body.fillRect(1 * ps, 7 * ps, 2 * ps, 1 * ps);
-      body.fillRect(13 * ps, 7 * ps, 2 * ps, 1 * ps);
-      body.fillRect(5 * ps, 9 * ps, 2 * ps, 4 * ps);
-      body.fillRect(9 * ps, 9 * ps, 2 * ps, 4 * ps);
-      body.fillRect(4 * ps, 13 * ps, 3 * ps, 1 * ps);
-      body.fillRect(9 * ps, 13 * ps, 3 * ps, 1 * ps);
-      body.fillStyle(0x8A7A6A, 0.4);
-      body.fillRect(4 * ps, 0 * ps, 1 * ps, 4 * ps);
-      body.fillRect(11 * ps, 0 * ps, 1 * ps, 4 * ps);
-    }
-
-    body.setPosition(-8, -8);
-    monster.add(body);
-
-    const hpBg = this.add.rectangle(0, -12, 14, 2, 0x000000, 0.5);
-    const hpFill = this.add.rectangle(0, -12, 14, 2, 0xEF4444, 0.8);
-    hpFill.setOrigin(0.5);
-    monster.add(hpBg);
-    monster.add(hpFill);
-    monster.setData('hpFill', hpFill);
-
-    monster.setSize(12, 12);
-    const hp = type.hp + state.depth * 8;
-    monster.setData('hp', hp);
-    monster.setData('maxHp', hp);
-    monster.setData('speed', type.speed + state.depth * 2 + 10); // slightly faster for encounters
-    monster.setData('damage', type.damage + state.depth * 2);
-    monster.setData('offset', Math.random() * Math.PI * 2);
-    monster.setData('name', type.name);
-    monster.setDepth(8);
-
-    this.physics.world.enable(monster);
-    monster.body.setCollideWorldBounds(true);
-    monster.body.setOffset(-6, -6);
-    this.physics.add.collider(monster, this.walls);
-    this.monsters.push(monster);
+    this.drawMonsterSprite(body, typeIdx);
+    this.setupMonster(monster, body, type, typeIdx,
+      type.hp + state.depth * 8,
+      type.speed + state.depth * 2 + 10, // slightly faster for encounters
+      type.damage + state.depth * 2
+    );
   }
 
   spawnBoss(bossData) {
@@ -2987,30 +3105,40 @@ class GameScene extends Phaser.Scene {
     this.physics.add.collider(monster, this.walls);
     this.monsters.push(monster);
 
-    // Boss entrance effect
-    this.screenShake = 12;
+    // Boss intro cinematic
+    this.screenFX.shake(15);
+    this.screenFX.flash(0xEF4444, 300);
     SFX.jumpscare();
     this.addLog(`⚠ BOSS: ${bossData.name} appeared!`);
 
-    // Flash the screen red briefly
-    this.cameras.main.flash(300, 239, 68, 68);
+    // Show boss intro overlay
+    const bossIntro = document.getElementById('boss-intro');
+    const bossName = document.getElementById('boss-intro-name');
+    const bossTitle = document.getElementById('boss-intro-title');
+    if (bossIntro && bossName && bossTitle) {
+      bossName.textContent = bossData.name;
+      bossTitle.textContent = `Floor ${state.depth + 1} Boss`;
+      bossIntro.classList.add('show');
+      // Pause game during intro
+      this.physics.pause();
+      setTimeout(() => {
+        bossIntro.classList.remove('show');
+        this.physics.resume();
+      }, 2500);
+    }
 
-    // Boss entrance text
-    const bossText = this.add.text(
-      this.cameras.main.scrollX + this.cameras.main.width / 2,
-      this.cameras.main.scrollY + this.cameras.main.height / 2,
-      `⚠ ${bossData.name}`,
-      { fontFamily: 'Press Start 2P', fontSize: '8px', color: '#E83838', stroke: '#000', strokeThickness: 3 }
-    ).setOrigin(0.5).setDepth(30).setAlpha(0);
-    this.tweens.add({ targets: bossText, alpha: 1, duration: 300, yoyo: true, hold: 1500,
-      onComplete: () => bossText.destroy()
-    });
+    // Dramatic particles during intro
+    for (let i = 0; i < 30; i++) {
+      this.time.delayedCall(i * 50, () => {
+        this.particles.get(bx + (Math.random()-0.5)*100, by + (Math.random()-0.5)*100,
+          (Math.random()-0.5)*80, -30 - Math.random()*60, 0xEF4444, 3, 0.8, { gravity: 30 });
+      });
+    }
   }
 
   spawnParticle(x, y, vx, vy, color, alpha) {
-    const p = this.add.circle(x, y, 1 + Math.random() * 1.5, color, alpha);
-    p.setDepth(15);
-    this.particles.push({ gfx: p, vx, vy, life: 0.3 + Math.random() * 0.2, maxLife: 0.5 });
+    // Legacy wrapper — routes to particle pool
+    this.particles.get(x, y, vx, vy, color, 2, 0.4, { alpha: alpha || 1, gravity: 0 });
   }
 
   spawnDamageNumber(x, y, text, color = 0xFFFFFF) {
@@ -3073,11 +3201,8 @@ class GameScene extends Phaser.Scene {
     state.visited.clear();
     const nextTheme = THEMES[state.floorTheme % THEMES.length];
     this.addLog(`Descending to floor ${state.depth + 1}...`);
-    startTransition(
-      () => this.scene.restart(),
-      `FLOOR ${state.depth + 1}`,
-      nextTheme.name
-    );
+    showToast(`Floor ${state.depth} cleared!`, 'success', 2000, '✨');
+    showLoading(() => this.scene.restart());
   }
 
   getTitle(level) {
@@ -3104,7 +3229,15 @@ class GameScene extends Phaser.Scene {
     const depthText = document.getElementById('depth-text');
     const logEl = document.getElementById('game-log');
 
-    if (hpBar) hpBar.style.width = `${(p.hp / p.maxHp) * 100}%`;
+    if (hpBar) {
+      hpBar.style.width = `${(p.hp / p.maxHp) * 100}%`;
+      // Low HP pulse animation
+      if (p.hp / p.maxHp < 0.25) {
+        hpBar.classList.add('low');
+      } else {
+        hpBar.classList.remove('low');
+      }
+    }
     const xpBar = document.getElementById('xp-fill');
     if (xpBar) xpBar.style.width = `${(p.xp / p.xpNext) * 100}%`;
     if (goldText) goldText.textContent = `G:${p.gold}`;
@@ -3125,13 +3258,17 @@ class GameScene extends Phaser.Scene {
       logEl.scrollTop = logEl.scrollHeight;
     }
 
-    // Combo display
+    // Combo display with pulse animation
     const comboEl = document.getElementById('combo-display');
     if (comboEl) {
       if (combo.count >= 3) {
         comboEl.textContent = `${combo.count}x COMBO`;
         comboEl.style.display = 'block';
         comboEl.style.color = combo.count >= 12 ? '#F8D838' : combo.count >= 5 ? '#E87898' : '#A882F7';
+        // Trigger pulse animation
+        comboEl.classList.remove('pulse');
+        void comboEl.offsetWidth; // force reflow
+        comboEl.classList.add('pulse');
       } else {
         comboEl.style.display = 'none';
       }
@@ -3174,6 +3311,375 @@ const config = {
 };
 
 let game = null;
+let minimapVisible = true;
+let gamePaused = false;
+
+// ═══════════════════════════════════════════════════════════
+// PARTICLE SYSTEM (object pool for performance)
+// ═══════════════════════════════════════════════════════════
+class ParticlePool {
+  constructor(scene, maxParticles = 300) {
+    this.scene = scene;
+    this.pool = [];
+    this.active = [];
+    this.maxParticles = maxParticles;
+  }
+
+  get(x, y, vx, vy, color, size, life, opts = {}) {
+    let p;
+    if (this.pool.length > 0) {
+      p = this.pool.pop();
+      p.setPosition(x, y);
+      p.setVisible(true);
+      p.setAlpha(opts.alpha || 1);
+      p.setScale(1);
+    } else if (this.active.length < this.maxParticles) {
+      p = this.scene.add.circle(0, 0, size || 2, color, opts.alpha || 1);
+      p.setDepth(15);
+    } else {
+      return; // pool exhausted
+    }
+    p.setFillStyle(color, opts.alpha || 1);
+    p.setRadius(size || 2);
+    this.active.push({ gfx: p, vx, vy, life, maxLife: life, gravity: opts.gravity || 0, shrink: opts.shrink !== false, friction: opts.friction || 0.98, color });
+  }
+
+  update(dt) {
+    for (let i = this.active.length - 1; i >= 0; i--) {
+      const p = this.active[i];
+      p.life -= dt;
+      if (p.life <= 0) {
+        p.gfx.setVisible(false);
+        this.pool.push(p.gfx);
+        this.active.splice(i, 1);
+        continue;
+      }
+      p.vy += p.gravity * dt;
+      p.vx *= p.friction;
+      p.vy *= p.friction;
+      p.gfx.x += p.vx * dt;
+      p.gfx.y += p.vy * dt;
+      const lifeRatio = p.life / p.maxLife;
+      if (p.shrink) p.gfx.setScale(lifeRatio);
+      p.gfx.setAlpha(lifeRatio);
+    }
+  }
+
+  clear() {
+    this.active.forEach(p => { p.gfx.setVisible(false); this.pool.push(p.gfx); });
+    this.active.length = 0;
+  }
+}
+
+// ═══════════════════════════════════════════════════════════
+// SCREEN EFFECTS MANAGER
+// ═══════════════════════════════════════════════════════════
+class ScreenFX {
+  constructor(scene) {
+    this.scene = scene;
+    this.shakeIntensity = 0;
+    this.shakeDecay = 10;
+    this.freezeTimer = 0;
+    this.chromaticAmount = 0;
+    this.vignetteAlpha = 0;
+  }
+
+  shake(intensity) { this.shakeIntensity = Math.max(this.shakeIntensity, intensity); }
+
+  freeze(duration) {
+    this.freezeTimer = duration;
+    this.scene.physics.pause();
+    this.scene.time.delayedCall(duration * 1000, () => {
+      this.scene.physics.resume();
+      this.freezeTimer = 0;
+    });
+  }
+
+  flash(color, duration) {
+    const el = document.getElementById('screen-flash');
+    if (!el) return;
+    const hex = '#' + color.toString(16).padStart(6, '0');
+    el.style.background = hex;
+    el.style.opacity = '0.4';
+    setTimeout(() => { el.style.opacity = '0'; }, duration || 100);
+  }
+
+  update(dt) {
+    if (this.shakeIntensity > 0) {
+      this.shakeIntensity -= this.shakeDecay * dt;
+      if (this.shakeIntensity < 0) this.shakeIntensity = 0;
+      const cam = this.scene.cameras.main;
+      cam.setScroll(
+        cam.scrollX + (Math.random() - 0.5) * this.shakeIntensity,
+        cam.scrollY + (Math.random() - 0.5) * this.shakeIntensity
+      );
+    }
+  }
+}
+
+// ═══════════════════════════════════════════════════════════
+// TOAST NOTIFICATION SYSTEM
+// ═══════════════════════════════════════════════════════════
+function showToast(message, type = 'info', duration = 3000, icon = '') {
+  const container = document.getElementById('toast-container');
+  if (!container) return;
+  const toast = document.createElement('div');
+  toast.className = `toast ${type}`;
+  toast.innerHTML = `${icon ? `<span class="toast-icon">${icon}</span>` : ''}${message}`;
+  container.appendChild(toast);
+  requestAnimationFrame(() => toast.classList.add('show'));
+  setTimeout(() => {
+    toast.classList.remove('show');
+    toast.classList.add('hide');
+    setTimeout(() => toast.remove(), 400);
+  }, duration);
+}
+
+// ═══════════════════════════════════════════════════════════
+// LOADING SCREEN WITH TIPS
+// ═══════════════════════════════════════════════════════════
+const LOADING_TIPS = [
+  'Dodge roll with SHIFT to avoid damage with i-frames!',
+  'Combo kills fast for massive XP multipliers!',
+  'Compass items reveal the exit on your minimap!',
+  'Bombs deal AoE damage — great for boss fights!',
+  'Downvoted comments are traps. Upvoted ones heal you!',
+  'Each floor has a unique theme and music!',
+  'Secret rooms hide the best loot!',
+  'Press P to pause, M to toggle minimap!',
+  'Save gold between runs — spend it in the SHOP!',
+  'Bosses appear on floors 3, 5, and 7!',
+];
+
+function showLoading(callback) {
+  const el = document.getElementById('loading-screen');
+  const fill = document.getElementById('loading-fill');
+  const tip = document.getElementById('loading-tip');
+  if (!el) { callback(); return; }
+  tip.textContent = LOADING_TIPS[Math.floor(Math.random() * LOADING_TIPS.length)];
+  el.classList.add('show');
+  let progress = 0;
+  const interval = setInterval(() => {
+    progress += 5 + Math.random() * 15;
+    fill.style.width = Math.min(100, progress) + '%';
+    if (progress >= 100) {
+      clearInterval(interval);
+      setTimeout(() => {
+        el.classList.remove('show');
+        fill.style.width = '0%';
+        callback();
+      }, 300);
+    }
+  }, 60);
+}
+
+// ═══════════════════════════════════════════════════════════
+// LOOT RARITY SYSTEM
+// ═══════════════════════════════════════════════════════════
+const RARITY = {
+  common:    { name: 'Common',    color: 0xAAAAAA, glow: 0x666666, mult: 1.0, chance: 0.50 },
+  uncommon:  { name: 'Uncommon',  color: 0x34D399, glow: 0x10B981, mult: 1.3, chance: 0.25 },
+  rare:      { name: 'Rare',      color: 0x3B82F6, glow: 0x2563EB, mult: 1.6, chance: 0.15 },
+  epic:      { name: 'Epic',      color: 0xA855F7, glow: 0x9333EA, mult: 2.0, chance: 0.08 },
+  legendary: { name: 'Legendary', color: 0xF8B800, glow: 0xD4A000, mult: 2.5, chance: 0.02 },
+};
+
+function rollRarity() {
+  const r = Math.random();
+  let cumulative = 0;
+  for (const [key, rarity] of Object.entries(RARITY)) {
+    cumulative += rarity.chance;
+    if (r < cumulative) return key;
+  }
+  return 'common';
+}
+
+function getRarityColor(rarityKey) {
+  return RARITY[rarityKey]?.color || 0xAAAAAA;
+}
+
+// ═══════════════════════════════════════════════════════════
+// DODGE ROLL SYSTEM
+// ═══════════════════════════════════════════════════════════
+let dodgeState = { cooldown: 0, maxCooldown: 1.5, charges: 3, maxCharges: 3, rolling: false, rollTimer: 0, rollDuration: 0.25, rollSpeed: 2.5, regenTimer: 0, regenRate: 0.5 };
+
+function updateDodge(dt) {
+  if (dodgeState.rolling) {
+    dodgeState.rollTimer -= dt;
+    if (dodgeState.rollTimer <= 0) {
+      dodgeState.rolling = false;
+      state.player.invincible = 0;
+    }
+  }
+  // Regen charges
+  if (dodgeState.charges < dodgeState.maxCharges) {
+    dodgeState.regenTimer += dt;
+    if (dodgeState.regenTimer >= dodgeState.regenRate) {
+      dodgeState.regenTimer = 0;
+      dodgeState.charges = Math.min(dodgeState.maxCharges, dodgeState.charges + 1);
+    }
+  }
+  // Update UI pips
+  const pips = document.getElementById('dodge-pips');
+  if (pips) {
+    pips.innerHTML = Array.from({length: dodgeState.maxCharges}, (_, i) =>
+      `<div class="dodge-pip ${i < dodgeState.charges ? '' : 'empty'}"></div>`
+    ).join('');
+  }
+  const bar = document.getElementById('dodge-bar');
+  if (bar) bar.style.display = state.phase === 'explore' ? 'flex' : 'none';
+}
+
+// ═══════════════════════════════════════════════════════════
+// ABILITY SYSTEM
+// ═══════════════════════════════════════════════════════════
+const ABILITIES = [
+  { id: 'fireball', name: 'Fireball', icon: '🔥', key: '1', cd: 3, desc: 'Launch a piercing fireball',
+    execute: (scene) => {
+      const facing = scene.playerFacing;
+      const b = scene.add.circle(scene.player.x, scene.player.y, 5, 0xFF6600);
+      b.setDepth(8);
+      scene.physics.world.enable(b);
+      b.body.setAllowGravity(false);
+      b.body.setSize(10, 10);
+      b.body.setVelocity(facing.x * 300, facing.y * 300);
+      b.setData('damage', state.player.atk * 2);
+      b.setData('isAbility', true);
+      b.setData('pierce', true);
+      scene.bullets.add(b);
+      scene.particles.get(scene.player.x, scene.player.y, facing.x * -50, facing.y * -50, 0xFF4400, 3, 0.3, { gravity: 0 });
+      SFX.shoot();
+    }
+  },
+  { id: 'heal', name: 'Heal', icon: '💚', key: '2', cd: 8, desc: 'Restore 30% max HP',
+    execute: (scene) => {
+      const heal = Math.floor(state.player.maxHp * 0.3);
+      state.player.hp = Math.min(state.player.maxHp, state.player.hp + heal);
+      for (let i = 0; i < 15; i++) {
+        scene.particles.get(scene.player.x + (Math.random()-0.5)*20, scene.player.y + (Math.random()-0.5)*20,
+          (Math.random()-0.5)*30, -40 - Math.random()*40, 0x34D399, 2, 0.6, { gravity: 20 });
+      }
+      showToast(`+${heal} HP`, 'success', 1500, '💚');
+      SFX.heal();
+    }
+  },
+  { id: 'dash', name: 'Dash Strike', icon: '⚡', key: '3', cd: 4, desc: 'Dash forward damaging enemies',
+    execute: (scene) => {
+      const facing = scene.playerFacing;
+      const dist = 100;
+      scene.player.x += facing.x * dist;
+      scene.player.y += facing.y * dist;
+      for (let i = 0; i < 12; i++) {
+        scene.particles.get(scene.player.x - facing.x * dist * (i/12), scene.player.y - facing.y * dist * (i/12),
+          (Math.random()-0.5)*40, (Math.random()-0.5)*40, 0xF8D838, 2, 0.3);
+      }
+      scene.monsters.forEach(m => {
+        if (!m.active) return;
+        const dx = m.x - scene.player.x;
+        const dy = m.y - scene.player.y;
+        if (Math.sqrt(dx*dx + dy*dy) < 60) {
+          const dmg = state.player.atk * 1.5;
+          scene.damageMonster(m, dmg, true);
+        }
+      });
+      scene.screenFX.shake(5);
+      SFX.hit();
+    }
+  },
+  { id: 'shield', name: 'Barrier', icon: '🛡', key: '4', cd: 12, desc: 'Block next 3 hits',
+    execute: (scene) => {
+      addStatusEffect('SHIELD');
+      for (let i = 0; i < 20; i++) {
+        const angle = (Math.PI * 2 * i) / 20;
+        scene.particles.get(scene.player.x + Math.cos(angle)*20, scene.player.y + Math.sin(angle)*20,
+          Math.cos(angle)*20, Math.sin(angle)*20, 0x3B82F6, 2, 0.5, { friction: 0.95 });
+      }
+      showToast('Shield Active!', 'info', 1500, '🛡');
+      SFX.power();
+    }
+  },
+];
+
+let abilityCooldowns = {};
+
+function initAbilities() {
+  abilityCooldowns = {};
+  ABILITIES.forEach(a => abilityCooldowns[a.id] = 0);
+  renderAbilityBar();
+}
+
+function renderAbilityBar() {
+  const bar = document.getElementById('ability-bar');
+  if (!bar) return;
+  bar.style.display = state.phase === 'explore' ? 'flex' : 'none';
+  bar.innerHTML = ABILITIES.map(a => {
+    const cd = abilityCooldowns[a.id] || 0;
+    return `<div class="ability-slot ${cd <= 0 ? 'ready' : ''}" onclick="useAbility('${a.id}')" title="${a.desc}">
+      <span>${a.icon}</span>
+      <span class="ability-key">${a.key}</span>
+      ${cd > 0 ? `<span class="ability-cd">${Math.ceil(cd)}</span>` : ''}
+    </div>`;
+  }).join('');
+}
+
+function useAbility(id) {
+  const ability = ABILITIES.find(a => a.id === id);
+  if (!ability) return;
+  if ((abilityCooldowns[id] || 0) > 0) { showToast('On cooldown!', 'warning', 1000); return; }
+  if (!game || !game.scene) return;
+  const scene = game.scene.getScene('Game');
+  if (!scene) return;
+  ability.execute(scene);
+  abilityCooldowns[id] = ability.cd;
+  renderAbilityBar();
+}
+
+function updateAbilities(dt) {
+  let changed = false;
+  for (const id in abilityCooldowns) {
+    if (abilityCooldowns[id] > 0) {
+      abilityCooldowns[id] = Math.max(0, abilityCooldowns[id] - dt);
+      changed = true;
+    }
+  }
+  if (changed) renderAbilityBar();
+}
+
+// ═══════════════════════════════════════════════════════════
+// STATS SCREEN
+// ═══════════════════════════════════════════════════════════
+function toggleStats() {
+  const el = document.getElementById('stats-screen');
+  if (!el) return;
+  el.classList.toggle('show');
+  if (el.classList.contains('show')) renderStats();
+}
+
+function renderStats() {
+  const grid = document.getElementById('stats-grid');
+  if (!grid) return;
+  const p = state.player;
+  const stats = [
+    { label: 'Floor', value: `${state.depth + 1} / ${state.totalFloors}` },
+    { label: 'Level', value: `${p.level} (${p.title})` },
+    { label: 'HP', value: `${p.hp} / ${p.maxHp}` },
+    { label: 'ATK', value: p.atk },
+    { label: 'DEF', value: p.def },
+    { label: 'Gold', value: p.gold },
+    { label: 'Kills', value: state.kills },
+    { label: 'Max Combo', value: `${combo.maxCombo}x` },
+    { label: 'Achievements', value: `${unlockedAchievements.size}/${ACHIEVEMENTS.length}` },
+    { label: 'Dodge Charges', value: `${dodgeState.charges}/${dodgeState.maxCharges}` },
+    { label: 'Total Gold', value: persistentGold + p.gold },
+    { label: 'Weapon', value: p.weapon ? p.weapon.name : 'None' },
+  ];
+  grid.innerHTML = stats.map(s => `
+    <div class="stat-card">
+      <div class="stat-card-label">${s.label}</div>
+      <div class="stat-card-value">${s.value}</div>
+    </div>
+  `).join('');
+}
 
 // ─── INVENTORY SYSTEM ────────────────────────────────────────
 function addToInventory(itemId) {
@@ -3195,9 +3701,54 @@ function useItem(index) {
   const item = state.player.inventory[index];
   if (!item) return;
   if (item.type === 'consumable') {
-    if (item.effect) item.effect(state.player);
-    state.log.push(`Used: ${item.name}`);
-    SFX.heal();
+    // Special handling for bomb — needs access to scene/monsters
+    if (item.id === 'bomb') {
+      if (game && game.scene && game.scene.getScene('Game')) {
+        const scene = game.scene.getScene('Game');
+        let hitCount = 0;
+        scene.monsters.forEach(m => {
+          if (!m.active) return;
+          const dx = scene.player.x - m.x;
+          const dy = scene.player.y - m.y;
+          const dist = Math.sqrt(dx * dx + dy * dy);
+          if (dist < 120) {
+            const hp = m.getData('hp') - 50;
+            m.setData('hp', hp);
+            if (hp <= 0) {
+              scene.hitMonster(m); // triggers death logic
+            } else {
+              // Update HP bar
+              const hpFill = m.getData('hpFill');
+              if (hpFill && hpFill.active) {
+                const ratio = Math.max(0, hp / m.getData('maxHp'));
+                hpFill.setScale(ratio, 1);
+              }
+            }
+            hitCount++;
+            // Explosion particles
+            for (let i = 0; i < 8; i++) {
+              scene.spawnParticle(m.x, m.y, (Math.random()-0.5)*80, (Math.random()-0.5)*80, 0xEF4444, 0.9);
+            }
+          }
+        });
+        // Screen shake + flash
+        scene.screenShake = 10;
+        scene.cameras.main.flash(200, 239, 68, 68);
+        state.log.push(`BOOM! Hit ${hitCount} enemies!`);
+        SFX.jumpscare();
+      } else {
+        state.log.push('Bomb: No enemies nearby!');
+      }
+    } else if (item.id === 'compass') {
+      // Compass permanently reveals exit on minimap
+      state.player.hasCompass = true;
+      state.log.push('Compass: Exit revealed on minimap!');
+      SFX.power();
+    } else {
+      if (item.effect) item.effect(state.player);
+      state.log.push(`Used: ${item.name}`);
+      SFX.heal();
+    }
     state.player.inventory.splice(index, 1);
   } else if (item.type === 'equipment') {
     if (state.player.equipped === item.id) {
@@ -3212,6 +3763,19 @@ function useItem(index) {
       if (item.effect) item.effect(state.player);
       state.log.push(`Equipped: ${item.name}`);
     }
+    SFX.power();
+  } else if (item.type === 'key') {
+    // Key: open nearby chests from a distance + bonus gold
+    state.player.keys = (state.player.keys || 0) + 1;
+    const bonusGold = 20 + state.depth * 10;
+    state.player.gold += bonusGold;
+    state.log.push(`Key: Unlocked a secret! +${bonusGold}G`);
+    SFX.chest();
+    state.player.inventory.splice(index, 1);
+  } else if (item.type === 'passive') {
+    // Compass is passive — just reveal exit
+    state.player.hasCompass = true;
+    state.log.push(`${item.name}: Active!`);
     SFX.power();
   }
   updateInventoryUI();
@@ -3247,14 +3811,17 @@ function addStatusEffect(effectKey) {
 function processStatusEffects(dt) {
   state.player.statusEffects = state.player.statusEffects.filter(e => {
     const effect = STATUS[e.key];
-    if (e.remaining <= 0) {
-      state.log.push(`${effect.name} wore off`);
-      return false;
-    }
     e.tickTimer += dt;
     if (e.tickTimer >= 1) {
       e.tickTimer = 0;
-      e.remaining--;
+      // Only count down positive durations; negative = permanent (e.g. SHIELD)
+      if (e.remaining > 0) {
+        e.remaining--;
+        if (e.remaining <= 0) {
+          state.log.push(`${effect.name} wore off`);
+          return false;
+        }
+      }
       if (effect.tickDamage) {
         state.player.hp = Math.max(0, state.player.hp - effect.tickDamage);
         state.log.push(`${effect.name}: -${effect.tickDamage} HP`);
@@ -3301,10 +3868,11 @@ function updateInventoryUI() {
       invEl.innerHTML = '<div class="inv-empty">BAG EMPTY</div>';
     } else {
       invEl.innerHTML = p.inventory.map((item, i) => `
-        <div class="inv-item ${p.equipped === item.id ? 'equipped' : ''}" onclick="useItem(${i})" title="${item.desc}">
-          <span class="inv-icon">${item.icon}</span>
-          <span>${item.name}</span>
+        <div class="inv-item ${p.equipped === item.id ? 'equipped' : ''}" title="${item.desc}">
+          <span class="inv-icon" onclick="useItem(${i})">${item.icon}</span>
+          <span onclick="useItem(${i})" style="flex:1;">${item.name}</span>
           ${p.equipped === item.id ? '<span class="inv-equipped-tag">EQUIPPED</span>' : ''}
+          <span onclick="dropItem(${i})" style="font-family:Press Start 2P;font-size:6px;color:#E83838;cursor:pointer;padding:2px 4px;" title="Drop">✕</span>
         </div>
       `).join('');
     }
@@ -3334,7 +3902,7 @@ function startGame() {
       gold: 0, title: 'Youngster', invincible: 0,
       inventory: [], maxInventory: 12, equipped: null,
       speedMult: 1, shield: 0, statusEffects: [],
-      weapon: null,
+      weapon: null, hasCompass: false, keys: 0,
     },
     dungeon: null, depth: 0, totalFloors: 7, kills: 0, log: [],
     visited: new Set(), keys: 0, floorTheme: 0,

@@ -813,6 +813,538 @@
     ::-webkit-scrollbar-track { background: transparent; }
     ::-webkit-scrollbar-thumb { background: rgba(168,130,247,0.15); border-radius: 2px; }
 
+    /* ═══════════════════════════════════════════════════════
+       ANIMATION SYSTEM — Purposeful motion for every interaction
+       ═══════════════════════════════════════════════════════ */
+
+    /* ─── BUTTON FEEDBACK ─── */
+    .web-btn, button, .inv-item, .inv-sidebar-item {
+      transition: transform 0.12s cubic-bezier(0.25, 1, 0.5, 1),
+                  box-shadow 0.12s cubic-bezier(0.25, 1, 0.5, 1),
+                  background 0.15s ease,
+                  border-color 0.15s ease,
+                  color 0.15s ease;
+    }
+    .web-btn:hover, button:hover {
+      transform: translateY(-1px);
+    }
+    .web-btn:active, button:active {
+      transform: translateY(1px) scale(0.97);
+      transition-duration: 0.06s;
+    }
+    .inv-item:hover, .inv-sidebar-item:hover {
+      transform: translateX(2px);
+    }
+    .inv-item:active, .inv-sidebar-item:active {
+      transform: translateX(1px) scale(0.98);
+      transition-duration: 0.06s;
+    }
+
+    /* ─── OVERLAY TRANSITIONS ─── */
+    .overlay, .inv-overlay, .stats-overlay {
+      opacity: 0;
+      transform: scale(0.95);
+      transition: opacity 0.25s cubic-bezier(0.25, 1, 0.5, 1),
+                  transform 0.25s cubic-bezier(0.25, 1, 0.5, 1);
+      pointer-events: none;
+    }
+    .overlay.show, .inv-overlay.show, .stats-overlay.show {
+      opacity: 1;
+      transform: scale(1);
+      pointer-events: auto;
+    }
+    /* Override: title screen starts visible */
+    .overlay.show#title-screen {
+      opacity: 1;
+      transform: scale(1);
+    }
+
+    /* ─── TITLE SCREEN CHOREOGRAPHY ─── */
+    @keyframes titleFadeIn {
+      0% { opacity: 0; transform: translateY(12px); }
+      100% { opacity: 1; transform: translateY(0); }
+    }
+    @keyframes titleIconFloat {
+      0%, 100% { transform: translateY(0); }
+      50% { transform: translateY(-6px); }
+    }
+    #title-screen .pixel-icon {
+      animation: titleIconFloat 3s ease-in-out infinite;
+    }
+    #title-screen h1 {
+      animation: titleFadeIn 0.5s cubic-bezier(0.25, 1, 0.5, 1) 0.1s both;
+    }
+    #title-screen p {
+      animation: titleFadeIn 0.5s cubic-bezier(0.25, 1, 0.5, 1) 0.25s both;
+    }
+    #title-screen button {
+      animation: titleFadeIn 0.5s cubic-bezier(0.25, 1, 0.5, 1) 0.4s both;
+    }
+
+    /* ─── GAMEBOY SHELL FLOAT ─── */
+    @keyframes gameboyFloat {
+      0%, 100% { transform: translateY(0); }
+      50% { transform: translateY(-3px); }
+    }
+    .gameboy {
+      animation: gameboyFloat 6s ease-in-out infinite;
+    }
+
+    /* ─── POWER LED BREATHING ─── */
+    @keyframes ledBreathe {
+      0%, 100% { box-shadow: 0 0 8px #FF2020, 0 0 16px rgba(255,32,32,0.3); }
+      50% { box-shadow: 0 0 12px #FF2020, 0 0 24px rgba(255,32,32,0.5); }
+    }
+    .gb-power-led.on {
+      animation: ledBreathe 2s ease-in-out infinite;
+    }
+
+    /* ─── HP BAR COLOR TRANSITION ─── */
+    .gb-hp-fill {
+      transition: width 0.3s cubic-bezier(0.25, 1, 0.5, 1),
+                  background-color 0.3s ease;
+    }
+    .gb-hp-fill.low {
+      background: var(--red) !important;
+      animation: hpPulse 0.6s ease-in-out infinite;
+    }
+    @keyframes hpPulse {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0.6; }
+    }
+
+    /* ─── COMBO DISPLAY PULSE ─── */
+    @keyframes comboPulse {
+      0% { transform: scale(1); }
+      50% { transform: scale(1.15); }
+      100% { transform: scale(1); }
+    }
+    #combo-display {
+      transition: color 0.15s ease;
+    }
+    #combo-display.pulse {
+      animation: comboPulse 0.3s cubic-bezier(0.25, 1, 0.5, 1);
+    }
+
+    /* ─── STATUS BADGE ENTRANCE ─── */
+    @keyframes statusBadgeIn {
+      0% { opacity: 0; transform: translateY(-4px) scale(0.8); }
+      100% { opacity: 1; transform: translateY(0) scale(1); }
+    }
+    .gb-status-badge {
+      animation: statusBadgeIn 0.25s cubic-bezier(0.25, 1, 0.5, 1);
+    }
+
+    /* ─── DEPTH PIP ACTIVATION ─── */
+    .gb-depth-pip {
+      transition: all 0.3s cubic-bezier(0.25, 1, 0.5, 1);
+    }
+    .gb-depth-pip.active {
+      animation: pipActivate 0.4s cubic-bezier(0.25, 1, 0.5, 1);
+    }
+    @keyframes pipActivate {
+      0% { transform: scale(0.5); }
+      60% { transform: scale(1.3); }
+      100% { transform: scale(1); }
+    }
+
+    /* ─── TOAST ICON BOUNCE ─── */
+    .toast-icon {
+      display: inline-block;
+      animation: toastIconBounce 0.4s cubic-bezier(0.25, 1, 0.5, 1) 0.15s both;
+    }
+    @keyframes toastIconBounce {
+      0% { transform: scale(0) rotate(-20deg); }
+      60% { transform: scale(1.2) rotate(5deg); }
+      100% { transform: scale(1) rotate(0deg); }
+    }
+
+    /* ─── LOADING BAR SHIMMER ─── */
+    @keyframes loadingShimmer {
+      0% { background-position: -200px 0; }
+      100% { background-position: 200px 0; }
+    }
+    .loading-fill {
+      background: linear-gradient(90deg, var(--pink), var(--purple), var(--pink));
+      background-size: 200px 100%;
+      animation: loadingShimmer 1.2s ease-in-out infinite;
+    }
+
+    /* ─── BOSS INTRO TEXT ─── */
+    .boss-intro-name {
+      animation: bossNameReveal 0.8s cubic-bezier(0.22, 1, 0.36, 1);
+    }
+    .boss-intro-title {
+      animation: bossTitleReveal 0.6s cubic-bezier(0.25, 1, 0.5, 1) 0.3s both;
+    }
+
+    /* ─── ACHIEVEMENT PANEL STAGGER ─── */
+    #ach-items .inv-sidebar-item {
+      opacity: 0;
+      animation: achItemIn 0.25s cubic-bezier(0.25, 1, 0.5, 1) both;
+    }
+    @keyframes achItemIn {
+      0% { opacity: 0; transform: translateX(-8px); }
+      100% { opacity: 1; transform: translateX(0); }
+    }
+
+    /* ─── SHOP ITEM STAGGER ─── */
+    #shop-items .inv-sidebar-item {
+      opacity: 0;
+      animation: shopItemIn 0.2s cubic-bezier(0.25, 1, 0.5, 1) both;
+    }
+    @keyframes shopItemIn {
+      0% { opacity: 0; transform: translateY(6px); }
+      100% { opacity: 1; transform: translateY(0); }
+    }
+
+    /* ─── GAMEOVER SCREEN ─── */
+    #gameover-screen h2 {
+      animation: gameOverShake 0.5s cubic-bezier(0.25, 1, 0.5, 1);
+    }
+    @keyframes gameOverShake {
+      0%, 100% { transform: translateX(0); }
+      15% { transform: translateX(-6px); }
+      30% { transform: translateX(6px); }
+      45% { transform: translateX(-4px); }
+      60% { transform: translateX(4px); }
+      75% { transform: translateX(-2px); }
+    }
+
+    /* ─── GB SCREEN SUBTLE GLOW ─── */
+    .gb-screen {
+      box-shadow: inset 0 0 24px rgba(0,0,0,0.3),
+                  0 0 2px rgba(232,120,152,0.05);
+      transition: box-shadow 0.3s ease;
+    }
+
+    /* ─── D-PAD BUTTON PRESS ─── */
+    .gb-dpad-btn {
+      transition: transform 0.08s ease, box-shadow 0.08s ease;
+    }
+    .gb-dpad-btn:active {
+      transform: scale(0.92);
+    }
+
+    /* ─── AB BUTTON PRESS ─── */
+    .gb-ab-btn {
+      transition: transform 0.08s ease, box-shadow 0.08s ease;
+    }
+    .gb-ab-btn:active {
+      transform: scale(0.88);
+    }
+
+    /* ─── PANELS ENTRANCE ─── */
+    @keyframes panelSlideIn {
+      0% { opacity: 0; transform: translateY(8px); }
+      100% { opacity: 1; transform: translateY(0); }
+    }
+    .panels-row {
+      animation: panelSlideIn 0.4s cubic-bezier(0.25, 1, 0.5, 1) 0.2s both;
+    }
+    .web-bar {
+      animation: panelSlideIn 0.3s cubic-bezier(0.25, 1, 0.5, 1) 0.1s both;
+    }
+
+    /* ─── CONTROLS HINT PULSE ─── */
+    .controls-hint.show {
+      animation: hintFadeIn 0.5s cubic-bezier(0.25, 1, 0.5, 1) both;
+    }
+    @keyframes hintFadeIn {
+      0% { opacity: 0; transform: translateY(4px); }
+      100% { opacity: 1; transform: translateY(0); }
+    }
+
+    /* ─── REDUCED MOTION ─── */
+    @media (prefers-reduced-motion: reduce) {
+      *, *::before, *::after {
+        animation-duration: 0.01ms !important;
+        animation-iteration-count: 1 !important;
+        transition-duration: 0.08s !important;
+      }
+      .gameboy { animation: none !important; }
+      .gb-power-led.on { animation: none !important; }
+      .pixel-coin, .pixel-star, .pixel-mushroom, .qblock { animation: none !important; }
+    }
+
+    /* ═══ TOAST NOTIFICATIONS ═══ */
+    #toast-container {
+      position: fixed;
+      top: 16px;
+      right: 16px;
+      z-index: 10000;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      pointer-events: none;
+    }
+    .toast {
+      font-family: 'Press Start 2P', monospace;
+      font-size: 8px;
+      padding: 10px 18px;
+      border-radius: 6px;
+      border: 2px solid;
+      box-shadow: 4px 4px 0 rgba(0,0,0,0.4), 0 0 20px rgba(0,0,0,0.3);
+      transform: translateX(120%);
+      opacity: 0;
+      transition: all 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+      max-width: 320px;
+      pointer-events: auto;
+    }
+    .toast.show { transform: translateX(0); opacity: 1; }
+    .toast.hide { transform: translateX(120%); opacity: 0; }
+    .toast.info { background: #1a1a2e; border-color: #3890F8; color: #3890F8; }
+    .toast.success { background: #1a2e1a; border-color: #48C848; color: #48C848; }
+    .toast.warning { background: #2e2a1a; border-color: #F8D838; color: #F8D838; }
+    .toast.error { background: #2e1a1a; border-color: #E83838; color: #E83838; }
+    .toast.loot { background: #2e1a2e; border-color: #A882F7; color: #A882F7; }
+    .toast.legendary { background: #2e2a0a; border-color: #F8B800; color: #F8B800; animation: legendaryPulse 1s ease-in-out infinite; }
+    .toast-icon { margin-right: 8px; }
+    @keyframes legendaryPulse {
+      0%, 100% { box-shadow: 4px 4px 0 rgba(0,0,0,0.4), 0 0 15px rgba(248,184,0,0.3); }
+      50% { box-shadow: 4px 4px 0 rgba(0,0,0,0.4), 0 0 30px rgba(248,184,0,0.6); }
+    }
+
+    /* ═══ SCREEN FLASH ═══ */
+    #screen-flash {
+      position: absolute;
+      inset: 0;
+      z-index: 55;
+      pointer-events: none;
+      opacity: 0;
+      transition: opacity 0.1s;
+    }
+
+    /* ═══ CRT OVERLAY ═══ */
+    #crt-overlay {
+      position: absolute;
+      inset: 0;
+      z-index: 52;
+      pointer-events: none;
+      background:
+        radial-gradient(ellipse at center, transparent 60%, rgba(0,0,0,0.25) 100%),
+        repeating-linear-gradient(0deg, transparent, transparent 2px, rgba(0,0,0,0.03) 2px, rgba(0,0,0,0.03) 4px);
+      mix-blend-mode: multiply;
+    }
+
+    /* ═══ DODGE ROLL INDICATOR ═══ */
+    #dodge-bar {
+      position: absolute;
+      bottom: 58px;
+      left: 8px;
+      z-index: 25;
+      display: none;
+      align-items: center;
+      gap: 4px;
+    }
+    #dodge-bar .dodge-label {
+      font-family: 'Press Start 2P';
+      font-size: 5px;
+      color: rgba(255,255,255,0.3);
+    }
+    #dodge-bar .dodge-pips {
+      display: flex;
+      gap: 2px;
+    }
+    #dodge-bar .dodge-pip {
+      width: 8px;
+      height: 4px;
+      background: rgba(56,144,248,0.6);
+      border: 1px solid rgba(56,144,248,0.3);
+      border-radius: 1px;
+      transition: all 0.2s;
+    }
+    #dodge-bar .dodge-pip.empty { background: rgba(255,255,255,0.08); border-color: rgba(255,255,255,0.1); }
+
+    /* ═══ ABILITY BAR ═══ */
+    #ability-bar {
+      position: absolute;
+      bottom: 58px;
+      right: 8px;
+      z-index: 25;
+      display: none;
+      gap: 4px;
+    }
+    .ability-slot {
+      width: 20px;
+      height: 20px;
+      background: rgba(0,0,0,0.5);
+      border: 1px solid rgba(255,255,255,0.15);
+      border-radius: 3px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 10px;
+      position: relative;
+      cursor: pointer;
+    }
+    .ability-slot .ability-key {
+      position: absolute;
+      bottom: -1px;
+      right: 1px;
+      font-family: 'Press Start 2P';
+      font-size: 4px;
+      color: rgba(255,255,255,0.3);
+    }
+    .ability-slot .ability-cd {
+      position: absolute;
+      inset: 0;
+      background: rgba(0,0,0,0.7);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-family: 'VT323';
+      font-size: 10px;
+      color: #F8D838;
+      border-radius: 3px;
+    }
+    .ability-slot.ready { border-color: rgba(168,130,247,0.5); box-shadow: 0 0 8px rgba(168,130,247,0.2); }
+
+    /* ═══ STATS SCREEN ═══ */
+    .stats-overlay {
+      position: absolute;
+      inset: 0;
+      background: rgba(0,0,0,0.95);
+      display: none;
+      flex-direction: column;
+      align-items: center;
+      z-index: 35;
+      padding: 16px;
+      overflow-y: auto;
+    }
+    .stats-overlay.show { display: flex; }
+    .stats-title {
+      font-family: 'Press Start 2P';
+      font-size: 12px;
+      color: var(--pink);
+      margin-bottom: 16px;
+    }
+    .stats-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 8px;
+      width: 100%;
+      max-width: 380px;
+    }
+    .stat-card {
+      background: var(--bg-card2);
+      border: 2px solid var(--border);
+      border-radius: 6px;
+      padding: 8px 10px;
+    }
+    .stat-card-label {
+      font-family: 'Press Start 2P';
+      font-size: 5px;
+      color: var(--text-muted);
+      text-transform: uppercase;
+      margin-bottom: 4px;
+    }
+    .stat-card-value {
+      font-family: 'VT323';
+      font-size: 20px;
+      color: var(--text);
+    }
+
+    /* ═══ LOADING SCREEN ═══ */
+    #loading-screen {
+      position: absolute;
+      inset: 0;
+      background: #000;
+      z-index: 70;
+      display: none;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+    }
+    #loading-screen.show { display: flex; }
+    .loading-bar {
+      width: 200px;
+      height: 8px;
+      background: rgba(255,255,255,0.05);
+      border: 1px solid rgba(255,255,255,0.1);
+      border-radius: 4px;
+      overflow: hidden;
+      margin-top: 20px;
+    }
+    .loading-fill {
+      height: 100%;
+      background: linear-gradient(90deg, var(--pink), var(--purple));
+      border-radius: 4px;
+      width: 0%;
+      transition: width 0.3s;
+    }
+    .loading-tip {
+      font-family: 'VT323';
+      font-size: 14px;
+      color: var(--text-dim);
+      margin-top: 16px;
+      text-align: center;
+      max-width: 300px;
+    }
+
+    /* ═══ CRIT TEXT ═══ */
+    .crit-text {
+      position: absolute;
+      font-family: 'Press Start 2P';
+      font-weight: bold;
+      pointer-events: none;
+      z-index: 60;
+      text-shadow: 2px 2px 0 #000, -1px -1px 0 #000;
+      animation: critBounce 0.6s ease-out forwards;
+    }
+    @keyframes critBounce {
+      0% { transform: scale(0.5) translateY(0); opacity: 1; }
+      30% { transform: scale(1.8) translateY(-15px); }
+      60% { transform: scale(1) translateY(-30px); opacity: 1; }
+      100% { transform: scale(0.8) translateY(-50px); opacity: 0; }
+    }
+
+    /* ═══ BOSS INTRO ═══ */
+    #boss-intro {
+      position: absolute;
+      inset: 0;
+      background: rgba(0,0,0,0.9);
+      z-index: 65;
+      display: none;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+    }
+    #boss-intro.show { display: flex; }
+    .boss-intro-name {
+      font-family: 'Press Start 2P';
+      font-size: 14px;
+      color: #E83838;
+      text-shadow: 0 0 20px rgba(232,56,56,0.5);
+      animation: bossNameReveal 0.8s ease-out;
+    }
+    .boss-intro-title {
+      font-family: 'VT323';
+      font-size: 18px;
+      color: var(--text-dim);
+      margin-top: 8px;
+      animation: bossTitleReveal 0.6s ease-out 0.3s both;
+    }
+    .boss-intro-bar {
+      width: 200px;
+      height: 3px;
+      background: rgba(232,56,56,0.3);
+      margin-top: 16px;
+      animation: bossBarGrow 0.5s ease-out 0.5s both;
+    }
+    @keyframes bossNameReveal {
+      0% { transform: scale(3); opacity: 0; filter: blur(10px); }
+      100% { transform: scale(1); opacity: 1; filter: blur(0); }
+    }
+    @keyframes bossTitleReveal {
+      0% { transform: translateY(20px); opacity: 0; }
+      100% { transform: translateY(0); opacity: 1; }
+    }
+    @keyframes bossBarGrow {
+      0% { width: 0; }
+      100% { width: 200px; }
+    }
+
     /* ═══ RESPONSIVE ═══ */
     @media (max-width: 600px) {
       .gameboy { width: 100%; }
@@ -883,6 +1415,49 @@
             <!-- Game area -->
             <div class="gb-game-area" id="game-area">
               <div id="game-container"></div>
+
+              <!-- Screen Flash -->
+              <div id="screen-flash"></div>
+
+              <!-- CRT Overlay -->
+              <div id="crt-overlay"></div>
+
+              <!-- Dodge Bar -->
+              <div id="dodge-bar">
+                <span class="dodge-label">DODGE</span>
+                <div class="dodge-pips" id="dodge-pips">
+                  <div class="dodge-pip"></div><div class="dodge-pip"></div><div class="dodge-pip"></div>
+                </div>
+              </div>
+
+              <!-- Ability Bar -->
+              <div id="ability-bar"></div>
+
+              <!-- Boss Intro -->
+              <div id="boss-intro">
+                <div class="boss-intro-name" id="boss-intro-name"></div>
+                <div class="boss-intro-title" id="boss-intro-title"></div>
+                <div class="boss-intro-bar"></div>
+              </div>
+
+              <!-- Loading Screen -->
+              <div id="loading-screen">
+                <svg viewBox="0 0 32 32" width="48" height="48" fill="none">
+                  <rect x="6" y="4" width="20" height="4" fill="#4A3A6A"/>
+                  <rect x="4" y="8" width="24" height="16" fill="#3A2A5A"/>
+                  <rect x="12" y="14" width="8" height="10" fill="#1A1028"/>
+                  <rect x="14" y="16" width="4" height="2" fill="#E87898"/>
+                </svg>
+                <div class="loading-bar"><div class="loading-fill" id="loading-fill"></div></div>
+                <div class="loading-tip" id="loading-tip"></div>
+              </div>
+
+              <!-- Stats Screen -->
+              <div class="stats-overlay" id="stats-screen">
+                <div class="stats-title">RUN STATS</div>
+                <div class="stats-grid" id="stats-grid"></div>
+                <button onclick="document.getElementById('stats-screen').classList.remove('show')" style="font-family:'Press Start 2P';font-size:8px;padding:8px 16px;background:var(--bg-card2);color:var(--text);border:2px solid var(--border);border-radius:6px;cursor:pointer;margin-top:16px;">CLOSE</button>
+              </div>
 
               <!-- Boss Health Bar -->
               <div id="boss-health-bar" style="display:none;position:absolute;top:28px;left:50%;transform:translateX(-50%);width:70%;z-index:30;">
@@ -995,10 +1570,14 @@
   </div>
 
   <!-- ═══ WEB UI BAR ═══ -->
+  <!-- Toast Container -->
+  <div id="toast-container"></div>
+
   <div class="web-bar">
     <button class="web-btn" onclick="toggleInventory()">BAG (I)</button>
     <button class="web-btn" onclick="toggleShop()">SHOP</button>
     <button class="web-btn" onclick="toggleAchievements()">FEATS</button>
+    <button class="web-btn" onclick="toggleStats()">STATS</button>
     <button class="web-btn" id="btn-mute" onclick="toggleMute()">MUTE</button>
     <div style="flex:1;"></div>
     <div class="gb-depth-bar" style="align-items:center;">
@@ -1021,7 +1600,7 @@
 
   <!-- ═══ CONTROLS HINT ═══ -->
   <div class="controls-hint" id="controls-hint">
-    <span>WASD</span> Move · <span>SPACE</span> Attack · <span>E</span> Exit · <span>I</span> Bag
+    <span>WASD</span> Move · <span>SPACE</span> Attack · <span>E</span> Exit · <span>I</span> Bag · <span>M</span> Map · <span>P</span> Pause
   </div>
 
   </div><!-- /.app -->
@@ -1105,11 +1684,11 @@
       if (goldEl) goldEl.textContent = persistentGold;
       const el = document.getElementById('shop-items');
       if (!el) return;
-      el.innerHTML = Object.entries(UPGRADES).map(([id, upg]) => {
+      el.innerHTML = Object.entries(UPGRADES).map(([id, upg], i) => {
         const level = upgradeLevels[id] || 0;
         const cost = Math.floor(upg.baseCost * Math.pow(upg.costMult, level));
         const canBuy = persistentGold >= cost;
-        return `<div class="inv-sidebar-item" onclick="buyUpgrade('${id}');renderShop();" style="${canBuy ? '' : 'opacity:0.4;pointer-events:none;'}">
+        return `<div class="inv-sidebar-item" onclick="buyUpgrade('${id}');renderShop();" style="${canBuy ? '' : 'opacity:0.4;pointer-events:none;'} animation-delay:${i * 0.05}s">
           <span style="font-size:16px;">⬆</span>
           <div>
             <div style="font-size:14px;">${upg.name} Lv.${level}</div>
@@ -1130,9 +1709,9 @@
       if (countEl) countEl.textContent = unlockedAchievements.size;
       const el = document.getElementById('ach-items');
       if (!el) return;
-      el.innerHTML = ACHIEVEMENTS.map(a => {
+      el.innerHTML = ACHIEVEMENTS.map((a, i) => {
         const done = unlockedAchievements.has(a.id);
-        return `<div class="inv-sidebar-item" style="${done ? 'border-color:var(--green);' : 'opacity:0.4;'}">
+        return `<div class="inv-sidebar-item" style="${done ? 'border-color:var(--green);' : 'opacity:0.4;'} animation-delay:${i * 0.06}s">
           <span style="font-size:16px;">${done ? '🏆' : '🔒'}</span>
           <div>
             <div style="font-size:14px;">${a.name}</div>

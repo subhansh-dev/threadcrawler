@@ -56,8 +56,19 @@ function classifyVibe(comments: any[]): string {
   return 'mystery';
 }
 
-function generateMonster(vibe: string, depth: number, score: number): string | null {
-  if (Math.random() > 0.3 + depth * 0.05) return null;
+// Seeded PRNG (mulberry32) for deterministic monster generation
+function seededRandom(seed: number) {
+  let a = seed | 0;
+  return function() {
+    a = a + 0x6D2B79F5 | 0;
+    let t = Math.imul(a ^ a >>> 15, 1 | a);
+    t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t;
+    return ((t ^ t >>> 14) >>> 0) / 4294967296;
+  };
+}
+
+function generateMonster(vibe: string, depth: number, score: number, rng: () => number): string | null {
+  if (rng() > 0.3 + depth * 0.05) return null;
 
   const monsters: Record<string, string[]> = {
     horror: ['Shadow Lurker', 'Void Walker', 'Fear Eater', 'Nightmare Shade'],
@@ -68,7 +79,7 @@ function generateMonster(vibe: string, depth: number, score: number): string | n
   };
 
   const pool = monsters[vibe] || monsters.mystery;
-  return pool[Math.floor(Math.random() * pool.length)];
+  return pool[Math.floor(rng() * pool.length)];
 }
 
 function buildDungeon(thread: any, comments: any[]): DungeonData {
@@ -76,17 +87,45 @@ function buildDungeon(thread: any, comments: any[]): DungeonData {
   const rootIds: string[] = [];
   let totalDepth = 0;
   let scoreSum = 0;
+  const vibe = classifyVibe(comments);
+
+  // Use seeded RNG for deterministic generation based on thread title
+  let seedHash = 0;
+  for (let i = 0; i < thread.title.length; i++) {
+    seedHash = ((seedHash << 5) - seedHash + thread.title.charCodeAt(i)) | 0;
+  }
+  const rng = seededRandom(seedHash);
+
+  // Build a lookup map for parent→children relationships
+  const commentMap = new Map<string, any>();
+  comments.forEach((c: any) => commentMap.set(c.id, c));
+
+  // Compute actual depth for each comment by tracing parent chain
+  function computeDepth(commentId: string, visited = new Set<string>()): number {
+    if (visited.has(commentId)) return 0; // cycle protection
+    visited.add(commentId);
+    const c = commentMap.get(commentId);
+    if (!c || !c.parentId || c.parentId === thread.id) return 0;
+    const parent = commentMap.get(c.parentId);
+    if (!parent) return 0;
+    return 1 + computeDepth(c.parentId, visited);
+  }
 
   // Build room for each comment
-  comments.forEach(c => {
-    const depth = c.depth || 0;
+  comments.forEach((c: any) => {
+    const depth = c.depth != null ? c.depth : computeDepth(c.id);
     totalDepth = Math.max(totalDepth, depth);
     scoreSum += Math.abs(c.score);
 
-    const hasTrap = c.score < -2 || Math.random() < 0.08;
-    const hasPowerUp = c.awards && c.awards.length > 0 || Math.random() < 0.05;
-    const hasHeal = c.score > 5 || Math.random() < 0.12;
-    const isDeadEnd = !c.replies || c.replies.length === 0;
+    // Find direct children (replies to this comment)
+    const children = comments
+      .filter((r: any) => r.parentId === c.id)
+      .map((r: any) => r.id);
+
+    const hasTrap = c.score < -2 || rng() < 0.08;
+    const hasPowerUp = (c.awards && c.awards.length > 0) || rng() < 0.05;
+    const hasHeal = c.score > 5 || rng() < 0.12;
+    const isDeadEnd = children.length === 0;
 
     const room: Room = {
       id: c.id,
@@ -94,12 +133,12 @@ function buildDungeon(thread: any, comments: any[]): DungeonData {
       body: c.body.slice(0, 200),
       score: c.score,
       depth,
-      children: (c.replies || []).map((r: any) => r.id),
+      children,
       hasTrap,
       hasPowerUp,
       hasHeal,
       isDeadEnd,
-      monsterType: generateMonster(classifyVibe(comments), depth, c.score),
+      monsterType: generateMonster(vibe, depth, c.score, rng),
       lore: depth > 3 ? `Comment by u/${c.author} — a deep thread secret` : null,
     };
 
@@ -115,7 +154,7 @@ function buildDungeon(thread: any, comments: any[]): DungeonData {
     threadAuthor: thread.author,
     commentCount: comments.length,
     avgScore: Math.round(scoreSum / Math.max(1, comments.length)),
-    vibe: classifyVibe(comments),
+    vibe,
   };
 }
 
@@ -198,15 +237,26 @@ Devvit.addCustomPostType({
           author: post.author,
         };
 
-        const commentData = comments.map(c => ({
-          id: c.id,
-          author: c.author,
-          body: c.body,
-          score: c.score,
-          depth: 0,
-          replies: [],
-          awards: [],
-        }));
+        // Flatten comment tree with proper depth and parentId tracking
+        const commentData: any[] = [];
+        function flattenComments(list: any[], depth: number, parentId: string) {
+          for (const c of list) {
+            commentData.push({
+              id: c.id,
+              author: c.authorName || c.author || 'deleted',
+              body: c.body || '',
+              score: c.score || 0,
+              depth,
+              parentId,
+              replies: [],
+              awards: [],
+            });
+            if (c.replies && c.replies.length > 0) {
+              flattenComments(c.replies, depth + 1, c.id);
+            }
+          }
+        }
+        flattenComments(comments, 0, post.id);
 
         const dungeonData = buildDungeon(threadData, commentData);
         setDungeon(dungeonData);
