@@ -4792,6 +4792,9 @@ function startGame() {
     riskTokens: 0, synergies: [], tempBuffs: [],
     bossRushMode: false, bossRushUnlocked: false,
     floorModifier: null,
+    exitLocked: true, exitUnlockThreshold: 0.7,
+    floorTimer: 0, floorTimerMax: 0, collapsing: false,
+    waveNumber: 0, waveTimer: 0, waveStrength: 1,
   };
 
   // Load persistent data (weapon, gold, upgrades) AFTER state reset
