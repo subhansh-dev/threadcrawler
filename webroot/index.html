@@ -1044,6 +1044,59 @@
     .vault-start-btn:hover { transform: translateY(-2px); }
     .vault-stats { font-family: 'VT323'; font-size: 13px; color: var(--text-dim); text-align: center; line-height: 1.6; }
 
+    /* ─── CHARACTER SELECT SCREEN ─── */
+    #character-select-screen {
+      background: rgba(6,6,10,0.97);
+      gap: 12px; z-index: 50;
+      max-height: 90vh;
+      overflow-y: auto;
+    }
+    #character-select-screen h2 {
+      font-family: 'Press Start 2P'; font-size: 12px; color: #A882F7;
+      text-shadow: 0 0 20px rgba(168,130,247,0.4);
+    }
+    .character-grid {
+      display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px;
+      width: 95%; max-width: 500px;
+    }
+    .character-card {
+      background: var(--bg-card); border: 2px solid var(--border);
+      border-radius: 10px; padding: 10px; cursor: pointer;
+      transition: all 0.2s ease; text-align: center;
+    }
+    .character-card:hover {
+      border-color: #A882F7; transform: translateY(-3px);
+      box-shadow: 0 6px 20px rgba(168,130,247,0.3);
+    }
+    .character-card.selected {
+      border-color: #48C848; background: rgba(72,200,72,0.1);
+      box-shadow: 0 0 20px rgba(72,200,72,0.4);
+    }
+    .character-portrait {
+      width: 80px; height: 96px; margin: 0 auto 8px;
+      border: 3px solid; border-radius: 8px;
+      background: var(--bg-dark); display: flex;
+      align-items: center; justify-content: center;
+      pointer-events: none;
+    }
+    .character-portrait canvas { image-rendering: pixelated; pointer-events: none; }
+    .character-name {
+      font-family: 'Press Start 2P'; font-size: 7px; color: var(--text);
+      margin-bottom: 4px;
+    }
+    .character-origin {
+      font-family: 'VT323'; font-size: 11px; color: #A882F7;
+      margin-bottom: 2px;
+    }
+    .character-desc {
+      font-family: 'VT323'; font-size: 10px; color: var(--text-dim);
+      margin-bottom: 4px;
+    }
+    .character-quote {
+      font-family: 'VT323'; font-size: 9px; color: #F8B800;
+      font-style: italic;
+    }
+
     /* ─── GAMEOVER SCREEN ─── */
     #gameover-screen h2 {
       animation: gameOverShake 0.5s cubic-bezier(0.25, 1, 0.5, 1);
@@ -1543,8 +1596,20 @@
                 <h1>THREAD CRAWLER</h1>
                 <p>Every comment is a room. Every reply is a path deeper. Explore procedurally generated dungeons.</p>
                 <button onclick="startGame()" style="font-family:'Press Start 2P';font-size:12px;padding:14px 36px;background:linear-gradient(135deg,#48C848,#38A838);color:white;border:none;border-radius:8px;cursor:pointer;box-shadow:0 4px 0 #288828,0 6px 20px rgba(72,200,72,0.3);">START</button>
+                <button onclick="openCharacterSelect()" style="font-family:'Press Start 2P';font-size:8px;padding:10px 24px;background:linear-gradient(135deg,#A882F7,#8862D7);color:white;border:none;border-radius:8px;cursor:pointer;box-shadow:0 4px 0 #6842B7,0 6px 16px rgba(168,130,247,0.3);margin-top:8px;">CHARACTERS</button>
                 <button onclick="openVault()" style="font-family:'Press Start 2P';font-size:8px;padding:10px 24px;background:linear-gradient(135deg,#F8B800,#D4A000);color:#1A1028;border:none;border-radius:8px;cursor:pointer;box-shadow:0 4px 0 #A08000,0 6px 16px rgba(248,184,0,0.3);margin-top:8px;">THE VAULT</button>
                 <button id="boss-rush-btn" onclick="startBossRush()" style="display:none;font-family:'Press Start 2P';font-size:8px;padding:10px 24px;background:linear-gradient(135deg,#E83838,#C82828);color:white;border:none;border-radius:8px;cursor:pointer;box-shadow:0 4px 0 #A02020,0 6px 16px rgba(232,56,56,0.3);margin-top:8px;">BOSS RUSH</button>
+              </div>
+
+              <!-- Character Select -->
+              <div class="overlay" id="character-select-screen">
+                <h2>CHOOSE YOUR CHAMPION</h2>
+                <p style="font-family:'VT323';font-size:12px;color:#A882F7;margin-bottom:12px;">Reddit Meme Heroes & Anime Legends</p>
+                <div class="character-grid" id="character-grid"></div>
+                <div style="display:flex;gap:8px;margin-top:12px;">
+                  <button onclick="closeCharacterSelect()" style="font-family:'Press Start 2P';font-size:8px;padding:10px 24px;background:var(--bg-card2);color:var(--text);border:2px solid var(--border);border-radius:6px;cursor:pointer;">BACK</button>
+                  <button onclick="startGameFromCharSelect()" style="font-family:'Press Start 2P';font-size:8px;padding:10px 24px;background:linear-gradient(135deg,#48C848,#38A838);color:white;border:none;border-radius:6px;cursor:pointer;box-shadow:0 3px 0 #288828;">START GAME</button>
+                </div>
               </div>
 
               <!-- Game Over -->
@@ -1676,7 +1741,7 @@
 
   <!-- ═══ CONTROLS HINT ═══ -->
   <div class="controls-hint" id="controls-hint">
-    <span>WASD</span> Move · <span>SPACE</span> Attack · <span>E</span> Exit (70% kills) · <span>I</span> Bag · <span>K</span> Shop · <span>M</span> Map · <span>P</span> Pause · <span>SHIFT</span> Refuse Heal
+    <span>WASD / D-Pad</span> Move · <span>SPACE / A</span> Attack · <span>E / B</span> Exit · <span>I</span> Bag · <span>K</span> Shop · <span>M</span> Map · <span>P</span> Pause · <span>SHIFT</span> Dodge Roll
   </div>
 
   </div><!-- /.app -->
@@ -1691,17 +1756,20 @@
   <script src="game.js"></script>
 
   <script>
-    // Touch D-Pad
+    // Touch D-Pad — uses virtualBtn for Phaser compatibility
     document.querySelectorAll('.gb-dpad-btn,.gb-ab-btn,.gb-ss-btn').forEach(btn => {
       const key = btn.dataset.key;
       if (!key) return;
-      const map = {up:'ArrowUp',down:'ArrowDown',left:'ArrowLeft',right:'ArrowRight',a:' ',b:'e',start:'Enter',select:'Tab'};
-      const fire = t => { const k = map[key]; if (k) window.dispatchEvent(new KeyboardEvent(t, {key:k, code:k===' '?'Space':k, bubbles:true})); };
-      btn.addEventListener('touchstart', e => { e.preventDefault(); fire('keydown'); });
-      btn.addEventListener('touchend', e => { e.preventDefault(); fire('keyup'); });
-      btn.addEventListener('mousedown', () => fire('keydown'));
-      btn.addEventListener('mouseup', () => fire('keyup'));
-      btn.addEventListener('mouseleave', () => fire('keyup'));
+      const dirMap = {up:'up',down:'down',left:'left',right:'right',a:'a',b:'b',start:'start',select:'select'};
+      const vk = dirMap[key];
+      const on = () => { if (vk && virtualBtn) virtualBtn[vk] = true; };
+      const off = () => { if (vk && virtualBtn) virtualBtn[vk] = false; };
+      btn.addEventListener('touchstart', e => { e.preventDefault(); on(); });
+      btn.addEventListener('touchend', e => { e.preventDefault(); off(); });
+      btn.addEventListener('touchcancel', e => { e.preventDefault(); off(); });
+      btn.addEventListener('mousedown', e => { e.preventDefault(); on(); });
+      btn.addEventListener('mouseup', e => { e.preventDefault(); off(); });
+      btn.addEventListener('mouseleave', e => { off(); });
     });
 
     // Power LED
@@ -1709,6 +1777,7 @@
 
     // Load persistent data
     loadPersistentData();
+    loadCharacterSelection();
 
     // Web UI
     let muted = false;
