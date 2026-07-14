@@ -476,25 +476,27 @@ const CHARACTERS = {
       '"Justice will prevail, you say? But of course it will!"',
     ],
     pixelArt: [
-      // 12x16 — Green flowing hair, pale face, white bodysuit
-      [0,0,0,0,4,4,4,4,0,0,0,0],
-      [0,0,0,4,9,9,9,9,4,0,0,0],
-      [0,0,4,9,9,9,9,9,9,4,0,0],
-      [0,4,9,9,3,9,9,3,9,9,4,0],
+      // 12x18 — C.C. from Code Geass: long green hair, golden eyes, pale skin, white bodysuit
+      [0,0,0,4,4,4,4,4,4,0,0,0],
+      [0,0,4,4,9,9,9,9,4,4,0,0],
+      [0,4,4,9,9,9,9,9,9,4,4,0],
       [0,4,9,9,9,9,9,9,9,9,4,0],
-      [0,0,4,9,9,5,5,9,9,4,0,0],
-      [0,0,0,4,9,9,9,9,4,0,0,0],
+      [0,4,9,3,6,9,9,6,3,9,4,0],
+      [0,4,9,9,9,5,5,9,9,9,4,0],
+      [0,0,4,9,9,9,9,9,9,4,0,0],
+      [0,0,0,4,9,8,8,9,4,0,0,0],
       [0,0,0,0,8,8,8,8,0,0,0,0],
       [0,0,0,8,8,8,8,8,8,0,0,0],
-      [0,0,4,9,8,8,8,8,9,4,0,0],
-      [0,0,4,9,8,8,8,8,9,4,0,0],
+      [0,0,8,9,8,8,8,8,9,8,0,0],
+      [0,0,8,9,8,8,8,8,9,8,0,0],
       [0,4,9,9,8,8,8,8,9,9,4,0],
       [0,4,9,9,8,8,8,8,9,9,4,0],
-      [0,0,4,4,8,0,0,8,4,4,0,0],
+      [0,0,4,4,8,8,8,8,4,4,0,0],
       [0,0,0,4,4,0,0,4,4,0,0,0],
+      [0,0,0,4,0,0,0,0,4,0,0,0],
       [0,0,4,4,0,0,0,0,4,4,0,0],
     ],
-    palette: {3: 0x000000, 4: 0x228B22, 5: 0xFF9999, 8: 0xF5DEB3, 9: 0x90EE90}
+    palette: {3: 0x111111, 4: 0x2E8B2E, 5: 0xFFAAAA, 6: 0xDAA520, 8: 0xFFF0E0, 9: 0x90EE90}
   },
   tungtung: {
     name: 'Tung Tung Sahur',
@@ -508,25 +510,27 @@ const CHARACTERS = {
       '"No more sleep, only sahur!"',
     ],
     pixelArt: [
-      // 12x16 — Round wooden head, drum sticks, brown body
-      [0,0,0,0,1,1,1,1,0,0,0,0],
-      [0,0,0,1,7,7,7,7,1,0,0,0],
-      [0,0,1,7,7,7,7,7,7,1,0,0],
-      [0,0,1,7,3,7,7,3,7,1,0,0],
-      [0,0,1,7,7,7,7,7,7,1,0,0],
-      [0,0,1,7,5,5,5,5,7,1,0,0],
-      [0,0,0,1,7,7,7,7,1,0,0,0],
-      [0,0,0,0,1,1,1,1,0,0,0,0],
+      // 12x18 — Tung Tung Sahur: wooden drum figure with sticks
+      [0,0,0,0,7,7,7,7,0,0,0,0],
+      [0,0,0,7,6,6,6,6,7,0,0,0],
+      [0,0,7,6,6,6,6,6,6,7,0,0],
+      [0,0,7,6,3,6,6,3,6,7,0,0],
+      [0,0,7,6,6,6,6,6,6,7,0,0],
+      [0,0,7,6,5,5,5,5,6,7,0,0],
+      [0,0,0,7,6,6,6,6,7,0,0,0],
+      [0,0,0,0,7,1,1,7,0,0,0,0],
       [0,0,0,1,1,1,1,1,1,0,0,0],
       [0,0,1,1,1,1,1,1,1,1,0,0],
-      [0,1,7,1,1,1,1,1,1,7,1,0],
+      [0,1,6,1,1,1,1,1,1,6,1,0],
+      [0,1,6,1,1,1,1,1,1,6,1,0],
+      [0,0,1,1,1,1,1,1,1,1,0,0],
       [0,0,0,1,1,1,1,1,1,0,0,0],
       [0,0,0,0,1,1,1,1,0,0,0,0],
       [0,0,0,0,1,0,0,1,0,0,0,0],
       [0,0,0,1,1,0,0,1,1,0,0,0],
       [0,0,0,1,0,0,0,0,1,0,0,0],
     ],
-    palette: {1: 0x6B3410, 3: 0x000000, 5: 0xD4A060, 7: 0xA0522D}
+    palette: {1: 0x6B3410, 3: 0x000000, 5: 0xD4A060, 6: 0xA0522D, 7: 0x8B4513}
   },
   chungus: {
     name: 'Big Chungus',
@@ -540,25 +544,27 @@ const CHARACTERS = {
       '"Such meme. Very wow."',
     ],
     pixelArt: [
-      // 12x16 — Fat bunny with tall ears, round belly, pink nose
+      // 12x18 — Big Chungus: fat bunny, tall ears, round belly, pink nose
       [0,0,1,1,0,0,0,0,1,1,0,0],
-      [0,1,1,1,0,0,0,0,1,1,1,0],
-      [0,1,1,1,0,0,0,0,1,1,1,0],
+      [0,1,1,7,0,0,0,0,7,1,1,0],
+      [0,1,1,7,0,0,0,0,7,1,1,0],
       [0,1,1,1,1,1,1,1,1,1,1,0],
       [0,0,1,1,1,1,1,1,1,1,0,0],
       [0,0,1,3,1,1,1,1,3,1,0,0],
       [0,0,1,1,1,5,5,1,1,1,0,0],
       [0,0,0,1,1,1,1,1,1,0,0,0],
       [0,1,1,1,1,1,1,1,1,1,1,0],
+      [1,1,7,1,1,1,1,1,1,7,1,1],
       [1,1,1,1,1,1,1,1,1,1,1,1],
       [1,1,1,1,1,1,1,1,1,1,1,1],
       [1,1,1,1,1,1,1,1,1,1,1,1],
       [0,1,1,1,1,1,1,1,1,1,1,0],
       [0,0,1,1,1,1,1,1,1,1,0,0],
+      [0,0,1,1,0,0,0,0,1,1,0,0],
       [0,0,0,1,1,0,0,1,1,0,0,0],
-      [0,0,0,1,1,0,0,1,1,0,0,0],
+      [0,0,0,1,0,0,0,0,1,0,0,0],
     ],
-    palette: {1: 0xD0D0D0, 3: 0xCC0000, 5: 0xFFAAAA}
+    palette: {1: 0xD0D0D0, 3: 0xCC0000, 5: 0xFFAAAA, 7: 0xBBBBBB}
   },
   doge: {
     name: 'Doge',
@@ -572,7 +578,7 @@ const CHARACTERS = {
       '"Very dungeon, such crawler!"',
     ],
     pixelArt: [
-      // 12x16 — Shiba Inu: pointed ears, tan fur, white muzzle, black nose
+      // 12x18 — Doge Shiba Inu: pointed ears, tan fur, white muzzle, smug eyes
       [0,0,4,4,0,0,0,0,4,4,0,0],
       [0,4,4,4,0,0,0,0,4,4,4,0],
       [0,4,1,4,4,4,4,4,4,1,4,0],
@@ -581,12 +587,14 @@ const CHARACTERS = {
       [0,0,0,1,1,1,1,1,1,0,0,0],
       [0,0,0,0,1,2,2,1,0,0,0,0],
       [0,0,0,0,1,1,1,1,0,0,0,0],
-      [0,0,0,1,1,1,1,1,1,0,0,0],
       [0,0,0,1,8,1,1,8,1,0,0,0],
       [0,0,1,1,1,1,1,1,1,1,0,0],
+      [0,0,1,8,1,1,1,1,8,1,0,0],
       [0,0,1,1,1,1,1,1,1,1,0,0],
       [0,0,0,1,1,1,1,1,1,0,0,0],
+      [0,0,0,1,1,1,1,1,1,0,0,0],
       [0,0,0,0,1,1,1,1,0,0,0,0],
+      [0,0,0,0,1,0,0,1,0,0,0,0],
       [0,0,0,1,1,0,0,1,1,0,0,0],
       [0,0,0,1,0,0,0,0,1,0,0,0],
     ],
@@ -604,7 +612,7 @@ const CHARACTERS = {
       '"Dat boi always delivers!"',
     ],
     pixelArt: [
-      // 12x16 — Green frog with big white eyes, unicycle
+      // 12x18 — Dat Boi: green frog on unicycle with big white eyes
       [0,0,0,0,6,6,6,6,0,0,0,0],
       [0,0,0,6,6,6,6,6,6,0,0,0],
       [0,0,6,6,6,6,6,6,6,6,0,0],
@@ -614,6 +622,7 @@ const CHARACTERS = {
       [0,0,0,0,6,5,5,6,0,0,0,0],
       [0,0,0,0,0,6,6,0,0,0,0,0],
       [0,0,0,0,6,6,6,6,0,0,0,0],
+      [0,0,0,0,6,6,6,6,0,0,0,0],
       [0,0,0,0,0,6,6,0,0,0,0,0],
       [0,0,0,0,0,7,7,0,0,0,0,0],
       [0,0,0,0,7,0,0,7,0,0,0,0],
@@ -621,6 +630,7 @@ const CHARACTERS = {
       [0,0,0,0,1,1,1,1,0,0,0,0],
       [0,0,0,0,0,1,1,0,0,0,0,0],
       [0,0,0,0,1,1,1,1,0,0,0,0],
+      [0,0,0,0,0,1,1,0,0,0,0,0],
     ],
     palette: {1: 0x888888, 3: 0xFFFFFF, 5: 0x333333, 6: 0x2D8B2D, 7: 0x666666}
   },
@@ -636,7 +646,7 @@ const CHARACTERS = {
       '"Problem, adventurer?"',
     ],
     pixelArt: [
-      // 12x16 — White face, huge creepy grin, squinty eyes
+      // 12x18 — Trollface: white face, huge creepy grin, squinty eyes, wrinkled
       [0,0,0,1,1,1,1,1,1,0,0,0],
       [0,0,1,1,1,1,1,1,1,1,0,0],
       [0,1,1,1,1,1,1,1,1,1,1,0],
@@ -646,13 +656,15 @@ const CHARACTERS = {
       [0,0,1,1,1,1,1,1,1,1,0,0],
       [0,0,0,1,1,1,1,1,1,0,0,0],
       [0,0,0,1,5,5,5,5,1,0,0,0],
+      [0,0,1,5,1,5,5,1,5,1,0,0],
       [0,0,1,5,1,1,1,1,5,1,0,0],
-      [0,0,1,5,1,1,1,1,5,1,0,0],
-      [0,1,1,1,5,5,5,5,1,1,1,0],
-      [0,1,1,1,1,1,1,1,1,1,1,0],
+      [0,1,1,1,5,1,1,5,1,1,1,0],
+      [0,1,1,1,1,5,5,1,1,1,1,0],
       [0,0,1,1,1,1,1,1,1,1,0,0],
       [0,0,0,1,1,1,1,1,1,0,0,0],
+      [0,0,0,0,1,1,1,1,0,0,0,0],
       [0,0,0,0,1,0,0,1,0,0,0,0],
+      [0,0,0,0,0,0,0,0,0,0,0,0],
     ],
     palette: {1: 0xF0EDE8, 3: 0x111111, 5: 0xDD4444}
   },
@@ -721,7 +733,7 @@ function renderCharacterSelect() {
     el.className = `character-card ${isSelected ? 'selected' : ''}`;
     el.innerHTML = `
       <div class="character-portrait" style="border-color: #${char.color.toString(16).padStart(6, '0')}">
-        <canvas id="char-canvas-${id}" width="80" height="96"></canvas>
+        <canvas id="char-canvas-${id}" width="80" height="108"></canvas>
       </div>
       <div class="character-name">${char.name}${isSelected ? ' ✓' : ''}</div>
       <div class="character-origin">${char.origin}</div>
@@ -2513,12 +2525,14 @@ class GameScene extends Phaser.Scene {
     }
 
     // ─── FLOOR PRESSURE: EXIT LOCK ───
-    if (!state.bossRushMode && state.floorEnemiesTotal > 0 && state.dungeon) {
+    if (!state.bossRushMode && state.dungeon) {
       // Check if this is a boss floor
       const hasBoss = BOSSES.some(b => b.floor === state.depth);
       let exitShouldBeLocked;
 
-      if (hasBoss) {
+      if (state.floorEnemiesTotal === 0) {
+        exitShouldBeLocked = false;
+      } else if (hasBoss) {
         // Boss floor: exit only unlocks when boss is dead
         const bossAlive = this.monsters.some(m => m.active && m.getData && m.getData('isBoss'));
         exitShouldBeLocked = bossAlive;
@@ -4119,6 +4133,7 @@ class GameScene extends Phaser.Scene {
       type.speed + state.depth * 4 + 10,
       Math.floor(type.damage * (1 + state.depth * 0.18) * waveMult)
     );
+    state.floorEnemiesTotal++;
     // Red spawn flash
     for (let i = 0; i < 6; i++) {
       this.particles.get(x * TILE + TILE/2, y * TILE + TILE/2, (Math.random()-0.5)*40, -Math.random()*30, 0xEF4444, 2, 0.3);
