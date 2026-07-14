@@ -3,6 +3,30 @@
    Procedural generation + polished 2D top-down gameplay
    ═══════════════════════════════════════════════════════════ */
 
+// ─── VIRTUAL INPUT (for on-screen console buttons) ──────────
+const virtualBtn = {
+  up: false, down: false, left: false, right: false,
+  a: false, b: false, start: false, select: false,
+  // Edge detection: true on the frame a button is first pressed
+  _prevA: false, _prevB: false, _prevStart: false,
+  aDown: false, bDown: false, startDown: false,
+};
+
+function isVirtualDown(dir) { return virtualBtn[dir] || false; }
+function isVirtualA() { return virtualBtn.aDown; }
+function isVirtualB() { return virtualBtn.bDown; }
+function isVirtualStart() { return virtualBtn.startDown; }
+
+// Called every frame after reading input
+function updateVirtualInput() {
+  virtualBtn.aDown = virtualBtn.a && !virtualBtn._prevA;
+  virtualBtn.bDown = virtualBtn.b && !virtualBtn._prevB;
+  virtualBtn.startDown = virtualBtn.start && !virtualBtn._prevStart;
+  virtualBtn._prevA = virtualBtn.a;
+  virtualBtn._prevB = virtualBtn.b;
+  virtualBtn._prevStart = virtualBtn.start;
+}
+
 // ─── SOUND ENGINE ────────────────────────────────────────────
 let audioCtx = null;
 let musicPlaying = false;
@@ -438,8 +462,315 @@ const UPGRADES = {
   inv_size: { name: 'Bag Size', desc: '+2 inventory slots', baseCost: 25, costMult: 1.3, apply: (p) => { p.maxInventory += 2; } },
 };
 
-let persistentGold = 0;
-let upgradeLevels = {};
+// ─── CHARACTER SYSTEM (Reddit Meme Characters) ─────────────────────
+const CHARACTERS = {
+  cc: {
+    name: 'C.C.',
+    origin: 'Code Geass',
+    desc: 'The Immortal Witch',
+    color: 0x90EE90,
+    specialQuote: '"I am C.C., the Geass user!"',
+    bossQuotes: [
+      '"This world shall know pain!"',
+      '"All the world\'s a stage, and we are merely players."',
+      '"Justice will prevail, you say? But of course it will!"',
+    ],
+    pixelArt: [
+      // 12x16 — Green flowing hair, pale face, white bodysuit
+      [0,0,0,0,4,4,4,4,0,0,0,0],
+      [0,0,0,4,9,9,9,9,4,0,0,0],
+      [0,0,4,9,9,9,9,9,9,4,0,0],
+      [0,4,9,9,3,9,9,3,9,9,4,0],
+      [0,4,9,9,9,9,9,9,9,9,4,0],
+      [0,0,4,9,9,5,5,9,9,4,0,0],
+      [0,0,0,4,9,9,9,9,4,0,0,0],
+      [0,0,0,0,8,8,8,8,0,0,0,0],
+      [0,0,0,8,8,8,8,8,8,0,0,0],
+      [0,0,4,9,8,8,8,8,9,4,0,0],
+      [0,0,4,9,8,8,8,8,9,4,0,0],
+      [0,4,9,9,8,8,8,8,9,9,4,0],
+      [0,4,9,9,8,8,8,8,9,9,4,0],
+      [0,0,4,4,8,0,0,8,4,4,0,0],
+      [0,0,0,4,4,0,0,4,4,0,0,0],
+      [0,0,4,4,0,0,0,0,4,4,0,0],
+    ],
+    palette: {3: 0x000000, 4: 0x228B22, 5: 0xFF9999, 8: 0xF5DEB3, 9: 0x90EE90}
+  },
+  tungtung: {
+    name: 'Tung Tung Sahur',
+    origin: 'Indonesian Meme',
+    desc: 'The Wooden Warrior',
+    color: 0x8B4513,
+    specialQuote: '"TUNG TUNG TUNG TUNG TUNG SAHur!"',
+    bossQuotes: [
+      '"Bangun! Bangun! Sudah sahur!"',
+      '"Tung tung tung! Wake up!"',
+      '"No more sleep, only sahur!"',
+    ],
+    pixelArt: [
+      // 12x16 — Round wooden head, drum sticks, brown body
+      [0,0,0,0,1,1,1,1,0,0,0,0],
+      [0,0,0,1,7,7,7,7,1,0,0,0],
+      [0,0,1,7,7,7,7,7,7,1,0,0],
+      [0,0,1,7,3,7,7,3,7,1,0,0],
+      [0,0,1,7,7,7,7,7,7,1,0,0],
+      [0,0,1,7,5,5,5,5,7,1,0,0],
+      [0,0,0,1,7,7,7,7,1,0,0,0],
+      [0,0,0,0,1,1,1,1,0,0,0,0],
+      [0,0,0,1,1,1,1,1,1,0,0,0],
+      [0,0,1,1,1,1,1,1,1,1,0,0],
+      [0,1,7,1,1,1,1,1,1,7,1,0],
+      [0,0,0,1,1,1,1,1,1,0,0,0],
+      [0,0,0,0,1,1,1,1,0,0,0,0],
+      [0,0,0,0,1,0,0,1,0,0,0,0],
+      [0,0,0,1,1,0,0,1,1,0,0,0],
+      [0,0,0,1,0,0,0,0,1,0,0,0],
+    ],
+    palette: {1: 0x6B3410, 3: 0x000000, 5: 0xD4A060, 7: 0xA0522D}
+  },
+  chungus: {
+    name: 'Big Chungus',
+    origin: 'Reddit Meme',
+    desc: 'The Chungus Supreme',
+    color: 0xCCCCCC,
+    specialQuote: '"He is the big chungus."',
+    bossQuotes: [
+      '"What\'s up, doc?"',
+      '"I\'m the big chungus, baby!"',
+      '"Such meme. Very wow."',
+    ],
+    pixelArt: [
+      // 12x16 — Fat bunny with tall ears, round belly, pink nose
+      [0,0,1,1,0,0,0,0,1,1,0,0],
+      [0,1,1,1,0,0,0,0,1,1,1,0],
+      [0,1,1,1,0,0,0,0,1,1,1,0],
+      [0,1,1,1,1,1,1,1,1,1,1,0],
+      [0,0,1,1,1,1,1,1,1,1,0,0],
+      [0,0,1,3,1,1,1,1,3,1,0,0],
+      [0,0,1,1,1,5,5,1,1,1,0,0],
+      [0,0,0,1,1,1,1,1,1,0,0,0],
+      [0,1,1,1,1,1,1,1,1,1,1,0],
+      [1,1,1,1,1,1,1,1,1,1,1,1],
+      [1,1,1,1,1,1,1,1,1,1,1,1],
+      [1,1,1,1,1,1,1,1,1,1,1,1],
+      [0,1,1,1,1,1,1,1,1,1,1,0],
+      [0,0,1,1,1,1,1,1,1,1,0,0],
+      [0,0,0,1,1,0,0,1,1,0,0,0],
+      [0,0,0,1,1,0,0,1,1,0,0,0],
+    ],
+    palette: {1: 0xD0D0D0, 3: 0xCC0000, 5: 0xFFAAAA}
+  },
+  doge: {
+    name: 'Doge',
+    origin: 'Reddit Meme',
+    desc: 'Such Wow, Much Adventure',
+    color: 0xDEB887,
+    specialQuote: '"Much wow. Very dungeon. So crawl. Amaze."',
+    bossQuotes: [
+      '"Such boss, very defeat, wow!"',
+      '"Much victory, so amaze!"',
+      '"Very dungeon, such crawler!"',
+    ],
+    pixelArt: [
+      // 12x16 — Shiba Inu: pointed ears, tan fur, white muzzle, black nose
+      [0,0,4,4,0,0,0,0,4,4,0,0],
+      [0,4,4,4,0,0,0,0,4,4,4,0],
+      [0,4,1,4,4,4,4,4,4,1,4,0],
+      [0,0,4,1,1,1,1,1,1,4,0,0],
+      [0,0,0,1,3,1,1,3,1,0,0,0],
+      [0,0,0,1,1,1,1,1,1,0,0,0],
+      [0,0,0,0,1,2,2,1,0,0,0,0],
+      [0,0,0,0,1,1,1,1,0,0,0,0],
+      [0,0,0,1,1,1,1,1,1,0,0,0],
+      [0,0,0,1,8,1,1,8,1,0,0,0],
+      [0,0,1,1,1,1,1,1,1,1,0,0],
+      [0,0,1,1,1,1,1,1,1,1,0,0],
+      [0,0,0,1,1,1,1,1,1,0,0,0],
+      [0,0,0,0,1,1,1,1,0,0,0,0],
+      [0,0,0,1,1,0,0,1,1,0,0,0],
+      [0,0,0,1,0,0,0,0,1,0,0,0],
+    ],
+    palette: {1: 0xDEB887, 2: 0x222222, 3: 0x111111, 4: 0xC4A060, 8: 0xFFF8DC}
+  },
+  datboi: {
+    name: 'Dat Boi',
+    origin: 'Reddit Meme',
+    desc: 'Here He Comes!',
+    color: 0x228B22,
+    specialQuote: '"O sh*t, waddup!"',
+    bossQuotes: [
+      '"Here comes dat boi!"',
+      '"O sh*t, waddup!"',
+      '"Dat boi always delivers!"',
+    ],
+    pixelArt: [
+      // 12x16 — Green frog with big white eyes, unicycle
+      [0,0,0,0,6,6,6,6,0,0,0,0],
+      [0,0,0,6,6,6,6,6,6,0,0,0],
+      [0,0,6,6,6,6,6,6,6,6,0,0],
+      [0,0,6,3,3,6,6,3,3,6,0,0],
+      [0,0,6,3,3,6,6,3,3,6,0,0],
+      [0,0,0,6,6,6,6,6,6,0,0,0],
+      [0,0,0,0,6,5,5,6,0,0,0,0],
+      [0,0,0,0,0,6,6,0,0,0,0,0],
+      [0,0,0,0,6,6,6,6,0,0,0,0],
+      [0,0,0,0,0,6,6,0,0,0,0,0],
+      [0,0,0,0,0,7,7,0,0,0,0,0],
+      [0,0,0,0,7,0,0,7,0,0,0,0],
+      [0,0,0,7,0,0,0,0,7,0,0,0],
+      [0,0,0,0,1,1,1,1,0,0,0,0],
+      [0,0,0,0,0,1,1,0,0,0,0,0],
+      [0,0,0,0,1,1,1,1,0,0,0,0],
+    ],
+    palette: {1: 0x888888, 3: 0xFFFFFF, 5: 0x333333, 6: 0x2D8B2D, 7: 0x666666}
+  },
+  trollface: {
+    name: 'Trollface',
+    origin: 'Reddit Classic',
+    desc: 'Problem, Adventurer?',
+    color: 0xFFFFFF,
+    specialQuote: '"U mad, bro?"',
+    bossQuotes: [
+      '"Problem, boss?"',
+      '"Problem? I don\'t see any problem here!"',
+      '"Problem, adventurer?"',
+    ],
+    pixelArt: [
+      // 12x16 — White face, huge creepy grin, squinty eyes
+      [0,0,0,1,1,1,1,1,1,0,0,0],
+      [0,0,1,1,1,1,1,1,1,1,0,0],
+      [0,1,1,1,1,1,1,1,1,1,1,0],
+      [0,1,1,3,3,1,1,3,3,1,1,0],
+      [0,1,1,3,1,1,1,1,3,1,1,0],
+      [0,1,1,1,1,1,1,1,1,1,1,0],
+      [0,0,1,1,1,1,1,1,1,1,0,0],
+      [0,0,0,1,1,1,1,1,1,0,0,0],
+      [0,0,0,1,5,5,5,5,1,0,0,0],
+      [0,0,1,5,1,1,1,1,5,1,0,0],
+      [0,0,1,5,1,1,1,1,5,1,0,0],
+      [0,1,1,1,5,5,5,5,1,1,1,0],
+      [0,1,1,1,1,1,1,1,1,1,1,0],
+      [0,0,1,1,1,1,1,1,1,1,0,0],
+      [0,0,0,1,1,1,1,1,1,0,0,0],
+      [0,0,0,0,1,0,0,1,0,0,0,0],
+    ],
+    palette: {1: 0xF0EDE8, 3: 0x111111, 5: 0xDD4444}
+  },
+};
+
+let selectedCharacter = 'cc';
+let characterSelectionOpen = false;
+
+function loadCharacterSelection() {
+  try {
+    const saved = localStorage.getItem('threadcrawler_character');
+    console.log('Loading character from storage:', saved);
+    if (saved && CHARACTERS[saved]) {
+      selectedCharacter = saved;
+      console.log('Character loaded:', selectedCharacter);
+    } else {
+      console.log('No valid character saved, using default:', selectedCharacter);
+    }
+  } catch(e) { console.error('Load failed:', e); }
+}
+
+function saveCharacterSelection() {
+  try {
+    localStorage.setItem('threadcrawler_character', selectedCharacter);
+    console.log('Saved character:', selectedCharacter);
+  } catch(e) { console.error('Save failed:', e); }
+}
+
+function openCharacterSelect() {
+  characterSelectionOpen = true;
+  renderCharacterSelect();
+  const titleScreen = document.getElementById('title-screen');
+  const charScreen = document.getElementById('character-select-screen');
+  if (titleScreen) titleScreen.classList.remove('show');
+  if (charScreen) {
+    charScreen.style.display = 'flex';
+    charScreen.classList.add('show');
+  }
+}
+
+function closeCharacterSelect() {
+  characterSelectionOpen = false;
+  const charScreen = document.getElementById('character-select-screen');
+  const titleScreen = document.getElementById('title-screen');
+  if (charScreen) {
+    charScreen.classList.remove('show');
+    charScreen.style.display = '';
+  }
+  if (titleScreen) titleScreen.classList.add('show');
+}
+
+function startGameFromCharSelect() {
+  // Character is already saved by the click handler, just start
+  console.log('Starting game with character:', selectedCharacter);
+  startGame();
+}
+
+function renderCharacterSelect() {
+  const grid = document.getElementById('character-grid');
+  if (!grid) return;
+  grid.innerHTML = '';
+
+  Object.entries(CHARACTERS).forEach(([id, char]) => {
+    const isSelected = id === selectedCharacter;
+    const el = document.createElement('div');
+    el.className = `character-card ${isSelected ? 'selected' : ''}`;
+    el.innerHTML = `
+      <div class="character-portrait" style="border-color: #${char.color.toString(16).padStart(6, '0')}">
+        <canvas id="char-canvas-${id}" width="80" height="96"></canvas>
+      </div>
+      <div class="character-name">${char.name}${isSelected ? ' ✓' : ''}</div>
+      <div class="character-origin">${char.origin}</div>
+      <div class="character-desc">${char.desc}</div>
+      <div class="character-quote">${char.specialQuote}</div>
+    `;
+    // Use onclick directly on the element
+    el.onclick = function() {
+      selectedCharacter = id;
+      saveCharacterSelection();
+      renderCharacterSelect();
+      showToast('Selected: ' + CHARACTERS[selectedCharacter].name + '!', 'success', 1500, '🎮');
+      try { SFX.power(); } catch(ex) {}
+    };
+    grid.appendChild(el);
+
+    // Draw pixel art on canvas
+    setTimeout(function() { drawCharacterPixelArt(id, char); }, 10);
+  });
+}
+
+function drawCharacterPixelArt(id, char) {
+  const canvas = document.getElementById(`char-canvas-${id}`);
+  if (!canvas) return;
+  const ctx = canvas.getContext('2d');
+  const rows = char.pixelArt.length;
+  const cols = char.pixelArt[0].length;
+  const scale = Math.min(Math.floor(canvas.width / cols), Math.floor(canvas.height / rows));
+  const offsetX = Math.floor((canvas.width - cols * scale) / 2);
+  const offsetY = Math.floor((canvas.height - rows * scale) / 2);
+  ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+  char.pixelArt.forEach((row, y) => {
+    row.forEach((pixel, x) => {
+      if (pixel === 0) return;
+      ctx.fillStyle = '#' + (char.palette[pixel] || 0x000000).toString(16).padStart(6, '0');
+      ctx.fillRect(x * scale + offsetX, y * scale + offsetY, scale, scale);
+    });
+  });
+}
+
+function getCharacterData() {
+  return CHARACTERS[selectedCharacter] || CHARACTERS.cc;
+}
+
+function getBossDefeatQuote() {
+  const char = getCharacterData();
+  return char.bossQuotes[Math.floor(Math.random() * char.bossQuotes.length)];
+}
 
 function loadPersistentData() {
   try {
@@ -1780,7 +2111,13 @@ class GameScene extends Phaser.Scene {
     const monsterCount = Math.min(Math.floor((4 + state.depth * 1.5) * Math.sqrt(cm) * em), 20);
     for (let i = 0; i < monsterCount; i++) this.spawnMonster();
 
-    // Spawn boss on specific floors (or all floors in boss rush)
+    // ─── PARTICLE POOL ───
+    this.particles = new ParticlePool(this, 400);
+
+    // ─── SCREEN EFFECTS ───
+    this.screenFX = new ScreenFX(this);
+
+    // ─── SPAWN BOSS (after screenFX is initialized) ───
     if (state.bossRushMode) {
       const rushBoss = getBossRushBoss(state.depth);
       this.spawnBoss(rushBoss);
@@ -1788,12 +2125,6 @@ class GameScene extends Phaser.Scene {
       const bossData = BOSSES.find(b => b.floor === state.depth);
       if (bossData) this.spawnBoss(bossData);
     }
-
-    // ─── PARTICLE POOL ───
-    this.particles = new ParticlePool(this, 400);
-
-    // ─── SCREEN EFFECTS ───
-    this.screenFX = new ScreenFX(this);
 
     // ─── FOG OF WAR ───
     this.fogGraphics = this.add.graphics();
@@ -1926,24 +2257,28 @@ class GameScene extends Phaser.Scene {
     document.getElementById('controls-hint').classList.add('show');
   }
 
-  // ─── CC (CODE GEASS) CHARACTER SPRITE ───
+  // ─── CHARACTER SPRITE ───
   drawCatPlayer(g, frame, facing) {
     g.clear();
     const ps = 1;
+    const char = getCharacterData();
 
-    // CC colors (Code Geass)
-    const hair = 0x7CFC00;        // lime green hair
-    const hairDark = 0x4CAF00;    // darker green
-    const hairLight = 0x98FB98;   // light green highlights
-    const skin = 0xFDE8D0;        // fair skin
-    const skinShadow = 0xE8C8A8;  // skin shadow
-    const eyes = 0xDAA520;        // golden eyes
-    const eyeWhite = 0xFFFFFF;
-    const outfit = 0xF0F0F0;      // white outfit
-    const outfitShadow = 0xC8C8C8;
-    const outfitDark = 0xA0A0A0;
-    const outline = 0x282020;     // dark outline
-    const lips = 0xE88088;        // soft pink lips
+    // If character has pixel art, draw it centered
+    if (char.pixelArt && char.palette) {
+      const scale = 2;
+      const rows = char.pixelArt.length;
+      const cols = char.pixelArt[0].length;
+      const offsetX = -(cols * scale) / 2;
+      const offsetY = -(rows * scale) / 2;
+      char.pixelArt.forEach((row, y) => {
+        row.forEach((pixel, x) => {
+          if (pixel === 0) return;
+          g.fillStyle(char.palette[pixel] || 0x000000, 1);
+          g.fillRect(x * scale + offsetX, y * scale + offsetY, scale, scale);
+        });
+      });
+      return;
+    }
 
     // Frame offsets for walk animation
     const walkCycle = frame % 4;
@@ -2102,7 +2437,7 @@ class GameScene extends Phaser.Scene {
   }
 
   update(time, delta) {
-    if (state.phase !== 'explore' || !this.player || this.transitioning || gamePaused) return;
+    if (state.phase !== 'explore' || !this.player || !this.screenFX || this.transitioning || gamePaused) return;
     const dt = delta / 1000;
     const dungeon = state.dungeon;
     const theme = THEMES[state.floorTheme % THEMES.length];
@@ -2179,15 +2514,29 @@ class GameScene extends Phaser.Scene {
 
     // ─── FLOOR PRESSURE: EXIT LOCK ───
     if (!state.bossRushMode && state.floorEnemiesTotal > 0 && state.dungeon) {
-      const killPct = state.floorEnemiesKilled / state.floorEnemiesTotal;
+      // Check if this is a boss floor
+      const hasBoss = BOSSES.some(b => b.floor === state.depth);
+      let exitShouldBeLocked;
+
+      if (hasBoss) {
+        // Boss floor: exit only unlocks when boss is dead
+        const bossAlive = this.monsters.some(m => m.active && m.getData && m.getData('isBoss'));
+        exitShouldBeLocked = bossAlive;
+      } else {
+        // Normal floor: exit unlocks at 70% kills
+        const killPct = state.floorEnemiesKilled / state.floorEnemiesTotal;
+        exitShouldBeLocked = killPct < state.exitUnlockThreshold;
+      }
+
       const wasLocked = state.exitLocked;
-      state.exitLocked = killPct < state.exitUnlockThreshold;
+      state.exitLocked = exitShouldBeLocked;
+
       if (wasLocked && !state.exitLocked) {
-        showToast('EXIT UNLOCKED!', 'success', 2000, '🚪');
-        this.addLog('🚪 Exit unlocked! 70% of enemies defeated!');
+        const msg = hasBoss ? 'BOSS DEFEATED! Exit unlocked!' : 'EXIT UNLOCKED! 70% of enemies defeated!';
+        showToast(msg, 'success', 2000, '🚪');
+        this.addLog(`🚪 ${msg}`);
         SFX.exit();
         this.screenFX.flash(0x48C848, 300);
-        // Kill the old LOCKED hint so "Press E" can appear
         if (this.exitHint) { this.exitHint.destroy(); this.exitHint = null; }
         for (let i = 0; i < 15; i++) {
           this.particles.get(state.dungeon.exit.x * TILE + TILE/2, state.dungeon.exit.y * TILE + TILE/2,
@@ -2215,12 +2564,15 @@ class GameScene extends Phaser.Scene {
       }
     }
 
+    // ─── UPDATE VIRTUAL INPUT ───
+    updateVirtualInput();
+
     // ─── PLAYER MOVEMENT ───
     let vx = 0, vy = 0;
-    if (this.cursors.left.isDown || this.wasd.A.isDown) vx = -1;
-    if (this.cursors.right.isDown || this.wasd.D.isDown) vx = 1;
-    if (this.cursors.up.isDown || this.wasd.W.isDown) vy = -1;
-    if (this.cursors.down.isDown || this.wasd.S.isDown) vy = 1;
+    if (this.cursors.left.isDown || this.wasd.A.isDown || isVirtualDown('left')) vx = -1;
+    if (this.cursors.right.isDown || this.wasd.D.isDown || isVirtualDown('right')) vx = 1;
+    if (this.cursors.up.isDown || this.wasd.W.isDown || isVirtualDown('up')) vy = -1;
+    if (this.cursors.down.isDown || this.wasd.S.isDown || isVirtualDown('down')) vy = 1;
 
     // Normalize diagonal
     if (vx !== 0 && vy !== 0) {
@@ -2277,7 +2629,7 @@ class GameScene extends Phaser.Scene {
     this.player.body.setVelocity(vx * PLAYER_SPEED * speedMult, vy * PLAYER_SPEED * speedMult);
 
     // ─── SHOOTING ───
-    if (Phaser.Input.Keyboard.JustDown(this.spaceKey)) this.shoot();
+    if (Phaser.Input.Keyboard.JustDown(this.spaceKey) || isVirtualA()) this.shoot();
 
     // ─── TILE INTERACTIONS (with cooldown) ───
     if (tx >= 0 && tx < MAP_W && ty >= 0 && ty < MAP_H && this.interactionCooldown <= 0) {
@@ -2329,22 +2681,29 @@ class GameScene extends Phaser.Scene {
         // Check exit lock
         if (state.exitLocked && !state.bossRushMode) {
           // Exit is locked — show lock status
-          const killPct = state.floorEnemiesTotal > 0 ? Math.floor((state.floorEnemiesKilled / state.floorEnemiesTotal) * 100) : 0;
+          const hasBoss = BOSSES.some(b => b.floor === state.depth);
+          let lockText;
+          if (hasBoss) {
+            lockText = 'DEFEAT BOSS!';
+          } else {
+            const killPct = state.floorEnemiesTotal > 0 ? Math.floor((state.floorEnemiesKilled / state.floorEnemiesTotal) * 100) : 0;
+            lockText = `LOCKED (${killPct}%)`;
+          }
           if (!this.exitHint) {
             this.exitHint = this.add.text(
               dungeon.exit.x * TILE + TILE/2, dungeon.exit.y * TILE - 8,
-              `LOCKED (${killPct}%)`, {
+              lockText, {
                 fontFamily: 'Press Start 2P', fontSize: '5px', color: '#E83838',
                 stroke: '#000', strokeThickness: 2, align: 'center',
               }
             ).setOrigin(0.5).setDepth(22);
             this.tweens.add({ targets: this.exitHint, alpha: 0.5, yoyo: true, repeat: -1, duration: 600 });
           } else {
-            this.exitHint.setText(`LOCKED (${killPct}%)`);
+            this.exitHint.setText(lockText);
           }
         } else {
-          // Exit unlocked — allow E to proceed
-          if (Phaser.Input.Keyboard.JustDown(this.eKey)) {
+          // Exit unlocked — allow E/B to proceed
+          if (Phaser.Input.Keyboard.JustDown(this.eKey) || isVirtualB()) {
             this.nextFloor();
           }
           if (!this.exitHint) {
@@ -2962,9 +3321,11 @@ class GameScene extends Phaser.Scene {
     }
     if (crit) {
       damage = Math.floor(damage * 2);
-      this.screenFX.freeze(0.08); // hit-stop — longer on crit
-      this.screenFX.shake(12); // bigger shake on crit
-      this.screenFX.flash(0xFFFFFF, 100);
+      if (this.screenFX) {
+        this.screenFX.freeze(0.08); // hit-stop — longer on crit
+        this.screenFX.shake(12); // bigger shake on crit
+        this.screenFX.flash(0xFFFFFF, 100);
+      }
       showToast('CRIT!', 'warning', 800, '💥');
     }
 
@@ -3007,7 +3368,7 @@ class GameScene extends Phaser.Scene {
       }
     }
 
-    this.screenFX.shake(crit ? 8 : 4);
+    if (this.screenFX) this.screenFX.shake(crit ? 8 : 4);
     SFX.hit();
 
     // Show combo + damage number
@@ -3082,7 +3443,7 @@ class GameScene extends Phaser.Scene {
       if (goldEarned > 15) {
         this.spawnDamageNumber(monster.x + 12, monster.y - 4, `+${goldEarned}G`, 0xF8B800);
       }
-      this.screenFX.shake(6);
+      if (this.screenFX) this.screenFX.shake(6);
       SFX.kill();
 
       // Boss drops weapon
@@ -3097,12 +3458,18 @@ class GameScene extends Phaser.Scene {
         SFX.chest();
         const bossBar = document.getElementById('boss-health-bar');
         if (bossBar) bossBar.style.display = 'none';
-        this.screenFX.shake(12);
-        this.screenFX.flash(0xF8B800, 400);
+        if (this.screenFX) {
+          this.screenFX.shake(12);
+          this.screenFX.flash(0xF8B800, 400);
+        }
         // Victory particles
         for (let i = 0; i < 30; i++) {
           this.particles.get(monster.x, monster.y, (Math.random()-0.5)*200, -50 - Math.random()*150, 0xF8B800, 3, 1.2, { gravity: 60, friction: 0.97 });
         }
+        // Character victory quote
+        const victoryQuote = getBossDefeatQuote();
+        showToast(victoryQuote, 'legendary', 4000, getCharacterData().name);
+        this.addLog(`${getCharacterData().name}: ${victoryQuote}`);
       }
 
       // Random weapon drop from normal monsters (5% chance)
@@ -3135,7 +3502,7 @@ class GameScene extends Phaser.Scene {
         this.addLog(`LEVEL UP! Now ${state.player.title}`);
         showToast(`Level ${state.player.level}! ${state.player.title}`, 'success', 2500, '⭐');
         SFX.levelup();
-        this.screenFX.flash(0xFBBF24, 200);
+        if (this.screenFX) this.screenFX.flash(0xFBBF24, 200);
         // Level up particles
         for (let i = 0; i < 20; i++) {
           const angle = (Math.PI * 2 * i) / 20;
@@ -3148,6 +3515,7 @@ class GameScene extends Phaser.Scene {
 
   damagePlayer(amount) {
     if (state.player.invincible > 0 || dodgeState.rolling) return;
+    if (!this.screenFX) return; // scene transitioning
 
     // Reset combo on taking damage
     resetCombo();
@@ -3468,8 +3836,23 @@ class GameScene extends Phaser.Scene {
 
   updateBossHPBar(boss) {
     const hpFill = boss.getData('hpFill');
-    const hp = boss.getData('hp');
+    const hp = Math.max(0, boss.getData('hp'));
     const maxHp = boss.getData('maxHp');
+
+    // If boss is dead (hp <= 0), hide the health bar
+    if (hp <= 0) {
+      if (hpFill && hpFill.active) {
+        hpFill.setScale(0, 1);
+      }
+      const bossHP = document.getElementById('boss-hp-fill');
+      const bossHPText = document.getElementById('boss-hp-text');
+      const bossBar = document.getElementById('boss-health-bar');
+      if (bossBar) bossBar.style.display = 'none';
+      if (bossHP) bossHP.style.width = '0%';
+      if (bossHPText) bossHPText.textContent = '0/0';
+      return;
+    }
+
     if (hpFill && hpFill.active) {
       const ratio = Math.max(0, hp / maxHp);
       hpFill.setScale(ratio, 1);
@@ -3814,8 +4197,10 @@ class GameScene extends Phaser.Scene {
     this.monsters.push(monster);
 
     // Boss intro cinematic
-    this.screenFX.shake(15);
-    this.screenFX.flash(0xEF4444, 300);
+    if (this.screenFX) {
+      this.screenFX.shake(15);
+      this.screenFX.flash(0xEF4444, 300);
+    }
     SFX.jumpscare();
     this.addLog(`⚠ BOSS: ${bossData.name} appeared!`);
 
@@ -4455,7 +4840,7 @@ const ABILITIES = [
           scene.damageMonster(m, dmg, true);
         }
       });
-      scene.screenFX.shake(5);
+      if (scene.screenFX) scene.screenFX.shake(5);
       SFX.hit();
     }
   },
@@ -4770,6 +5155,9 @@ function updateStatusUI() {
 
 // ─── GAME LIFECYCLE ──────────────────────────────────────────
 function startGame() {
+  // Load character selection
+  loadCharacterSelection();
+
   // Capture commentCount before reset
   const savedCommentCount = state.commentCount;
 
@@ -4825,6 +5213,8 @@ function startGame() {
 
   document.getElementById('title-screen').classList.remove('show');
   document.getElementById('gameover-screen').classList.remove('show');
+  const charScreen = document.getElementById('character-select-screen');
+  if (charScreen) { charScreen.classList.remove('show'); charScreen.style.display = ''; }
   document.getElementById('power-led').classList.add('on');
   document.getElementById('controls-hint').classList.add('show');
 
@@ -4845,6 +5235,11 @@ function startGame() {
     const cm = getCommunityMultiplier();
     state.log.push(`Community: ${state.commentCount} comments (${cm.toFixed(1)}x rewards)`);
   }
+
+  // Character welcome message
+  const charData = getCharacterData();
+  state.log.push(`${charData.name} enters the dungeon!`);
+  state.log.push(`${charData.specialQuote}`);
 
   if (game) game.destroy(true);
   game = new Phaser.Game(config);
